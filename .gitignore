@@ -1,0 +1,6 @@
+data/SAMfiles/*
+data/elasticities_N=3,30,65_and_other
+data/excel data computation
+results/*
+src/transport_calibration.csv
+__pycache__
