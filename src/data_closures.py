@@ -97,7 +97,7 @@ class calibrationDict(endo_exo_indexes):
         
         if self.closure == "johansen":
             return {**self.commonDict, 
-                         **{'sD':Variable(self.full_endo(), cal.sD0),
+                         **{#'sD':Variable(self.full_endo(), cal.sD0),
                             
                             'K':Variable(self.full_exo(), cal.K0),
                             'wI':Variable(self.full_exo(),cal.wI),
@@ -284,7 +284,7 @@ class calibrationDict(endo_exo_indexes):
             'Cj': Variable(self.full_endo(), cal.Cj0),
             'pCj': Variable(self.full_endo(), cal.pCj0),
             'Mj': Variable(self.idx_1D(exo_names = ["ENERGY"]), cal.Mj0),
-            'pMj': Variable(self.full_endo(), cal.pMj0),
+            'pMj': Variable(self.idx_1D(exo_names = ["ENERGY"]), cal.pMj0),
             'Xj': Variable(self.idx_1D(exo_names = ["ENERGY"]), cal.Xj0),
             'Dj': Variable(self.full_endo(), cal.Dj0),
             'pDj': Variable(self.full_endo(), cal.pDj0),
@@ -333,15 +333,15 @@ class calibrationDict(endo_exo_indexes):
             'alphaGj':Variable(self.full_exo(), cal.alphaGj),
             'alphaIj':Variable(self.full_exo(), cal.alphaIj),
             
-            'alphaXj':Variable(self.idx_1D(endo_names = ["STEEL","CHEMICAL"]), cal.alphaXj),
-            'alphaDj':Variable(self.idx_1D(endo_names = ["STEEL","CHEMICAL"]), cal.alphaDj),
-            'betaDj':Variable(self.idx_1D(endo_names = ["STEEL","CHEMICAL"]), cal.betaDj),
-            'betaMj':Variable(self.idx_1D(endo_names = ["STEEL","CHEMICAL"]), cal.betaMj),
+            #'alphaXj':Variable(self.idx_1D(endo_names = ["STEEL","CHEMICAL"]), cal.alphaXj),
+            #'alphaDj':Variable(self.idx_1D(endo_names = ["STEEL","CHEMICAL"]), cal.alphaDj),
+            #'betaDj':Variable(self.idx_1D(endo_names = ["STEEL","CHEMICAL"]), cal.betaDj),
+            #'betaMj':Variable(self.idx_1D(endo_names = ["STEEL","CHEMICAL"]), cal.betaMj),
             
-            'alphaXj0':Variable(self.full_exo(), cal.alphaXj0),
-            'alphaDj0':Variable(self.full_exo(), cal.alphaDj0),
-            'betaDj0':Variable(self.full_exo(), cal.betaDj0),
-            'betaMj0':Variable(self.full_exo(), cal.betaMj0),
+            'alphaXj':Variable(self.full_exo(), cal.alphaXj0),
+            'alphaDj':Variable(self.full_exo(), cal.alphaDj0),
+            'betaDj':Variable(self.full_exo(), cal.betaDj0),
+            'betaMj':Variable(self.full_exo(), cal.betaMj0),
             
             'thetaj':Variable(self.full_exo(), cal.thetaj),
             'csij':Variable(self.full_exo(), cal.csij),
@@ -369,7 +369,7 @@ class calibrationDict(endo_exo_indexes):
             'rhoPj':Variable(self.full_exo(), cal.rhoPj),
 
             'lambda_KLM':Variable(self.full_exo(), cal.lambda_KLM),
-            'lambda_XMj':Variable(self.full_exo(), cal.lambda_XMj),
+            #'lambda_XMj':Variable(self.full_exo(), cal.lambda_XMj),
             
             "R_E":Variable(self.full_endo(), cal.R_E),
             "R_nE":Variable(self.full_endo(), cal.R_nE),

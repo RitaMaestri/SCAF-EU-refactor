@@ -160,8 +160,6 @@ def system(var, par):
         "eqYij":eq.eqYij(Yij=d['Yij'], aYij=d['aYij'],Yj=d['Yj'], _index=non_zero_index_Yij),
         ###
         "eqKL":eq.eqKL(KLj=d['KLj'],aKLj=d['aKLj'],Yj=d['Yj']),
-        
-        #"eqpYj":eq.eqpYj(pYj=d['pYj'],pCj=d['pCj'],aKLj=d['aKLj'],pKLj=d['pKLj'],aYij=d['aYij'], tauYj=d['tauYj']),
         ### da verificare uguaglianza
         "eqpYj_E":eq.eqpYj_E(pYj=d['pYj'], pCj=d['pCj'], aKLj=d['aKLj'], pKLj=d['pKLj'], aYij=d['aYij'], pY_Ej=d["pY_Ej"], tauYj=d['tauYj']),
         ###
@@ -172,8 +170,6 @@ def system(var, par):
         "eqCESquantityDy_E":eq.eqsum_scalar(d['Yj'][E], d['Dj'][E], d['Xj'][E]),
         ###
         "eqpriceYj":eq.eqRevenueCost(p1j=d['pDj'],p2j=d['pXj'],p12j=d['pYj'],V1j=d['Dj'],V2j=d['Xj'],V12j=d['Yj']),
-       
-        #"eqCESpriceY":eq.eqCESprice(pZj=d['pYj'], pXj=d['pXj'], pYj=d['pDj'], alphaXj=d['alphaXj'], alphaYj=d['alphaDj'], sigmaj=d['sigmaXj'],  thetaj=d['thetaj']),
         ###
         "eqCESquantityDs":eq.eqCESquantity(Xj=d['Dj'], Zj=d['Sj'], alphaXj=d['betaDj'], alphaYj=d['betaMj'], pXj=d['pDj'], pYj=d['pMj'], sigmaj=d['sigmaSj'], thetaj=d['csij'], _index=index_wo_E),
         ###
@@ -182,14 +178,10 @@ def system(var, par):
         "eqCESquantityM":eq.eqCESquantity(Xj=d['Mj'], Zj=d['Sj'], alphaXj=d['betaMj'], alphaYj=d['betaDj'], pXj=d['pMj'], pYj=d['pDj'], sigmaj=d['sigmaSj'], thetaj=d['csij'], _index=np.intersect1d(index_wo_E,non_zero_index_M)),
         ###
         "eqpriceSj":eq.eqRevenueCost(p1j=d['pDj'],p2j=d['pMj'],p12j=d['pSj'],V1j=d['Dj'],V2j=d['Mj'],V12j=d['Sj']),
-        
-        #"eqCESpriceS":eq.eqCESprice(pZj=d['pSj'],pXj=d['pMj'],pYj=d['pDj'],alphaXj=d['betaMj'],alphaYj=d['betaDj'],sigmaj=d['sigmaSj'], thetaj=d['csij']),
         ###
         "eqB":eq.eqB(B=d['B'],pXj=d['pXj'],Xj=d['Xj'],pMj=d['pMj'],Mj=d['Mj']),
         ###
-        "eqIDpX":eq.eqID(x=d['pXj'],y=d['pMj']),
-        
-        #"eqCobbDouglasjC":eq.eqCobbDouglasj(Qj=d['Cj'],alphaQj=d['alphaCj'],pCj=d['pCj'],Q=d['R'], _index=non_zero_index_C),
+        "eqIDpX":eq.eqID(x=d['pXj'],y=d['pMj'],_index=index_wo_E),
         ###
         "eqCobbDouglasjG":eq.eqCobbDouglasj(Qj=d['Gj'],alphaQj=d['alphaGj'],pCj=d['pCj'],Q=d['Rg'], _index=non_zero_index_G),
         ###
@@ -204,21 +196,12 @@ def system(var, par):
         "eqGDPPI":eq.eqGDPPI(GDPPI = d['GDPPI'], pCj=d['pCj'], pXj=d['pXj'], pCtp= d['pCtp'], pXtp=d['pXtp'], Cj= d['Cj'], Gj= d['Gj'], Ij= d['Ij'], Xj=d['Xj'], Mj=d['Mj'], Ctp= d['Ctp'], Gtp= d['Gtp'], Itp= d['Itp'], Xtp=d['Xtp'], Mtp=d['Mtp']),
         ###
         "eqGDPreal":eq.eqGDPreal(GDPreal=d['GDPreal'],GDP=d['GDP'], GDPPI=d['GDPPI']), #expected GDPPI time series
-        
-        #"eqCPI":eq.eqCPI(CPI = d['CPI'], pCj=d['pCj'], pCtp= d['pCtp'], Cj= d['Cj'], Ctp= d['Ctp']),
-        
-        #"eqRreal":eq.eqRreal(Rreal=d['Rreal'],R=d['R'], CPI=d['CPI']), 
-        
-        #"eqT":eq.eqT(T=d['T'], tauYj=d['tauYj'], pYj=d['pYj'], Yj=d['Yj'], tauSj=d['tauSj'], pSj=d['pSj'], Sj=d['Sj'], tauL=d['tauL'], w=d['w'], Lj=d['Lj']),#
         ###
         "eqPriceTaxtauS":eq.eqPriceTax(pGross=d['pCj'], pNet=d['pSj'], tau=d['tauSj'], exclude_idx=E),
-        
-        #"eqPriceTaxtauL":eq.eqPriceTax(pGross=d['pL'], pNet=d['w'], tau=d['tauL']),
         ###
         "eqpI":eq.eqpI(pI=d['pI'],pCj=d['pCj'],alphaIj=d['alphaIj']),
         ###
         "eqMultRi":eq.eqMultiplication(result=d['Ri'],mult1=d['pI'],mult2=d['I']),
-
         #energy coupling
         ###
         "eqC_E":eq.eqsum_scalar(d['Cj'][E], d['C_EB'],d['C_ET']),
@@ -229,17 +212,6 @@ def system(var, par):
                                pE_B=d['pE_B'], C_EB=d['C_EB'], YE_Bj=d['YE_Bj'], pE_Pj=d['pE_Pj'], 
                                YE_Pj=d['YE_Pj'], pE_TnT=d['pE_TnT'], pE_TT=d['pE_TT'], C_ET=d['C_ET'], 
                                YE_Tj=d['YE_Tj'], pE_Ej=d['pE_Ej'], YE_Ej=d['YE_Ej']),
-        
-        # "eqE_P":eq.eqsum_scalar(d['E_P'], d['YE_Pj']),
-        
-        # "eqE_B":eq.eqsum_scalar(d['E_B'], d['YE_Bj'], d['C_EB']),
-        
-        # "eqE_T":eq.eqsum_scalar(d['E_T'], d['YE_Tj'], d['C_ET']),
-        
-        #"eqCj_new":eq.eqCobbDouglasj_lambda(Cj=d['Cj'], alphaCj=d['alphaCj0'],pCj=d['pCj'], R=d['R'], lambda_E=d["lambda_E"], lambda_nE=d["lambda_nE"], _index=non_zero_index_C),#checked
-        
-        #"eqlambda_nE":eq.eqlambda_nE(alphaCj=d['alphaCj0'],lambda_E=d['lambda_E'], lambda_nE=d['lambda_nE']), #checked
-        
         ###
         "eqCj_CDE":eq.eqC_CDE(A_Cj=d["A_Cj_nE"],betaCj=d["betaCj_nE"],u_C=d["u_C"],gammaCj=d["gammaCj_nE"],pCj=np.delete(d["pCj"], E),Cj=np.delete(d["Cj"], E),R=d["R_nE"]),
         ###
@@ -264,14 +236,41 @@ def system(var, par):
         "eqrhoPj": eq.eqrho(pEi=d['pE_Pj'], p_EE=d['pE_Ej'][E], rho=d["rhoPj"],_index=non_zero_index_pE_Pj ), #
         ###
         "eqWorldPrices": eq.eqSameRatio(numerator1=d['pXj'][index_wo_E_SE],numerator2=d['pYj'][index_wo_E_SE],denominator1=d['pXj'][SE],denominator2=d['pYj'][SE]),
-        ###
-        "eqAlphaX":eq.eqsum_arr(d['alphaXj'][[ST,CH]], d['alphaXj0'][[ST,CH]], d['lambda_XMj'][[ST,CH]]  ),
-        ###
-        "eqAlphaD":eq.eqsum_arr(d['alphaDj'][[ST,CH]], d['alphaDj0'][[ST,CH]], -d['lambda_XMj'][[ST,CH]]  ),
-        ###
-        "eqBetaD":eq.eqsum_arr(d['betaDj'][[ST,CH]], d['betaDj0'][[ST,CH]], d['lambda_XMj'][[ST,CH]]  ),
-        ###
-        "eqBetaM":eq.eqsum_arr(d['betaMj'][[ST,CH]], d['betaMj0'][[ST,CH]], -d['lambda_XMj'][[ST,CH]]  ),
+        
+        #"eqAlphaX":eq.eqsum_arr(d['alphaXj'][[ST,CH]], d['alphaXj0'][[ST,CH]], d['lambda_XMj'][[ST,CH]]  ),
+        
+        #"eqAlphaD":eq.eqsum_arr(d['alphaDj'][[ST,CH]], d['alphaDj0'][[ST,CH]], -d['lambda_XMj'][[ST,CH]]  ),
+        
+        #"eqBetaD":eq.eqsum_arr(d['betaDj'][[ST,CH]], d['betaDj0'][[ST,CH]], d['lambda_XMj'][[ST,CH]]  ),
+        
+        #"eqBetaM":eq.eqsum_arr(d['betaMj'][[ST,CH]], d['betaMj0'][[ST,CH]], -d['lambda_XMj'][[ST,CH]]  ),
+
+        #"eqPriceTaxtauL":eq.eqPriceTax(pGross=d['pL'], pNet=d['w'], tau=d['tauL']),
+
+        #"eqCPI":eq.eqCPI(CPI = d['CPI'], pCj=d['pCj'], pCtp= d['pCtp'], Cj= d['Cj'], Ctp= d['Ctp']),
+        
+        #"eqRreal":eq.eqRreal(Rreal=d['Rreal'],R=d['R'], CPI=d['CPI']), 
+        
+        #"eqT":eq.eqT(T=d['T'], tauYj=d['tauYj'], pYj=d['pYj'], Yj=d['Yj'], tauSj=d['tauSj'], pSj=d['pSj'], Sj=d['Sj'], tauL=d['tauL'], w=d['w'], Lj=d['Lj']),#
+        
+        #"eqpYj":eq.eqpYj(pYj=d['pYj'],pCj=d['pCj'],aKLj=d['aKLj'],pKLj=d['pKLj'],aYij=d['aYij'], tauYj=d['tauYj']),
+        
+        #"eqCESpriceY":eq.eqCESprice(pZj=d['pYj'], pXj=d['pXj'], pYj=d['pDj'], alphaXj=d['alphaXj'], alphaYj=d['alphaDj'], sigmaj=d['sigmaXj'],  thetaj=d['thetaj']),
+        
+        #"eqCESpriceS":eq.eqCESprice(pZj=d['pSj'],pXj=d['pMj'],pYj=d['pDj'],alphaXj=d['betaMj'],alphaYj=d['betaDj'],sigmaj=d['sigmaSj'], thetaj=d['csij']),
+                
+        #"eqCobbDouglasjC":eq.eqCobbDouglasj(Qj=d['Cj'],alphaQj=d['alphaCj'],pCj=d['pCj'],Q=d['R'], _index=non_zero_index_C),
+        
+        # "eqE_P":eq.eqsum_scalar(d['E_P'], d['YE_Pj']),
+        
+        # "eqE_B":eq.eqsum_scalar(d['E_B'], d['YE_Bj'], d['C_EB']),
+        
+        # "eqE_T":eq.eqsum_scalar(d['E_T'], d['YE_Tj'], d['C_ET']),
+        
+        #"eqCj_new":eq.eqCobbDouglasj_lambda(Cj=d['Cj'], alphaCj=d['alphaCj0'],pCj=d['pCj'], R=d['R'], lambda_E=d["lambda_E"], lambda_nE=d["lambda_nE"], _index=non_zero_index_C),#checked
+        
+        #"eqlambda_nE":eq.eqlambda_nE(alphaCj=d['alphaCj0'],lambda_E=d['lambda_E'], lambda_nE=d['lambda_nE']), #checked
+
         }
 
     if endo_Knext:
@@ -280,7 +279,7 @@ def system(var, par):
 
     if closure=="johansen": 
         equations.update({
-                                "eqsD":eq.eqsD(sD=d['sD'], Ij=d['Ij'], pCj=d['pCj'], Mj=d['Mj'], Xj=d['Xj'], pXj=d['pXj'], GDP=d['GDP']),
+                                #"eqsD":eq.eqsD(sD=d['sD'], Ij=d['Ij'], pCj=d['pCj'], Mj=d['Mj'], Xj=d['Xj'], pXj=d['pXj'], GDP=d['GDP']),
                                 ###
                                 "eqMultwI":eq.eqMultiplication(result=d['Ri'],mult1=d['wI'],mult2=d['GDP']),
                                 ###
@@ -327,7 +326,6 @@ def system(var, par):
                             
                            "eqB": eq.eqMultiplication(result=d['B'],mult1=d['wB'],mult2=d['GDP'])})
 
-        
         solution = np.hstack(list(equations.values()))
 
         return solution
