@@ -90,16 +90,8 @@ def eqLeontiefVolumes(quantity, technical_coeff, output, _index=None):
         # Apply Leontief equation only to non-zero elements indicated by _index
         zero = -1 + quantity[_index] / np.multiply(technical_coeff[_index], output[_index])
     else:
-        # Without explicit index, handle zeros automatically:
-        # - Where coeff != 0: apply Leontief equation
-        # - Where coeff == 0: enforce quantity == 0
-        non_zero = technical_coeff != 0
-        zero = np.where(
-            non_zero,
-            -1 + quantity / np.multiply(technical_coeff, output),
-            quantity  # Where coeff is 0, equation becomes: -1 + 0 = 0 (i.e., quantity = 0)
-        )
-    
+
+        zero = -1 + quantity / np.multiply(technical_coeff, output)
     return zero
 
 ###############################################################################################################

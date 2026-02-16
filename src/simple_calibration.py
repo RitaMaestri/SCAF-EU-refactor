@@ -8,6 +8,8 @@ import csv
 import pandas as pd
 import scipy
 from functools import partial
+import os
+import json
 
 #import pandas as pd
 
@@ -25,6 +27,100 @@ shares = pd.read_csv("/home/rita/Documents/Tesi/Code/REMIND_energy_coupling/data
 tau=imp.labor_taxes / (imp.pLLj - imp.labor_taxes)
 pL=1
 w=pL/(1+tau)
+
+# Cache directory for expensive calibration parameters
+CACHE_DIR = "calibration_cache"
+if not os.path.exists(CACHE_DIR):
+    os.makedirs(CACHE_DIR)
+
+def get_cache_filename(db_name, param_name):
+    """Generate cache filename based on database and parameter name."""
+    return os.path.join(CACHE_DIR, f"{db_name}_{param_name}.npy")
+
+def get_cache_metadata_filename(db_name):
+    """Generate cache metadata filename to track source database."""
+    return os.path.join(CACHE_DIR, f"{db_name}_metadata.json")
+
+def save_expensive_params(db_name, params_dict):
+    """
+    Save expensive calibration parameters to files.
+    
+    Parameters
+    ----------
+    db_name : str
+        Database name (e.g., 'GTAP') to include in filename
+    params_dict : dict
+        Dictionary of parameter_name: parameter_value pairs
+    """
+    # Save each parameter
+    for param_name, param_value in params_dict.items():
+        filepath = get_cache_filename(db_name, param_name)
+        if isinstance(param_value, (np.ndarray, list)):
+            np.save(filepath, param_value)
+        elif isinstance(param_value, (int, float)):
+            # Save scalar as single-element array for consistency
+            np.save(filepath, np.array([param_value]))
+        else:
+            print(f"Warning: Cannot cache parameter {param_name} of type {type(param_value)}")
+    
+    # Save metadata
+    metadata = {
+        'database': db_name,
+        'parameters': list(params_dict.keys()),
+        'N': N
+    }
+    with open(get_cache_metadata_filename(db_name), 'w') as f:
+        json.dump(metadata, f, indent=2)
+    
+    print(f"Cached {len(params_dict)} parameters from {db_name}")
+
+def load_expensive_params(db_name, param_names):
+    """
+    Load expensive calibration parameters from cache files.
+    
+    Parameters
+    ----------
+    db_name : str
+        Database name (e.g., 'GTAP')
+    param_names : list
+        List of parameter names to load
+        
+    Returns
+    -------
+    dict or None
+        Dictionary of loaded parameters, or None if cache doesn't exist
+    """
+    params = {}
+    metadata_file = get_cache_metadata_filename(db_name)
+    
+    # Check if metadata exists
+    if not os.path.exists(metadata_file):
+        return None
+    
+    # Load and verify metadata
+    with open(metadata_file, 'r') as f:
+        metadata = json.load(f)
+    
+    if metadata.get('N') != N:
+        print(f"Cache N={metadata.get('N')} != current N={N}. Recalculating...")
+        return None
+    
+    # Try to load each parameter
+    for param_name in param_names:
+        filepath = get_cache_filename(db_name, param_name)
+        if not os.path.exists(filepath):
+            print(f"Cache file missing for {param_name}. Recalculating all parameters...")
+            return None
+        
+        data = np.load(filepath)
+        # Convert single-element array back to scalar if needed
+        if data.size == 1 and not isinstance(data, np.ndarray) or (isinstance(data, np.ndarray) and data.shape == (1,)):
+            params[param_name] = float(data.flat[0])
+        else:
+            params[param_name] = data
+    
+    print(f"Loaded {len(params)} parameters from cache ({db_name})")
+    return params
 
 def division_by_zero(num,den):
     if len(num)==len(den):
@@ -64,6 +160,215 @@ def create_ordered_bounds(variables, bound_dict):
     bounds = np.array([lower_bounds, upper_bounds])
     
     return bounds
+
+
+def _compute_expensive_params(alphaCj0_nE, target_ni_j_nE, target_etaCj_nE, 
+                               pCjCj_nE, pCj0_nE, R_nE, N_nE):
+    """
+    Compute expensive calibration parameters (betaCj, etaCj, A_Cj, etc.).
+    This function is separated for caching purposes.
+    """
+    
+    #########################
+    #### finding betaCj #####
+    #########################
+    
+    def eqni_j(var,alphaCj,N):
+        ni_j=var[:N]
+        betaCj=var[N:]
+        thetaCj =  1 - betaCj
+        term1 = thetaCj * (2 * alphaCj - 1)
+        term2 = - alphaCj * (np.sum(alphaCj * thetaCj))
+        zero = -1 + ni_j / (term1 + term2)
+        return zero
+    
+    constraint_with_params = partial(eqni_j, alphaCj=alphaCj0_nE, N=N_nE)
+    
+    ni_j_constraint = scipy.optimize.NonlinearConstraint(
+        fun=constraint_with_params,
+        lb=-1e-14,  
+        ub=1e-14
+    )
+
+    
+    def eq_difference(alphaCj0, el,target_el):
+        result = np.sqrt(alphaCj0)*(el-target_el)
+        return result
+    
+    def systemNi(var, par):
+        d = {**var, **par}
+        return eq_difference(d["alphaCj0"], d["ni_j"],d["target_ni_j"])
+    
+    
+    variables = { "betaCj": np.array([float(-0.5)]*N_nE),
+                 "ni_j":target_ni_j_nE*0.99}
+    
+    parameters={'target_ni_j':target_ni_j_nE,
+                'alphaCj0':alphaCj0_nE
+                }
+    
+    #beta must be either between 0 and 1 or less than 0 for every j
+    bound_dict = {
+        "betaCj": [-np.inf, -0.001],
+        "ni_j": [-np.inf, np.inf],
+    }
+    
+    bounds = create_ordered_bounds(variables, bound_dict)
+    
+    solNi_constrained = dict_minimize(systemNi, variables , parameters, N_nE, bounds, constraint=ni_j_constraint )
+    
+    systemNi(solNi_constrained.dvar, parameters)
+    
+    computed_ni_j_nE=solNi_constrained.dvar["ni_j"]
+    betaCj_nE=solNi_constrained.dvar["betaCj"]
+    
+    eqni_j(solNi_constrained.x,alphaCj0_nE,N_nE)
+    ni_calibration_error=(computed_ni_j_nE-target_ni_j_nE)/target_ni_j_nE
+
+    #########################
+    #### finding gammaCj #####
+    #########################
+    
+    #### CONSTRAINT 1 ######
+    
+    def eq_etaCj(gammaCj, alphaCj0, betaCj):
+        
+        # Compute thetaCj as 1 - betaCj
+        thetaCj = 1 - betaCj
+    
+        # Compute the summation terms
+        sum_alpha_gamma = np.sum(alphaCj0 * gammaCj)
+        sum_alpha_gamma_theta = np.sum(alphaCj0 * gammaCj * thetaCj)
+        sum_alpha_theta = np.sum(alphaCj0 * thetaCj)
+       # Compute the etaCj array using vectorized operations
+        etaCj = (1 / sum_alpha_gamma) * (gammaCj * (1 - thetaCj) + sum_alpha_gamma_theta) + thetaCj - sum_alpha_theta
+         
+        return etaCj
+    
+    
+    def eq_constraint_etaCj(var, alphaCj0, betaCj, N):
+        gammaCj=var[:N]
+        etaCj=var[N:]
+        computed_etaCj=eq_etaCj(gammaCj, alphaCj0, betaCj)
+        zero=1-computed_etaCj/etaCj
+        return zero
+        
+    eq_constraint_etaCj_with_params = partial(eq_constraint_etaCj, alphaCj0=alphaCj0_nE, betaCj=betaCj_nE, N=N_nE)
+
+    scipy_etaCj_constraint = scipy.optimize.NonlinearConstraint(
+        fun=eq_constraint_etaCj_with_params,
+        lb=-1e-12,
+        ub=+1e-12,
+        keep_feasible=False
+    )
+    
+
+    
+    ####### CONSTRAINT 2 ######
+    
+    def sign_eq(var, target_etaCj, N):
+        gammaCj=var[:N]
+        etaCj=var[N:]
+        
+        # Compute the value for the last N positions
+        positive = (etaCj - 1) * (target_etaCj - 1)
+        
+        return positive
+    
+
+    sign_constraint_with_params = partial(sign_eq, target_etaCj=target_etaCj_nE, N=N_nE)
+
+    scipy_sign_constraint = scipy.optimize.NonlinearConstraint(
+        fun=sign_constraint_with_params,
+        lb=0,  
+        ub=np.inf 
+    )
+    
+
+    
+    #### OPTIMIZATION EQAUATION ######
+    
+    def systemEta_j(var, par):
+        d = {**var, **par}
+        return eq_difference(d["alphaCj0"],d["etaCj"],d["target_etaCj"])
+
+    guess_gammaCj=np.array(4.+8.*1/np.array(range(1,7)))
+    guess_etaCj= eq_etaCj(guess_gammaCj, alphaCj0_nE, betaCj_nE)+1e-2
+    
+    variables = { "gammaCj": guess_gammaCj,
+                  'etaCj':guess_etaCj}
+    
+    parameters={'target_etaCj':target_etaCj_nE,
+                'betaCj':betaCj_nE,
+                'alphaCj0':alphaCj0_nE, 
+                }
+    
+    bounds_dict={ "gammaCj": [0,np.inf],
+                  'etaCj': [0, np.inf]}
+    
+    
+    bounds = create_ordered_bounds(variables, bounds_dict)
+
+
+    solEtaj_constrained = dict_minimize(systemEta_j, variables , parameters, N_nE, bounds, constraint=[scipy_etaCj_constraint, scipy_sign_constraint ] )
+    
+    computed_etaCj_nE=solEtaj_constrained.dvar["etaCj"]
+    gammaCj_nE=solEtaj_constrained.dvar["gammaCj"]
+    
+    
+    eq_etaCj(solEtaj_constrained.dvar["gammaCj"], alphaCj0_nE, betaCj_nE)-solEtaj_constrained.dvar["etaCj"]
+
+    
+    etai_calibration_error=(computed_etaCj_nE-target_etaCj_nE)/target_etaCj_nE
+    
+    ##################################
+    ########## finding A_Cj ##########
+    ##################################
+    
+    u_C=1
+    
+    def eq_A_Cj(pCjCj,A_Cj,betaCj,u_C,gammaCj,pCj,R0):
+        Z_j = A_Cj * betaCj * u_C ** (gammaCj * betaCj) * (pCj / R0) ** betaCj
+        zero=1-pCjCj/(R0*Z_j/sum(Z_j))
+        return zero
+    
+    
+    def systemA_C(var, par):
+        d = {**var, **par}
+        return eq_A_Cj(d["pCjCj"],d["A_Cj"],d["betaCj"],d["u_C"],d["gammaCj"],d["pCj"],d["R0"])
+    
+    
+    variables = { 'A_Cj': np.array([0.3]*N_nE)}
+
+    R_nE_local = R_nE  # Get from closure
+    parameters={'pCjCj':pCjCj_nE,
+                'betaCj':betaCj_nE, 
+                'u_C':u_C,
+                "gammaCj":gammaCj_nE,
+                "pCj":pCj0_nE,
+                "R0":R_nE_local
+                }
+    
+    bounds_dict= { 'A_Cj': [0,np.inf],
+               }
+    
+    bounds= create_ordered_bounds(variables, bounds_dict)
+    
+    solA_Cj = dict_least_squares(systemA_C, variables , parameters, bounds, N, check=False,verb=0)
+    
+    A_Cj_nE=solA_Cj.dvar["A_Cj"]
+    
+    normalisation_factor= sum(A_Cj_nE * u_C ** (gammaCj_nE * betaCj_nE) * (pCj0_nE / R_nE_local) ** betaCj_nE)
+    
+    return {
+        'betaCj_nE': betaCj_nE,
+        'computed_ni_j_nE': computed_ni_j_nE,
+        'computed_etaCj_nE': computed_etaCj_nE,
+        'gammaCj_nE': gammaCj_nE,
+        'u_C': u_C,
+        'A_Cj_nE': A_Cj_nE,
+        'normalisation_factor': normalisation_factor
+    }
 
 
 class calibrationVariables:
@@ -298,242 +603,49 @@ class calibrationVariables:
         N_nE=N-1
         
         #########################
-        #### finding betaCj #####
+        #### LOAD FROM CACHE OR COMPUTE EXPENSIVE PARAMETERS ####
         #########################
         
-        def eqni_j(var,alphaCj,N):
-            ni_j=var[:N]
-            betaCj=var[N:]
-            thetaCj =  1 - betaCj
-            term1 = thetaCj * (2 * alphaCj - 1)
-            term2 = - alphaCj * (np.sum(alphaCj * thetaCj))
-            zero = -1 + ni_j / (term1 + term2)
-            return zero
+        # Database identifier for cache files
+        db_name = "GTAP"
+        expensive_params_names = ['betaCj_nE', 'computed_ni_j_nE', 'computed_etaCj_nE', 
+                                   'gammaCj_nE', 'u_C', 'A_Cj_nE', 'normalisation_factor']
         
-        constraint_with_params = partial(eqni_j, alphaCj=self.alphaCj0_nE, N=N_nE)
+        cached_params = load_expensive_params(db_name, expensive_params_names)
         
-        ni_j_constraint = scipy.optimize.NonlinearConstraint(
-            fun=constraint_with_params,
-            lb=-1e-14,  
-            ub=1e-14
-        )
-
+        if cached_params is not None:
+            # Load from cache
+            self.betaCj_nE = cached_params['betaCj_nE']
+            self.computed_ni_j_nE = cached_params['computed_ni_j_nE']
+            self.computed_etaCj_nE = cached_params['computed_etaCj_nE']
+            self.gammaCj_nE = cached_params['gammaCj_nE']
+            self.u_C = cached_params['u_C']
+            self.A_Cj_nE = cached_params['A_Cj_nE']
+            self.normalisation_factor = cached_params['normalisation_factor']
+        else:
+            # Compute expensive parameters
+            computed_params = _compute_expensive_params(
+                self.alphaCj0_nE, self.target_ni_j_nE, self.target_etaCj_nE,
+                self.pCjCj_nE, self.pCj0_nE, self.R_nE, N_nE
+            )
+            
+            # Assign to self
+            self.betaCj_nE = computed_params['betaCj_nE']
+            self.computed_ni_j_nE = computed_params['computed_ni_j_nE']
+            self.computed_etaCj_nE = computed_params['computed_etaCj_nE']
+            self.gammaCj_nE = computed_params['gammaCj_nE']
+            self.u_C = computed_params['u_C']
+            self.A_Cj_nE = computed_params['A_Cj_nE']
+            self.normalisation_factor = computed_params['normalisation_factor']
+            
+            # Save to cache
+            save_expensive_params(db_name, computed_params)
         
-        def eq_difference(alphaCj0, el,target_el):
-            result = np.sqrt(alphaCj0)*(el-target_el)
-            return result
-        
-        def systemNi(var, par):
-            d = {**var, **par}
-            return eq_difference(d["alphaCj0"], d["ni_j"],d["target_ni_j"])
-        
-        
-        variables = { "betaCj": np.array([float(-0.5)]*N_nE),
-                     "ni_j":self.target_ni_j_nE*0.99}
-        
-        parameters={'target_ni_j':self.target_ni_j_nE,
-                    'alphaCj0':self.alphaCj0_nE
-                    }
-        
-        #beta must be either between 0 and 1 or less than 0 for every j
-        bound_dict = {
-            "betaCj": [-np.inf, -0.001],
-            "ni_j": [-np.inf, np.inf],
-        }
-        
-        bounds = create_ordered_bounds(variables, bound_dict)
-        
-        solNi_constrained = dict_minimize(systemNi, variables , parameters, N, bounds, constraint=ni_j_constraint )
-        
-        systemNi(solNi_constrained.dvar, parameters)
-        
-        self.computed_ni_j_nE=solNi_constrained.dvar["ni_j"]
-        self.betaCj_nE=solNi_constrained.dvar["betaCj"]
-        
-        eqni_j(solNi_constrained.x,self.alphaCj0_nE,N_nE)
-        ni_calibration_error=(self.computed_ni_j_nE-self.target_ni_j_nE)/self.target_ni_j_nE
-
         #########################
-        #### finding gammaCj #####
+        #### ENERGY COUPLING ####
         #########################
         
-        
-        #### CONSTRAINT 1 ######
-        
-        def eq_etaCj(gammaCj, alphaCj0, betaCj):
-            
-            # Compute thetaCj as 1 - betaCj
-            thetaCj = 1 - betaCj
-        
-            # Compute the summation terms
-            sum_alpha_gamma = np.sum(alphaCj0 * gammaCj)
-            sum_alpha_gamma_theta = np.sum(alphaCj0 * gammaCj * thetaCj)
-            sum_alpha_theta = np.sum(alphaCj0 * thetaCj)
-           # Compute the etaCj array using vectorized operations
-            etaCj = (1 / sum_alpha_gamma) * (gammaCj * (1 - thetaCj) + sum_alpha_gamma_theta) + thetaCj - sum_alpha_theta
-             
-            return etaCj
-        
-        
-        def eq_constraint_etaCj(var, alphaCj0, betaCj, N):
-            gammaCj=var[:N]
-            etaCj=var[N:]
-            computed_etaCj=eq_etaCj(gammaCj, alphaCj0, betaCj)
-            zero=1-computed_etaCj/etaCj
-            return zero
-            
-        eq_constraint_etaCj_with_params = partial(eq_constraint_etaCj, alphaCj0=self.alphaCj0_nE, betaCj=self.betaCj_nE, N=N_nE)
-
-        scipy_etaCj_constraint = scipy.optimize.NonlinearConstraint(
-            fun=eq_constraint_etaCj_with_params,
-            lb=-1e-12,
-            ub=+1e-12,
-            keep_feasible=False
-        )
-        
-
-        
-        ####### CONSTRAINT 2 ######
-        
-        def sign_eq(var, target_etaCj, N):
-            gammaCj=var[:N]
-            etaCj=var[N:]
-            
-            # Compute the value for the last N positions
-            positive = (etaCj - 1) * (target_etaCj - 1)
-            
-            return positive
-        
-
-        sign_constraint_with_params = partial(sign_eq, target_etaCj=self.target_etaCj_nE, N=N_nE)
-
-        scipy_sign_constraint = scipy.optimize.NonlinearConstraint(
-            fun=sign_constraint_with_params,
-            lb=0,  
-            ub=np.inf 
-        )
-        
-        
-                ######  CONSTRAINT 3  #######
-        
-        # def Engel_eq(var, alphaCj0,N):
-        #     gammaCj=var[:N]
-        #     etaCj=var[N:]
-            
-        #     one = sum(alphaCj0*etaCj)
-        #     return one
-        
-        # Engel_constraint_with_params = partial(Engel_eq, alphaCj0=self.alphaCj0,N=N)
-        
-        # scipy_Engel_constraint = scipy.optimize.NonlinearConstraint(
-        #     fun=Engel_constraint_with_params,
-        #     lb=1-1e-8,  
-        #     ub=1+1e-8,
-        #     keep_feasible=False
-        # )
-        
-
-        
-        # def eq_ratio(el,target_el):
-        #     result = 1-el/target_el
-        #     return result
-        
-        
-        
-        #### OPTIMIZATION EQAUATION ######
-        
-        def systemEta_j(var, par):
-            d = {**var, **par}
-            return eq_difference(d["alphaCj0"],d["etaCj"],d["target_etaCj"])
-
-        guess_gammaCj=np.array(4.+8.*1/np.array(range(1,7)))
-        guess_etaCj= eq_etaCj(guess_gammaCj, self.alphaCj0_nE, self.betaCj_nE)+1e-2
-        
-        variables = { "gammaCj": guess_gammaCj,
-                      'etaCj':guess_etaCj}
-        
-        parameters={'target_etaCj':self.target_etaCj_nE,
-                    'betaCj':self.betaCj_nE,
-                    'alphaCj0':self.alphaCj0_nE, 
-                    }
-        
-        bounds_dict={ "gammaCj": [0,np.inf],
-                      'etaCj': [0, np.inf]}
-        
-        
-        bounds = create_ordered_bounds(variables, bounds_dict)
-
-
-        solEtaj_constrained = dict_minimize(systemEta_j, variables , parameters, N_nE, bounds, constraint=[scipy_etaCj_constraint, scipy_sign_constraint ] )
-        
-        self.computed_etaCj_nE=solEtaj_constrained.dvar["etaCj"]
-        self.gammaCj_nE=solEtaj_constrained.dvar["gammaCj"]
-        
-        
-        eq_etaCj(solEtaj_constrained.dvar["gammaCj"], self.alphaCj0_nE, self.betaCj_nE)-solEtaj_constrained.dvar["etaCj"]
-
-        #Engel_constraint_with_params(solEtaj_constrained.x)
-        
-        
-        
-        etai_calibration_error=(self.computed_etaCj_nE-self.target_etaCj_nE)/self.target_etaCj_nE
-        
-        ##################################
-        ########## finding A_Cj ##########
-        ##################################
-        
-        self.u_C=1
-        
-        def eq_A_Cj(pCjCj,A_Cj,betaCj,u_C,gammaCj,pCj,R0):
-            Z_j = A_Cj * betaCj * u_C ** (gammaCj * betaCj) * (pCj / R0) ** betaCj
-            zero=1-pCjCj/(R0*Z_j/sum(Z_j))
-            return zero
-        
-        
-        def systemA_C(var, par):
-            d = {**var, **par}
-            return eq_A_Cj(d["pCjCj"],d["A_Cj"],d["betaCj"],d["u_C"],d["gammaCj"],d["pCj"],d["R0"])
-        
-        
-        variables = { 'A_Cj': np.array([0.3]*N_nE)}
-
-        
-        parameters={'pCjCj':self.pCjCj_nE,
-                    'betaCj':self.betaCj_nE, 
-                    'u_C':self.u_C,
-                    "gammaCj":self.gammaCj_nE,
-                    "pCj":self.pCj0_nE,
-                    "R0":self.R_nE
-                    }
-        
-        bounds_dict= { 'A_Cj': [0,np.inf],
-                   }
-        
-        bounds= create_ordered_bounds(variables, bounds_dict)
-        
-        solA_Cj = dict_least_squares(systemA_C, variables , parameters, bounds, N, check=False,verb=0)
-        
-        self.A_Cj_nE=solA_Cj.dvar["A_Cj"]
-        
-        self.normalisation_factor= sum(self.A_Cj_nE * self.u_C ** (self.gammaCj_nE * self.betaCj_nE) * (self.pCj0_nE / self.R_nE) ** self.betaCj_nE)
-        
-        #eq_A_Cj(imp.pCjCj,self.A_Cj,self.betaCj,self.u_C,self.gammaCj,self.pCj0,self.R0)
-        
-        
-        
-        
-        
-        
-        
-
-# _____ _   _ _____ ____   ______   __   ____ ___  _   _ ____  _     ___ _   _  ____ 
-#| ____| \ | | ____|  _ \ / ___\ \ / /  / ___/ _ \| | | |  _ \| |   |_ _| \ | |/ ___|
-#|  _| |  \| |  _| | |_) | |  _ \ V /  | |  | | | | | | | |_) | |    | ||  \| | |  _ 
-#| |___| |\  | |___|  _ <| |_| | | |   | |__| |_| | |_| |  __/| |___ | || |\  | |_| |
-#|_____|_| \_|_____|_| \_\\____| |_|    \____\___/ \___/|_|   |_____|___|_| \_|\____|
-#                                                                                    
-        
-        #i don't have to determine pC_E because it is endogenously determined. 
+        #i don't have to determine pC_E because it is endogenously determined.
         sE_P = float(shares.loc["sE_P"])#from excel
         sE_T = float(shares.loc["sE_T"])
         sE_B = float(shares.loc["sE_B"])
