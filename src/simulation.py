@@ -147,6 +147,9 @@ def system(var, par):
 
     d=joint_dict(par,var)
     non_zero_index_pE_Pj=np.array(np.where(d["pE_Pj"] != 0)).flatten()
+    non_zero_index_aYE_Bj=np.array(np.where(d["aYE_Bj"] != 0)).flatten()
+    non_zero_index_aYE_Pj=np.array(np.where(d["aYE_Pj"] != 0)).flatten()
+    non_zero_index_aYE_Tj=np.array(np.where(d["aYE_Tj"] != 0)).flatten()
     index_wo_E=np.delete(np.array(range(N)), E)
     index_E=np.array([E])
     index_wo_E_SE=np.delete(index_wo_E, SE)
@@ -159,7 +162,13 @@ def system(var, par):
         ###
         "eqYij":eq.eqYij(Yij=d['Yij'], aYij=d['aYij'],Yj=d['Yj'], _index=non_zero_index_Yij),
         ###
-        "eqKL":eq.eqKL(KLj=d['KLj'],aKLj=d['aKLj'],Yj=d['Yj']),
+        "eqLeontiefVolumes_KL":eq.eqLeontiefVolumes(quantity=d['KLj'],technical_coeff=d['aKLj'],output=d['Yj']),
+        ###
+        "eqLeontiefVolumes_YE_B":eq.eqLeontiefVolumes(quantity=d['YE_Bj'],technical_coeff=d['aYE_Bj'],output=d['Yj'],_index=non_zero_index_aYE_Bj),
+        ###
+        "eqLeontiefVolumes_YE_P":eq.eqLeontiefVolumes(quantity=d['YE_Pj'],technical_coeff=d['aYE_Pj'],output=d['Yj'],_index=non_zero_index_aYE_Pj),
+        ###
+        "eqLeontiefVolumes_YE_T":eq.eqLeontiefVolumes(quantity=d['YE_Tj'],technical_coeff=d['aYE_Tj'],output=d['Yj'],_index=non_zero_index_aYE_Tj),
         ### da verificare uguaglianza
         "eqpYj_E":eq.eqpYj_E(pYj=d['pYj'], pCj=d['pCj'], aKLj=d['aKLj'], pKLj=d['pKLj'], aYij=d['aYij'], pY_Ej=d["pY_Ej"], tauYj=d['tauYj']),
         ###

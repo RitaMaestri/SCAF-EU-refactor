@@ -589,6 +589,16 @@ class calibrationVariables:
         self.Yij0[E,SE] =  cp(self.YE_Bj[SE]) +  cp(self.YE_Tj[SE])
         self.Yij0[E,T] =  cp(self.YE_Tj[T])
         self.Yij0[E,E] =  cp(self.YE_Ej[E]) + cp(self.YE_Tj[E])
+
+        #energy technical coefficients
+        self.aYE_Bj = cp(self.YE_Bj) / cp(self.Yj0)
+        self.aYE_Pj = cp(self.YE_Pj) / cp(self.Yj0)
+        self.aYE_Tj = cp(self.YE_Tj) / cp(self.Yj0)
+        
+        #non-zero indices for energy technical coefficients
+        self.non_zero_index_aYE_Bj = np.array(np.where(self.aYE_Bj != 0)).flatten()
+        self.non_zero_index_aYE_Pj = np.array(np.where(self.aYE_Pj != 0)).flatten()
+        self.non_zero_index_aYE_Tj = np.array(np.where(self.aYE_Tj != 0)).flatten()
         
         ############ ENERGY PRICES   #############
         

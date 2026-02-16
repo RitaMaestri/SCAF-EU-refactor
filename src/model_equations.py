@@ -65,10 +65,41 @@ def eqYij(Yij,aYij,Yj, _index=None):
 
 ###############################################################################################################
 
-def eqKL(KLj,aKLj,Yj):
-
-    zero=-1 + KLj / np.multiply(aKLj,Yj)
-
+def eqLeontiefVolumes(quantity, technical_coeff, output, _index=None):
+    """
+    Leontief-type equation for vectorial technical coefficients.
+    
+    Relates a quantity to a technical coefficient and output:
+    quantity = technical_coeff * output
+    
+    When technical_coeff = 0, enforces quantity = 0.
+    
+    Used for:
+    - KL: KLj = aKLj * Yj
+    - YE_B: YE_Bj = aYE_Bj * Yj (buildings energy)
+    - YE_P: YE_Pj = aYE_Pj * Yj (process energy)
+    - YE_T: YE_Tj = aYE_Tj * Yj (transport energy)
+    
+    Parameters
+    ----------
+    _index : np.ndarray, optional
+        Index array of elements to check. Only applies equation to non-zero elements.
+        If not provided, automatically handles zeros via np.where.
+    """
+    if isinstance(_index, np.ndarray):
+        # Apply Leontief equation only to non-zero elements indicated by _index
+        zero = -1 + quantity[_index] / np.multiply(technical_coeff[_index], output[_index])
+    else:
+        # Without explicit index, handle zeros automatically:
+        # - Where coeff != 0: apply Leontief equation
+        # - Where coeff == 0: enforce quantity == 0
+        non_zero = technical_coeff != 0
+        zero = np.where(
+            non_zero,
+            -1 + quantity / np.multiply(technical_coeff, output),
+            quantity  # Where coeff is 0, equation becomes: -1 + 0 = 0 (i.e., quantity = 0)
+        )
+    
     return zero
 
 ###############################################################################################################

@@ -359,6 +359,10 @@ class calibrationDict(endo_exo_indexes):
 
             'YE_Ej':Variable(self.full_exo(), cal.YE_Ej),
 
+            'aYE_Bj':Variable(self.full_exo(), cal.aYE_Bj),
+            'aYE_Pj':Variable(self.full_exo(), cal.aYE_Pj),
+            'aYE_Tj':Variable(self.full_exo(), cal.aYE_Tj),
+
             'aKLj0':Variable(self.full_exo(), cal.aKLj0),
             'aYij0':Variable(self.full_exo(), cal.aYij0),
             'pXj':Variable(self.idx_1D(exo_names = ["ENERGY","SERVICES"]), cal.pXj),
@@ -507,6 +511,9 @@ bounds={
     'lambda_nE':(0,np.inf),
     'pE_Ej':(0,np.inf),
     'YE_Ej':(0,np.inf),
+    'aYE_Bj':(0,np.inf),
+    'aYE_Pj':(0,np.inf),
+    'aYE_Tj':(0,np.inf),
     'lambda_KLM':(0,np.inf),
     'aKLj0':(0,np.inf),
     'aYij0':(0,np.inf),
