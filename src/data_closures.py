@@ -351,9 +351,9 @@ class calibrationDict(endo_exo_indexes):
             #'aYij':Variable(self.idx_2D(endo_names=[("PRIMARY","SECONDARY")]), cal.aYij),
             'delta':Variable(self.full_exo(), cal.delta),
 
-            'YE_Pj':Variable(self.full_exo(), cal.YE_Pj),
-            'YE_Tj':Variable(self.full_exo(), cal.YE_Tj),
-            'YE_Bj':Variable(self.full_exo(), cal.YE_Bj),
+            'YE_Pj':Variable(self.full_endo(), cal.YE_Pj),
+            'YE_Tj':Variable(self.full_endo(), cal.YE_Tj),
+            'YE_Bj':Variable(self.full_endo(), cal.YE_Bj),
             'C_EB':Variable(self.full_exo(), cal.C_EB),
             'C_ET':Variable(self.full_exo(), cal.C_ET),
 
