@@ -24,9 +24,7 @@ T = sectors.index("TRANSPORTATION")
 shares = pd.read_csv("/home/rita/Documents/Tesi/Code/REMIND_energy_coupling/data/shares.csv", index_col="variable")
 
 
-tau=imp.labor_taxes / (imp.pLLj - imp.labor_taxes)
-pL=1
-w=pL/(1+tau)
+
 
 # Cache directory for expensive calibration parameters
 CACHE_DIR = "calibration_cache"
@@ -73,6 +71,10 @@ def save_expensive_params(db_name, params_dict):
         json.dump(metadata, f, indent=2)
     
     print(f"Cached {len(params_dict)} parameters from {db_name}")
+
+
+
+
 
 def load_expensive_params(db_name, param_names):
     """
@@ -122,19 +124,7 @@ def load_expensive_params(db_name, param_names):
     print(f"Loaded {len(params)} parameters from cache ({db_name})")
     return params
 
-def division_by_zero(num,den):
-    if len(num)==len(den):
-        n=len(num)
-    else:
-        print("denominator and numerator have different len")
-        sys.exit()
-    result=np.zeros(n)
-    result[den!=0]=num[den!=0]/den[den!=0]
-    return result
 
-def compute_intermediate_prices(idx_E, pCj, p_CEj):
-        intermediate_prices=np.repeat( cp(pCj), len(pCj), axis=0 )
-        intermediate_prices_matrix = intermediate_prices.reshape(len(pCj), len(pCj))
 
 def create_ordered_bounds(variables, bound_dict):
     # Initialize lists for lower and upper bounds
@@ -160,6 +150,10 @@ def create_ordered_bounds(variables, bound_dict):
     bounds = np.array([lower_bounds, upper_bounds])
     
     return bounds
+
+
+
+
 
 
 def _compute_expensive_params(alphaCj0_nE, target_ni_j_nE, target_etaCj_nE, 
@@ -385,7 +379,6 @@ class calibrationVariables:
             self.pL0=sum(imp.pLLj)/L0
             self.Lj0 = imp.pLLj / cp(self.pL0)
         
-
         
         #prezzi
         
@@ -397,8 +390,6 @@ class calibrationVariables:
         self.pXj=np.array([float(1000)]*N)
         self.pMj0=cp(self.pXj0)
         self.pXj0=cp(self.pXj)
-        
-
         
         #taxes
         
@@ -644,7 +635,7 @@ class calibrationVariables:
         #########################
         #### ENERGY COUPLING ####
         #########################
-        
+
         #i don't have to determine pC_E because it is endogenously determined.
         sE_P = float(shares.loc["sE_P"])#from excel
         sE_T = float(shares.loc["sE_T"])
@@ -668,7 +659,7 @@ class calibrationVariables:
         self.YE_Pj[ST]=float(shares.loc["YE_Pj_ST"])*cp(self.E_P)
         self.YE_Pj[M]=float(shares.loc["YE_Pj_M"])*cp(self.E_P)
 
-        
+
         #ENERGY FOR TRANSPORT
         self.YE_Tj = np.array([float(0)]*N)        
         self.s_LDV = float(shares.loc["s_LDV"])
@@ -944,24 +935,100 @@ def create_calibration_csv(calibration_obj, output_file="data/calibration_2020.c
                 row[year] = 0
         rows.append(row)
     
-    # Create rows for Price data (left blank as requested)
+    # Create rows for Price data
+    # Mapping:
+    # - pE_B: all sectors, B
+    # - pE_TT: TRANSPORTATION, T
+    # - pE_TnT: all sectors except TRANSPORTATION, T
+    # - pE_Pj: all sectors (by position), P
+    # - pE_Ej: all sectors, PE
+    
     for sector_name in all_sector_names:
-        for energy_use in ["PE", "P", "T", "B"]:
-            row = {
-                "Model": model,
-                "Scenario": scenario,
-                "Region": region,
-                "Variable": "Price",
-                "Energy consumers": sector_name,
-                "Energy uses": energy_use,
-                "Unit": "EJ"
-            }
-            
-            # Add all years as 0 (prices are blank)
-            for year in all_years:
+        
+        # Find the sector index
+        sector_idx = None
+        for idx, name in index_to_sector.items():
+            if name == sector_name:
+                sector_idx = idx
+                break
+        
+        # PE (Primary Energy) - pE_Ej
+        row = {
+            "Model": model,
+            "Scenario": scenario,
+            "Region": region,
+            "Variable": "Price",
+            "Energy consumers": sector_name,
+            "Energy uses": "PE",
+            "Unit": "EJ"
+        }
+        for year in all_years:
+            if year == "2020":
+                if sector_idx is not None:
+                    row[year] = calibration_obj.pE_Ej[sector_idx]
+                else:
+                    row[year] = 0
+            else:
                 row[year] = 0
-            
-            rows.append(row)
+        rows.append(row)
+        
+        # P (Process Energy) - pE_Pj
+        row = {
+            "Model": model,
+            "Scenario": scenario,
+            "Region": region,
+            "Variable": "Price",
+            "Energy consumers": sector_name,
+            "Energy uses": "P",
+            "Unit": "EJ"
+        }
+        for year in all_years:
+            if year == "2020":
+                if sector_idx is not None:
+                    row[year] = calibration_obj.pE_Pj[sector_idx]
+                else:
+                    row[year] = 0
+            else:
+                row[year] = 0
+        rows.append(row)
+        
+        # T (Transport Energy) - pE_TT or pE_TnT depending on sector
+        row = {
+            "Model": model,
+            "Scenario": scenario,
+            "Region": region,
+            "Variable": "Price",
+            "Energy consumers": sector_name,
+            "Energy uses": "T",
+            "Unit": "EJ"
+        }
+        for year in all_years:
+            if year == "2020":
+                if sector_name == "TRANSPORTATION":
+                    row[year] = calibration_obj.pE_TT
+                else:
+                    # All other sectors (including HOUSEHOLDS) get pE_TnT
+                    row[year] = calibration_obj.pE_TnT
+            else:
+                row[year] = 0
+        rows.append(row)
+        
+        # B (Buildings Energy) - pE_B (same for all sectors)
+        row = {
+            "Model": model,
+            "Scenario": scenario,
+            "Region": region,
+            "Variable": "Price",
+            "Energy consumers": sector_name,
+            "Energy uses": "B",
+            "Unit": "EJ"
+        }
+        for year in all_years:
+            if year == "2020":
+                row[year] = calibration_obj.pE_B
+            else:
+                row[year] = 0
+        rows.append(row)
     
     # Convert to DataFrame and save
     output_df = pd.DataFrame(rows)

@@ -164,12 +164,8 @@ def system(var, par):
         ###
         "eqLeontiefVolumes_KL":eq.eqLeontiefVolumes(quantity=d['KLj'],technical_coeff=d['aKLj'],output=d['Yj']),
         ###
-        "eqLeontiefVolumes_YE_B":eq.eqLeontiefVolumes(quantity=d['YE_Bj'],technical_coeff=d['aYE_Bj'],output=d['Yj'],_index=non_zero_index_aYE_Bj),
-        ###
-        "eqLeontiefVolumes_YE_P":eq.eqLeontiefVolumes(quantity=d['YE_Pj'],technical_coeff=d['aYE_Pj'],output=d['Yj'],_index=non_zero_index_aYE_Pj),
-        ###
-        "eqLeontiefVolumes_YE_T":eq.eqLeontiefVolumes(quantity=d['YE_Tj'],technical_coeff=d['aYE_Tj'],output=d['Yj'],_index=non_zero_index_aYE_Tj),
         ### da verificare uguaglianza
+        ### 
         "eqpYj_E":eq.eqpYj_E(pYj=d['pYj'], pCj=d['pCj'], aKLj=d['aKLj'], pKLj=d['pKLj'], aYij=d['aYij'], pY_Ej=d["pY_Ej"], tauYj=d['tauYj']),
         ###
         "eqCESquantityX":eq.eqCESquantity(Xj=d['Xj'], Zj=d['Yj'] , alphaXj=d['alphaXj'], alphaYj=d['alphaDj'], pXj=d['pXj'], pYj=d['pDj'], sigmaj=d['sigmaXj'], thetaj=d['thetaj'], _index=np.intersect1d(index_wo_E,non_zero_index_X)),
@@ -211,6 +207,9 @@ def system(var, par):
         "eqpI":eq.eqpI(pI=d['pI'],pCj=d['pCj'],alphaIj=d['alphaIj']),
         ###
         "eqMultRi":eq.eqMultiplication(result=d['Ri'],mult1=d['pI'],mult2=d['I']),
+        ###
+
+
         #energy coupling
         ###
         "eqC_E":eq.eqsum_scalar(d['Cj'][E], d['C_EB'],d['C_ET']),
@@ -222,20 +221,6 @@ def system(var, par):
                                YE_Pj=d['YE_Pj'], pE_TnT=d['pE_TnT'], pE_TT=d['pE_TT'], C_ET=d['C_ET'], 
                                YE_Tj=d['YE_Tj'], pE_Ej=d['pE_Ej'], YE_Ej=d['YE_Ej']),
         ###
-        "eqCj_CDE":eq.eqC_CDE(A_Cj=d["A_Cj_nE"],betaCj=d["betaCj_nE"],u_C=d["u_C"],gammaCj=d["gammaCj_nE"],pCj=np.delete(d["pCj"], E),Cj=np.delete(d["Cj"], E),R=d["R_nE"]),
-        ###
-        "eq_u_CDE":eq.eq_u_CDE(norm_factor=d["normalisation_factor"], A_Cj=d["A_Cj_nE"],betaCj=d["betaCj_nE"],u_C=d["u_C"],gammaCj=d["gammaCj_nE"],pCj=np.delete(d["pCj"], E),Cj=np.delete(d["Cj"], E),R=d["R_nE"]),
-        ###
-        "eq_R_E":eq.eq_R_E(R_E=d["R_E"], pC_E=d["pCj"][E], C_E=d["Cj"][E]),
-        ###
-        "eq_RH_nE":eq.eq_RH_nE(R=d["R"], R_E=d["R_E"], R_nE=d["R_nE"]),
-        ###
-        "eqpCE":eq.eqsum_pESE(p_SE=d['pSj'][E], tauSE=d['tauSj'][E], S_E=d['Sj'][E], Y_Ej=d['Yij'][E,:], C_E=d['Cj'][E], pY_Ej=d['pY_Ej'], p_CE=d['pCj'][E]),#
-        ###
-        "eqaKLj0":eq.eqaKLj0(aKLj0=d['aKLj0'], aKLj=d['aKLj'], lambda_KLM=d['lambda_KLM']),
-        ###
-        'eqaYij0':eq.eqaYij0(aYij0=d['aYij0'], aYij=d['aYij'], lambda_KLM=d['lambda_KLM']),#
-        ###
         "eqrhoB": eq.eqrho(pEi=d['pE_B'], p_EE=d['pE_Ej'][E], rho=d["rhoB"]), #
         ###
         "eqrhoTT": eq.eqrho(pEi=d['pE_TT'], p_EE=d['pE_Ej'][E], rho=d["rhoTT"]), #
@@ -244,8 +229,32 @@ def system(var, par):
         ###
         "eqrhoPj": eq.eqrho(pEi=d['pE_Pj'], p_EE=d['pE_Ej'][E], rho=d["rhoPj"],_index=non_zero_index_pE_Pj ), #
         ###
+        "eqLeontiefVolumes_YE_B":eq.eqLeontiefVolumes(quantity=d['YE_Bj'],technical_coeff=d['aYE_Bj'],output=d['Yj'],_index=non_zero_index_aYE_Bj),
+        ###
+        "eqLeontiefVolumes_YE_P":eq.eqLeontiefVolumes(quantity=d['YE_Pj'],technical_coeff=d['aYE_Pj'],output=d['Yj'],_index=non_zero_index_aYE_Pj),
+        ###
+        "eqLeontiefVolumes_YE_T":eq.eqLeontiefVolumes(quantity=d['YE_Tj'],technical_coeff=d['aYE_Tj'],output=d['Yj'],_index=non_zero_index_aYE_Tj),
+
+
+        ### CDES
+        "eqCj_CDE":eq.eqC_CDE(A_Cj=d["A_Cj_nE"],betaCj=d["betaCj_nE"],u_C=d["u_C"],gammaCj=d["gammaCj_nE"],pCj=np.delete(d["pCj"], E),Cj=np.delete(d["Cj"], E),R=d["R_nE"]),
+        ###
+        "eq_u_CDE":eq.eq_u_CDE(norm_factor=d["normalisation_factor"], A_Cj=d["A_Cj_nE"],betaCj=d["betaCj_nE"],u_C=d["u_C"],gammaCj=d["gammaCj_nE"],pCj=np.delete(d["pCj"], E),Cj=np.delete(d["Cj"], E),R=d["R_nE"]),
+        ###
+        "eq_R_E":eq.eq_R_E(R_E=d["R_E"], pC_E=d["pCj"][E], C_E=d["Cj"][E]),
+        ###
+        "eq_RH_nE":eq.eq_RH_nE(R=d["R"], R_E=d["R_E"], R_nE=d["R_nE"]),
+        
+        ###
+        "eqpCE":eq.eqsum_pESE(p_SE=d['pSj'][E], tauSE=d['tauSj'][E], S_E=d['Sj'][E], Y_Ej=d['Yij'][E,:], C_E=d['Cj'][E], pY_Ej=d['pY_Ej'], p_CE=d['pCj'][E]),#
+        ###
+        "eqaKLj0":eq.eqaKLj0(aKLj0=d['aKLj0'], aKLj=d['aKLj'], lambda_KLM=d['lambda_KLM']),
+        ###
+        'eqaYij0':eq.eqaYij0(aYij0=d['aYij0'], aYij=d['aYij'], lambda_KLM=d['lambda_KLM']),#
+        ###
         "eqWorldPrices": eq.eqSameRatio(numerator1=d['pXj'][index_wo_E_SE],numerator2=d['pYj'][index_wo_E_SE],denominator1=d['pXj'][SE],denominator2=d['pYj'][SE]),
         
+
         #"eqAlphaX":eq.eqsum_arr(d['alphaXj'][[ST,CH]], d['alphaXj0'][[ST,CH]], d['lambda_XMj'][[ST,CH]]  ),
         
         #"eqAlphaD":eq.eqsum_arr(d['alphaDj'][[ST,CH]], d['alphaDj0'][[ST,CH]], -d['lambda_XMj'][[ST,CH]]  ),
