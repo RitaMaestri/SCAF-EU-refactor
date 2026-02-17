@@ -1030,6 +1030,81 @@ def create_calibration_csv(calibration_obj, output_file="data/calibration_2020.c
                 row[year] = 0
         rows.append(row)
     
+    # Create rows for Rho data
+    # Mapping:
+    # - rhoB: all sectors, B
+    # - rhoTT: TRANSPORTATION, T
+    # - rhoTnT: all sectors except TRANSPORTATION, T
+    # - rhoPj: all sectors (by position), P
+    # Note: No PE (Primary Energy) rows for Rho
+    
+    for sector_name in all_sector_names:
+        
+        # Find the sector index
+        sector_idx = None
+        for idx, name in index_to_sector.items():
+            if name == sector_name:
+                sector_idx = idx
+                break
+        
+        # P (Process Energy) - rhoPj
+        row = {
+            "Model": model,
+            "Scenario": scenario,
+            "Region": region,
+            "Variable": "Rho",
+            "Energy consumers": sector_name,
+            "Energy uses": "P",
+            "Unit": ""
+        }
+        for year in all_years:
+            if year == "2020":
+                if sector_idx is not None:
+                    row[year] = calibration_obj.rhoPj[sector_idx]
+                else:
+                    row[year] = 0
+            else:
+                row[year] = 0
+        rows.append(row)
+        
+        # T (Transport Energy) - rhoTT or rhoTnT depending on sector
+        row = {
+            "Model": model,
+            "Scenario": scenario,
+            "Region": region,
+            "Variable": "Rho",
+            "Energy consumers": sector_name,
+            "Energy uses": "T",
+            "Unit": ""
+        }
+        for year in all_years:
+            if year == "2020":
+                if sector_name == "TRANSPORTATION":
+                    row[year] = calibration_obj.rhoTT
+                else:
+                    # All other sectors (including HOUSEHOLDS) get rhoTnT
+                    row[year] = calibration_obj.rhoTnT
+            else:
+                row[year] = 0
+        rows.append(row)
+        
+        # B (Buildings Energy) - rhoB (same for all sectors)
+        row = {
+            "Model": model,
+            "Scenario": scenario,
+            "Region": region,
+            "Variable": "Rho",
+            "Energy consumers": sector_name,
+            "Energy uses": "B",
+            "Unit": ""
+        }
+        for year in all_years:
+            if year == "2020":
+                row[year] = calibration_obj.rhoB
+            else:
+                row[year] = 0
+        rows.append(row)
+    
     # Convert to DataFrame and save
     output_df = pd.DataFrame(rows)
     
