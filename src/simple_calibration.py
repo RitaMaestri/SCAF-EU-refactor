@@ -435,13 +435,16 @@ class calibrationVariables:
         self.Ri0= sum(imp.pCjIj)
         self.Rg0= sum(imp.pCjGj)
         self.l0=sum(cp(self.Lj0)/ cp(self.KLj0))
+        self.GDP0= sum(imp.pCjCj+imp.pCjGj+imp.pCjIj+imp.pXjXj-imp.pMjMj)
+        
+
+        ### aternative closures
         self.uL0 = 0.105
         self.sigmaw= 0.
         self.uK0 = 0.105
         self.sigmapK= -0.1
-        self.GDP0= sum(imp.pCjCj+imp.pCjGj+imp.pCjIj+imp.pXjXj-imp.pMjMj)
         
-        # parametri
+        # elasticities 
         self.sigmaXj=imp.sigmaXj.astype(float)
         self.sigmaSj=imp.sigmaSj.astype(float)
         self.sigmaKLj=imp.sigmaKLj.astype(float)
@@ -697,7 +700,8 @@ class calibrationVariables:
         self.aYE_Bj = cp(self.YE_Bj) / cp(self.Yj0)
         self.aYE_Pj = cp(self.YE_Pj) / cp(self.Yj0)
         self.aYE_Tj = cp(self.YE_Tj) / cp(self.Yj0)
-        
+        self.aYE_Ej = cp(self.YE_Ej) / cp(self.Yj0)
+
         #non-zero indices for energy technical coefficients
         self.non_zero_index_aYE_Bj = np.array(np.where(self.aYE_Bj != 0)).flatten()
         self.non_zero_index_aYE_Pj = np.array(np.where(self.aYE_Pj != 0)).flatten()
@@ -1101,6 +1105,109 @@ def create_calibration_csv(calibration_obj, output_file="data/calibration_2020.c
         for year in all_years:
             if year == "2020":
                 row[year] = calibration_obj.rhoB
+            else:
+                row[year] = 0
+        rows.append(row)
+    
+    # Create rows for Technical Coefficients (a)
+    # Mapping:
+    # - aYE_Bj: all sectors, B
+    # - aYE_Pj: all sectors, P
+    # - aYE_Tj: all sectors, T
+    # - aYE_Ej: all sectors, only non-zero for ENERGY; E
+    # Note: No PE rows for technical coefficients
+    
+    # Calculate aYE_Ej if not already in calibration_obj
+    aYE_Ej = calibration_obj.YE_Ej / calibration_obj.Yj0
+    
+    for sector_name in all_sector_names:
+        # Skip HOUSEHOLDS for technical coefficients
+        if sector_name == "HOUSEHOLDS":
+            continue
+        
+        # Find the sector index
+        sector_idx = None
+        for idx, name in index_to_sector.items():
+            if name == sector_name:
+                sector_idx = idx
+                break
+        
+        # P (Process Energy) - aYE_Pj
+        row = {
+            "Model": model,
+            "Scenario": scenario,
+            "Region": region,
+            "Variable": "Technical_coefficient",
+            "Energy consumers": sector_name,
+            "Energy uses": "P",
+            "Unit": ""
+        }
+        for year in all_years:
+            if year == "2020":
+                if sector_idx is not None:
+                    row[year] = calibration_obj.aYE_Pj[sector_idx]
+                else:
+                    row[year] = 0
+            else:
+                row[year] = 0
+        rows.append(row)
+        
+        # T (Transport Energy) - aYE_Tj
+        row = {
+            "Model": model,
+            "Scenario": scenario,
+            "Region": region,
+            "Variable": "Technical_coefficient",
+            "Energy consumers": sector_name,
+            "Energy uses": "T",
+            "Unit": ""
+        }
+        for year in all_years:
+            if year == "2020":
+                if sector_idx is not None:
+                    row[year] = calibration_obj.aYE_Tj[sector_idx]
+                else:
+                    row[year] = 0
+            else:
+                row[year] = 0
+        rows.append(row)
+        
+        # B (Buildings Energy) - aYE_Bj
+        row = {
+            "Model": model,
+            "Scenario": scenario,
+            "Region": region,
+            "Variable": "Technical_coefficient",
+            "Energy consumers": sector_name,
+            "Energy uses": "B",
+            "Unit": ""
+        }
+        for year in all_years:
+            if year == "2020":
+                if sector_idx is not None:
+                    row[year] = calibration_obj.aYE_Bj[sector_idx]
+                else:
+                    row[year] = 0
+            else:
+                row[year] = 0
+        rows.append(row)
+        
+        # E (Primary Energy) - aYE_Ej (only non-zero for ENERGY sector)
+        row = {
+            "Model": model,
+            "Scenario": scenario,
+            "Region": region,
+            "Variable": "Technical_coefficient",
+            "Energy consumers": sector_name,
+            "Energy uses": "E",
+            "Unit": ""
+        }
+        for year in all_years:
+            if year == "2020":
+                if sector_idx is not None:
+                    row[year] = aYE_Ej[sector_idx]
+                else:
+                    row[year] = 0
             else:
                 row[year] = 0
         rows.append(row)

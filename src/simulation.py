@@ -244,8 +244,7 @@ def system(var, par):
         "eq_R_E":eq.eq_R_E(R_E=d["R_E"], pC_E=d["pCj"][E], C_E=d["Cj"][E]),
         ###
         "eq_RH_nE":eq.eq_RH_nE(R=d["R"], R_E=d["R_E"], R_nE=d["R_nE"]),
-        
-        ###
+                ###
         "eqpCE":eq.eqsum_pESE(p_SE=d['pSj'][E], tauSE=d['tauSj'][E], S_E=d['Sj'][E], Y_Ej=d['Yij'][E,:], C_E=d['Cj'][E], pY_Ej=d['pY_Ej'], p_CE=d['pCj'][E]),#
         ###
         "eqaKLj0":eq.eqaKLj0(aKLj0=d['aKLj0'], aKLj=d['aKLj'], lambda_KLM=d['lambda_KLM']),
