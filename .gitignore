@@ -4,3 +4,4 @@ data/excel data computation
 results/*
 src/transport_calibration.csv
 __pycache__
+.vscode

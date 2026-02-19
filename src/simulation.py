@@ -24,7 +24,7 @@ warnings.filterwarnings("ignore")
 
 now = datetime.now()
 dt_string = now.strftime("%d-%m-%Y_%H:%M")
-exogenous_data = "REMIND_exogenous_data_backup_cut"
+exogenous_data = "REMIND_exogenous_data_2020"
 ###### PARAMETERS SETTING ###########
 
 # closure : "johansen" , "neoclassic", "kaldorian", "keynes-marshall", "keynes", "keynes-kaldor","neokeynesian1", "neokeynesian2"   ########
@@ -39,23 +39,31 @@ add_string = "REMIND-" + str(N) + "sectors"
 
 growth_ratios_df = pd.read_csv(
     "data/"+exogenous_data+".csv", index_col="variable") 
- # [years.astype(str)]
-growth_ratios_df_T = growth_ratios_df.T.reset_index().drop(columns="index")
 
-counter = collections.Counter(list(growth_ratios_df.index))
 
-scalar_growth_ratios = [k for k, v in counter.items() if v == 1]
 
-growth_ratios = growth_ratios_df_T[growth_ratios_df_T.columns &
-                                   scalar_growth_ratios].to_dict(orient='list')
+def growth_ratios_to_dict(growth_ratios_df):
 
-growth_ratios = {k: np.array(v) for k, v in growth_ratios.items()}
+    growth_ratios_df_T = growth_ratios_df.T.reset_index().drop(columns="index")
 
-vector_growth_ratios = [k for k, v in counter.items() if v > 1]
+    counter = collections.Counter(list(growth_ratios_df.index))
 
-for key in vector_growth_ratios:
-    gr_array = growth_ratios_df_T[key].to_numpy().T
-    growth_ratios[key] = gr_array
+    scalar_growth_ratios = [k for k, v in counter.items() if v == 1]
+
+    growth_ratios = growth_ratios_df_T[growth_ratios_df_T.columns &
+                                    scalar_growth_ratios].to_dict(orient='list')
+
+    growth_ratios = {k: np.array(v) for k, v in growth_ratios.items()}
+
+    vector_growth_ratios = [k for k, v in counter.items() if v > 1]
+
+    for key in vector_growth_ratios:
+        gr_array = growth_ratios_df_T[key].to_numpy().T
+        growth_ratios[key] = gr_array
+    return growth_ratios
+
+growth_ratios= growth_ratios_to_dict(growth_ratios_df)
+
 
 years = np.array([eval(i) for i in growth_ratios_df.columns])
 stop = years[-1]
@@ -64,11 +72,7 @@ Lg_rate = growth_ratio_to_rate(growth_ratios["L"])
 
 
 dynamic_parameters = {}
-#dynamic_parameters_df= pd.read_csv("data/INSEE FRA/dynamic parameters.csv", index_col="variable")[years.astype(str)]
 
-#dynamic_parameters={
-#    "GDPreal":np.array(dynamic_parameters_df.loc["GDPreal"]),
-#`    }
 
 endo_Knext = False if 'K' in {**growth_ratios,
                              **dynamic_parameters}.keys() else True
