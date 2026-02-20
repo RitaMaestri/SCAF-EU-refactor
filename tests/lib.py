@@ -57,6 +57,7 @@ def compare_results(
 
     # Compare values for each common label
     for label in common_labels:
+        print(label)
         values_a = dict_a[label]
         values_b = dict_b[label]
 

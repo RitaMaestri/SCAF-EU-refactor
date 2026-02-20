@@ -25,7 +25,7 @@ warnings.filterwarnings("ignore")
 
 now = datetime.now()
 dt_string = now.strftime("%d-%m-%Y_%H:%M")
-exogenous_data = "REMIND_exogenous_data_2020"
+exogenous_data = "REMIND_exogenous_data_sectors"
 ###### PARAMETERS SETTING ###########
 
 # closure : "johansen" , "neoclassic", "kaldorian", "keynes-marshall", "keynes", "keynes-kaldor","neokeynesian1", "neokeynesian2"   ########
@@ -41,7 +41,7 @@ add_string = "REMIND-" + str(N) + "sectors"
 growth_ratios_df = pd.read_csv(
     "data/"+exogenous_data+".csv", index_col="variable") 
 
-years = np.array([eval(i) for i in growth_ratios_df.columns])
+years = np.array([eval(i) for i in growth_ratios_df.columns[3:]])
 stop = years[-1]
 start = years[0]
 
@@ -82,7 +82,7 @@ growth_ratios=build_exogenous_timeseries(sectors, exo_mask, growth_ratios_df, [s
                               sector2_col="Sector_2")
 
 System=sys_df(years, growth_ratios, variables_calibration, parameters_calibration)
-
+System.parameters_df.to_csv("results/parameters_df_data_sectors.csv")
 
 ####### check for errors ########
 

@@ -24,6 +24,8 @@ class sys_df:
 
 
         for i in self.growth_ratios.keys():
+            if i=="aYij":
+                a=1
             par_t0=self.calib_par_dict[i] 
             gr_j=self.growth_ratios[i]
 
@@ -68,7 +70,7 @@ class sys_df:
 
         for key in dynamic_par:
             if isinstance(self.calib_par_dict[key], np.ndarray):
-                exo_index = ~np.isnan(self.calib_par_dict[key])#where there are not nans it means it is exogenous. Non nans are
+                exo_index = ~np.isnan(self.calib_par_dict[key]).flatten()#where there are not nans it means it is exogenous. Non nans are
                 
                 new_df_slice=self.parameters_df.loc[key]
                 
