@@ -16,34 +16,28 @@ def growth_ratio_to_rate(ratio): #the first element of ratio is 1 (at calibratio
 class sys_df:
 
     #it creates a dicitonary of parameters' temporal series based on growth rates wrt year 0 or growth ratios
-    def evolve_par(self, growth_rate = False):
+    def evolve_par(self):
         
         growth_dictionary = {key: None for key in self.growth_ratios.keys()}
 
         step=self.years[1]-self.years[0]
 
-        if growth_rate:
-            for i in self.growth_rates.keys():
-                par0=[self.calib_par_dict[i]]
-                [par0.append( par0[-1]*( 1 + self.growth_rates[i][j])**step ) for j in range(len(self.growth_rates[i])) ]
-                par0=np.array(par0)
-                growth_dictionary[i]=par0
-        else:
-            for i in self.growth_ratios.keys():
-                par_t0=self.calib_par_dict[i] 
-                gr_j=self.growth_ratios[i]
 
-                #sto evolvendo una variabile scalare
-                if not isinstance(par_t0, np.ndarray):
+        for i in self.growth_ratios.keys():
+            par_t0=self.calib_par_dict[i] 
+            gr_j=self.growth_ratios[i]
+
+            #sto evolvendo una variabile scalare
+            if not isinstance(par_t0, np.ndarray):
+                growth_dictionary[i]=gr_j*par_t0
+            else: 
+                #growth dictionary has the same dimensions as gr_j
+                par_t0=par_t0[~np.isnan(par_t0)]
+                if gr_j.ndim == 1:
                     growth_dictionary[i]=gr_j*par_t0
-                else: 
-                    #growth dictionary has the same dimensions as gr_j
-                    par_t0=par_t0[~np.isnan(par_t0)]
-                    if gr_j.ndim == 1:
-                        growth_dictionary[i]=gr_j*par_t0
-                    else:
-                        repeated_array = np.tile(par_t0, (np.shape(gr_j)[1], 1)).T
-                        growth_dictionary[i] = gr_j*repeated_array
+                else:
+                    repeated_array = np.tile(par_t0, (np.shape(gr_j)[1], 1)).T
+                    growth_dictionary[i] = gr_j*repeated_array
 
         return growth_dictionary
 
@@ -67,16 +61,19 @@ class sys_df:
     def __parameters_dynamics(self):
         static_par = list(set(self.calib_par_dict.keys()) - set(self.dynamic_parameters.keys()))
         dynamic_par = list(self.calib_par_dict.keys() & self.dynamic_parameters.keys())
-
+        #for 
         for key, value in {k: self.calib_par_dict[k] for k in static_par}.items():
 
                 self.parameters_df.loc[key] = np.repeat([value.flatten() if isinstance(value, np.ndarray) else value], int(len(self.years)), axis=0).T
 
         for key in dynamic_par:
             if isinstance(self.calib_par_dict[key], np.ndarray):
-                exo_index= ~np.isnan(self.calib_par_dict[key])#where there are nans
-                new_df_slice=self.parameters_df.groupby(level=0).get_group(key)
-                new_df_slice[exo_index]=self.dynamic_parameters[key]
+                exo_index = ~np.isnan(self.calib_par_dict[key])#where there are not nans it means it is exogenous. Non nans are
+                
+                new_df_slice=self.parameters_df.loc[key]
+                
+                new_df_slice[exo_index] = self.dynamic_parameters[key]
+                
                 self.parameters_df.loc[key] = new_df_slice
             else:
                 self.parameters_df.loc[key]=self.dynamic_parameters[key]

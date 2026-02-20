@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import sys
 from data_closures import bounds, N, calibrationDict
-from import_GTAP_data import non_zero_index_G, non_zero_index_I, non_zero_index_C, non_zero_index_X, non_zero_index_M, non_zero_index_Yij,non_zero_index_L,non_zero_index_K
+from import_GTAP_data import non_zero_index_G, non_zero_index_I, non_zero_index_C, non_zero_index_X, non_zero_index_M, non_zero_index_Yij,non_zero_index_L,non_zero_index_K,sectors
 #sys.path.append('/home/rita/Documents/Stage/Code/REMIND energy coupling')
 import model_equations as eq
 from solvers import dict_minimize, dict_least_squares, dict_fsolve, dict_basinhopping, MyBounds, to_dict
@@ -16,6 +16,7 @@ import collections
 from simple_calibration import A,M,SE,E,ST,CH,T
 import warnings
 import handle_jump as jump
+from functions import build_exogenous_timeseries
 warnings.filterwarnings("ignore")
 
 #############################################################
@@ -40,46 +41,25 @@ add_string = "REMIND-" + str(N) + "sectors"
 growth_ratios_df = pd.read_csv(
     "data/"+exogenous_data+".csv", index_col="variable") 
 
-
-
-def growth_ratios_to_dict(growth_ratios_df):
-
-    growth_ratios_df_T = growth_ratios_df.T.reset_index().drop(columns="index")
-
-    counter = collections.Counter(list(growth_ratios_df.index))
-
-    scalar_growth_ratios = [k for k, v in counter.items() if v == 1]
-
-    growth_ratios = growth_ratios_df_T[growth_ratios_df_T.columns &
-                                    scalar_growth_ratios].to_dict(orient='list')
-
-    growth_ratios = {k: np.array(v) for k, v in growth_ratios.items()}
-
-    vector_growth_ratios = [k for k, v in counter.items() if v > 1]
-
-    for key in vector_growth_ratios:
-        gr_array = growth_ratios_df_T[key].to_numpy().T
-        growth_ratios[key] = gr_array
-    return growth_ratios
-
-growth_ratios= growth_ratios_to_dict(growth_ratios_df)
-
-
 years = np.array([eval(i) for i in growth_ratios_df.columns])
 stop = years[-1]
 start = years[0]
-Lg_rate = growth_ratio_to_rate(growth_ratios["L"])
+
+endo_Knext=False
+
+
+
+
+Lg_rate = -0.019215761298272
+
 
 
 dynamic_parameters = {}
 
 
-endo_Knext = False if 'K' in {**growth_ratios,
-                             **dynamic_parameters}.keys() else True
-endostring = "endo_Knext" if endo_Knext else "exoKnext"
 
 name = str().join(["results/", closure, str(start), "-", str(stop),
-                   endostring, add_string, "(", dt_string, ")", ".csv"])
+                    add_string, "(", dt_string, ")", ".csv"])
 
 
 ########################################################################
@@ -87,13 +67,19 @@ name = str().join(["results/", closure, str(start), "-", str(stop),
 ########################################################################
 
 
-calibration = calibrationDict(closure, Lg_rate[0], endo_Knext)
+calibration = calibrationDict(closure, Lg_rate, endo_Knext)
 
 variables_calibration = calibration.endogeouns_dict
 
 parameters_calibration = calibration.exogenous_dict
 
+exo_mask = {k: v.exo_mask for k, v in calibration.variables_dict.items()}
+
 ## Build the system ##
+growth_ratios=build_exogenous_timeseries(sectors, exo_mask, growth_ratios_df, [str(x) for x in years],
+                              variable_col="variable",
+                              sector1_col="Sector_1",
+                              sector2_col="Sector_2")
 
 System=sys_df(years, growth_ratios, variables_calibration, parameters_calibration)
 
