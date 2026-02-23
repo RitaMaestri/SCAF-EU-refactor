@@ -2,21 +2,18 @@ import numpy as np
 import pandas as pd
 import sys
 from data_closures import bounds, N, calibrationDict
-from import_GTAP_data import non_zero_index_G, non_zero_index_I, non_zero_index_C, non_zero_index_X, non_zero_index_M, non_zero_index_Yij,non_zero_index_L,non_zero_index_K,sectors
-#sys.path.append('/home/rita/Documents/Stage/Code/REMIND energy coupling')
+from import_GTAP_data import non_zero_index_G, non_zero_index_I, non_zero_index_X, non_zero_index_M, non_zero_index_Yij,non_zero_index_L,sectors
 import model_equations as eq
-from solvers import dict_minimize, dict_least_squares, dict_fsolve, dict_basinhopping, MyBounds, to_dict
-from time_series_data import sys_df, growth_ratio_to_rate
+from solvers import dict_least_squares
+from time_series_data import sys_df
 from datetime import datetime
 import random
 import math
 import copy
-#import json
-import collections
 from simple_calibration import A,M,SE,E,ST,CH,T
 import warnings
 import handle_jump as jump
-from functions import build_exogenous_timeseries
+from build_exo_timeseries import build_exogenous_timeseries
 warnings.filterwarnings("ignore")
 
 #############################################################
@@ -31,32 +28,20 @@ exogenous_data = "REMIND_exogenous_data_sectors"
 # closure : "johansen" , "neoclassic", "kaldorian", "keynes-marshall", "keynes", "keynes-kaldor","neokeynesian1", "neokeynesian2"   ########
 closure = "johansen"
 
-
-#stop=2017
-#step=1
-#years = np.array(range(2015, stop+1, step))
-
 add_string = "REMIND-" + str(N) + "sectors"
 
 growth_ratios_df = pd.read_csv(
-    "data/"+exogenous_data+".csv", index_col="variable") 
+    "data/"+exogenous_data+".csv") 
 
-years = np.array([eval(i) for i in growth_ratios_df.columns[3:]])
+years = np.array([eval(i) for i in growth_ratios_df.columns[4:]])
 stop = years[-1]
 start = years[0]
 
 endo_Knext=False
 
-
-
-
 Lg_rate = -0.019215761298272
 
-
-
 dynamic_parameters = {}
-
-
 
 name = str().join(["results/", closure, str(start), "-", str(stop),
                     add_string, "(", dt_string, ")", ".csv"])

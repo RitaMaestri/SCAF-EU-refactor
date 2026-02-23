@@ -24,8 +24,8 @@ class sys_df:
 
 
         for i in self.growth_ratios.keys():
-            if i=="aYij":
-                a=1
+            #if i=="aYij":
+            #    a=1
             par_t0=self.calib_par_dict[i] 
             gr_j=self.growth_ratios[i]
 
@@ -153,11 +153,13 @@ class sys_df:
         self.calib_var_dict = Variables_dict
         self.calib_par_dict = Parameters_dict
         self.dynamic_parameters = Dynamic_parameters
-        endoKnext= True if "K" not in {**self.dynamic_parameters,**self.growth_ratios}.keys() else False
-        if endoKnext:
-            K0=np.array([np.nan]*(len(self.years)))
-            K0[0]=self.calib_par_dict['K']
-            self.dynamic_parameters['K']=K0
+
+        #endoKnext= True if "K" not in {**self.dynamic_parameters,**self.growth_ratios}.keys() else False
+        #if endoKnext:
+        #    K0=np.array([np.nan]*(len(self.years)))
+        #    K0[0]=self.calib_par_dict['K']
+        #    self.dynamic_parameters['K']=K0
+        
         #GDPreal=np.array(pd.read_csv("data/GDPreal_evolution.csv")[self.years.astype(str)].iloc[0])
 
         #Lgrowth=np.array( pd.read_csv("data/L_growth_ratio.csv")[self.years.astype(str)].iloc[0] )
@@ -171,8 +173,8 @@ class sys_df:
         
         self.__initialize_variables_df()
         self.__initialize_parameters_df()
-        if endoKnext:
-            self.evolve_K(self.years[0])
+        #if endoKnext:
+        #    self.evolve_K(self.years[0])    
         
 #system = sys_df(years,growth_rates,variables,parameters)
 
