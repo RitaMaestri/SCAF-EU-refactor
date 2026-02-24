@@ -14,6 +14,7 @@ from simple_calibration import A,M,SE,E,ST,CH,T
 import warnings
 import handle_jump as jump
 from build_exo_timeseries import build_exogenous_timeseries
+from variables_dict import VARIABLE_SPECS
 warnings.filterwarnings("ignore")
 
 #############################################################
@@ -26,7 +27,7 @@ exogenous_data = "REMIND_exogenous_data_sectors"
 ###### PARAMETERS SETTING ###########
 
 # closure : "johansen" , "neoclassic", "kaldorian", "keynes-marshall", "keynes", "keynes-kaldor","neokeynesian1", "neokeynesian2"   ########
-closure = "johansen"
+#closure = "johansen"
 
 add_string = "REMIND-" + str(N) + "sectors"
 
@@ -43,7 +44,7 @@ Lg_rate = -0.019215761298272
 
 dynamic_parameters = {}
 
-name = str().join(["results/", closure, str(start), "-", str(stop),
+name = str().join(["results/", str(start), "-", str(stop),
                     add_string, "(", dt_string, ")", ".csv"])
 
 
@@ -52,7 +53,7 @@ name = str().join(["results/", closure, str(start), "-", str(stop),
 ########################################################################
 
 
-calibration = calibrationDict(closure, Lg_rate, endo_Knext)
+calibration = calibrationDict(Lg_rate)
 
 variables_calibration = calibration.endogeouns_dict
 
@@ -227,6 +228,16 @@ def system(var, par):
         'eqaYij0':eq.eqaYij0(aYij0=d['aYij0'], aYij=d['aYij'], lambda_KLM=d['lambda_KLM']),#
         ###
         "eqWorldPrices": eq.eqSameRatio(numerator1=d['pXj'][index_wo_E_SE],numerator2=d['pYj'][index_wo_E_SE],denominator1=d['pXj'][SE],denominator2=d['pYj'][SE]),
+        ###
+        "eqMultwI":eq.eqMultiplication(result=d['Ri'],mult1=d['wI'],mult2=d['GDP']),
+        ###
+        "eqCESquantityLj":eq.eqCESquantity(Xj=d['Lj'], Zj=d['KLj'], alphaXj=d['alphaLj'], alphaYj=d['alphaKj'], pXj=d['pL'], pYj=d['pK'], sigmaj=d['sigmaKLj'], thetaj=d['bKLj'], theta=d['bKL']),#e-5
+        ###
+        "eqFL":eq.eqF(F=d['L'],Fj=d['Lj']),
+        ###
+        "eqFK":eq.eqF(F=d['K'],Fj=d['Kj']),
+        ###
+        "eqMultB":eq.eqMultiplication(result=d['B'],mult1=d['wB'],mult2=d['GDP'])
         
 
         #"eqAlphaX":eq.eqsum_arr(d['alphaXj'][[ST,CH]], d['alphaXj0'][[ST,CH]], d['lambda_XMj'][[ST,CH]]  ),
@@ -264,163 +275,18 @@ def system(var, par):
         #"eqlambda_nE":eq.eqlambda_nE(alphaCj=d['alphaCj0'],lambda_E=d['lambda_E'], lambda_nE=d['lambda_nE']), #checked
 
         }
-
-    if endo_Knext:
-        equations.update("eqinventory", eq.eqinventory(Knext=d['Knext'], K=d['K'], delta=d['delta'], I=d['I']) )
-                      
-
-    if closure=="johansen": 
-        equations.update({
-                                #"eqsD":eq.eqsD(sD=d['sD'], Ij=d['Ij'], pCj=d['pCj'], Mj=d['Mj'], Xj=d['Xj'], pXj=d['pXj'], GDP=d['GDP']),
-                                ###
-                                "eqMultwI":eq.eqMultiplication(result=d['Ri'],mult1=d['wI'],mult2=d['GDP']),
-                                ###
-                                "eqCESquantityLj":eq.eqCESquantity(Xj=d['Lj'], Zj=d['KLj'], alphaXj=d['alphaLj'], alphaYj=d['alphaKj'], pXj=d['pL'], pYj=d['pK'], sigmaj=d['sigmaKLj'], thetaj=d['bKLj'], theta=d['bKL']),#e-5
-                                ###
-                                "eqFL":eq.eqF(F=d['L'],Fj=d['Lj']),
-                                ###
-                                "eqFK":eq.eqF(F=d['K'],Fj=d['Kj']),
-                                ###
-                                "eqMultB":eq.eqMultiplication(result=d['B'],mult1=d['wB'],mult2=d['GDP'])
-                                }
-                                )
-        
-        solution = np.hstack(list(equations.values()))
-        
-        
-        return solution 
-
-    elif closure=="neoclassic":
-        equations.update({"eqRi":eq.eqRi(Ri=d['Ri'], sL=d['sL'], w=d['w'], Lj=d['Lj'], sK=d['sK'], Kj=d['Kj'], pK=d['pK'], sG=d['sG'], T=d['T'], Rg=d['Rg'], B=d['B']),
-                                      
-                          "eqCESquantityLj":eq.eqCESquantity(Xj=d['Lj'], Zj=d['KLj'], alphaXj=d['alphaLj'], alphaYj=d['alphaKj'], pXj=d['pL'], pYj=d['pK'], sigmaj=d['sigmaKLj'], thetaj=d['bKLj'], theta=d['bKL']),#e-5
-                                      
-                          "eqL":eq.eqF(F=d['L'],Fj=d['Lj']),
-                                      
-                          "eqF":eq.eqF(F=d['K'],Fj=d['Kj']),
-                                      
-                          "eqMult":eq.eqMult(result=d['B'],mult1=d['wB'],mult2=d['GDP'])
-                          })
-        solution = np.hstack(list(equations.values()))
-
-        return solution 
-
-    elif closure=="kaldorian":
-        equations.update({"eqlj":eq.eqlj(l=d['l'], alphalj=d['alphalj'], KLj=d['KLj'], Lj=d['Lj']),
-                                      
-                           "eqRi": eq.eqRi(Ri=d['Ri'], sL=d['sL'], w=d['w'], Lj=d['Lj'], sK=d['sK'], Kj=d['Kj'], pK=d['pK'], sG=d['sG'], T=d['T'], Rg=d['Rg'], B=d['B']),
-                            
-                           "eqwI": eq.eqMultiplication(result=d['Ri'],mult1=d['wI'],mult2=d['GDP']),
-                            
-                           "eqL": eq.eqF(F=d['L'],Fj=d['Lj']),
-                            
-                           "eqK": eq.eqF(F=d['K'],Fj=d['Kj']),
-                            
-                           "eqB": eq.eqMultiplication(result=d['B'],mult1=d['wB'],mult2=d['GDP'])})
-
-        solution = np.hstack(list(equations.values()))
-
-        return solution
     
-    elif closure=="keynes-marshall":
-        equations.update({"eqRi":eq.eqRi(Ri=d['Ri'], sL=d['sL'], w=d['w'], Lj=d['Lj'], sK=d['sK'], Kj=d['Kj'], pK=d['pK'], sG=d['sG'], T=d['T'], Rg=d['Rg'], B=d['B']),
-                                      
-                          "eqCESquantityLj":eq.eqCESquantity(Xj=d['Lj'], Zj=d['KLj'], alphaXj=d['alphaLj'], alphaYj=d['alphaKj'], pXj=d['pL'], pYj=d['pK'], sigmaj=d['sigmaKLj'], thetaj=d['bKLj'], theta=d['bKL']),#e-5
-                            
-                          "eqwI":eq.eqMultiplication(result=d['Ri'],mult1=d['wI'],mult2=d['GDP']),
-                            
-                          "eqK":eq.eqF(F=d['K'],Fj=d['Kj']),
-                            
-                          "eqB":eq.eqMultiplication(result=d['B'],mult1=d['wB'],mult2=d['GDP'])})
-       
-        solution = np.hstack(list(equations.values()))
-
-        return solution
-
-
-    
-    elif closure=="keynes" or closure=="keynes-kaldor" :
-        equations.update({"eqlj":eq.eqlj(l=d['l'], alphalj=d['alphalj'], KLj=d['KLj'], Lj=d['Lj']),
-                                      
-                          "eqRi":eq.eqRi(Ri=d['Ri'], sL=d['sL'], w=d['w'], Lj=d['Lj'], sK=d['sK'], Kj=d['Kj'], pK=d['pK'], sG=d['sG'], T=d['T'], Rg=d['Rg'], B=d['B']),
-                        
-                          "eqwI":eq.eqMultiplication(result=d['Ri'],mult1=d['wI'],mult2=d['GDP']),
-                            
-                          "equL":eq.equ(u=d['uL'], L=d['L'], Lj=d['Lj']),
-                            
-                          "eqw_real":eq.eqw_real(w_real=d['w_real'], CPI=d['CPI'], w=d['w']),
-                            
-                          "eqw_curve":eq.eqw_curve(w_real=d['w_real'], alphaw=d['alphaw'], u=d['uL'], sigmaw=d['sigmaw'] ),
-                            
-                          "eqK":eq.eqF(F=d['K'],Fj=d['Kj']),
-                            
-                          "eqB":eq.eqMultiplication(result=d['B'],mult1=d['wB'],mult2=d['GDP']),
-                          })
-        solution = np.hstack(list(equations.values()))
-
-        return solution
-    elif closure=="keynes-marshall":
-        equations.update({"eqRi":eq.eqRi(Ri=d['Ri'], sL=d['sL'], w=d['w'], Lj=d['Lj'], sK=d['sK'], Kj=d['Kj'], pK=d['pK'], sG=d['sG'], T=d['T'], Rg=d['Rg'], B=d['B']),
-                        
-                          "eqCESquantityLj":eq.eqCESquantity(Xj=d['Lj'], Zj=d['KLj'], alphaXj=d['alphaLj'], alphaYj=d['alphaKj'], pXj=d['pL'], pYj=d['pK'], sigmaj=d['sigmaKLj'], thetaj=d['bKLj'], theta=d['bKL'], _index=non_zero_index_L),#e-5
-                            
-                          "eqwI":eq.eqMultiplication(result=d['I'],mult1=d['wI'],mult2=d['GDP']),
-                            
-                          "eqK":eq.eqF(F=d['K'],Fj=d['Kj']),
-                            
-                          "eqB":eq.eqMultiplication(result=d['B'],mult1=d['wB'],mult2=d['GDP']),
-                          })
-        solution = np.hstack(list(equations.values()))
-
-        return solution
-    elif closure=="neokeynesian1":
-        equations.update({"eqRi":eq.eqRi(Ri=d['Ri'], sL=d['sL'], w=d['w'], Lj=d['Lj'], sK=d['sK'], Kj=d['Kj'], pK=d['pK'], sG=d['sG'], T=d['T'], Rg=d['Rg'], B=d['B']),
-                                      
-                          "eqCESquantityLj":eq.eqCESquantity(Xj=d['Lj'], Zj=d['KLj'], alphaXj=d['alphaLj'], alphaYj=d['alphaKj'], pXj=d['pL'], pYj=d['pK'], sigmaj=d['sigmaKLj'], thetaj=d['bKLj'], theta=d['bKL'], _index=non_zero_index_L),#e-5
-                            
-                          "equL":eq.equ(u=d['uL'], L=d['L'], Lj=d['Lj']),
-                            
-                          "eqw_real":eq.eqw_real(w_real=d['w_real'], CPI=d['CPI'], w=d['w']),
-                            
-                          "eqw_curve":eq.eqw_curve(w_real=d['w_real'], alphaw=d['alphaw'], u=d['uL'], sigmaw=d['sigmaw'] ),
-                         
-                          "equK":eq.equ(u=d['uK'], L=d['K'], Lj=d['Kj']),
-                            
-                          "eqpK_real":eq.eqw_real(w_real=d['pK_real'], CPI=d['CPI'], w=d['pK']),
-                            
-                          "eqsigmapK":eq.eqw_curve(w_real=d['pK_real'], alphaw=d['alphapK'], u=d['uK'], sigmaw=d['sigmapK'] ),
+    solution = np.hstack(list(equations.values()))
         
-                          "eqwB":eq.eqMultiplication(result=d['B'],mult1=d['wB'],mult2=d['GDP']),
-                          })                          
-        solution = np.hstack(list(equations.values()))
-
-        return solution
-    elif closure=="neokeynesian2":
-        equations.update({"eqRi":eq.eqRi(Ri=d['Ri'], sL=d['sL'], w=d['w'], Lj=d['Lj'], sK=d['sK'], Kj=d['Kj'], pK=d['pK'], sG=d['sG'], T=d['T'], Rg=d['Rg'], B=d['B']),
-                                      
-                          "eqCESquantityLj":eq.eqCESquantity(Xj=d['Lj'], Zj=d['KLj'], alphaXj=d['alphaLj'], alphaYj=d['alphaKj'], pXj=d['pL'], pYj=d['pK'], sigmaj=d['sigmaKLj'], thetaj=d['bKLj'], theta=d['bKL'], _index=non_zero_index_L),#e-5
-                            
-                          "equL":eq.equ(u=d['uL'], L=d['L'], Lj=d['Lj']),
-                            
-                          "eqw_real":eq.eqw_real(w_real=d['w_real'], CPI=d['CPI'], w=d['w']),
-                            
-                          "eqw_curve":eq.eqw_curve(w_real=d['w_real'], alphaw=d['alphaw'], u=d['uL'], sigmaw=d['sigmaw'] ),
-                            
-                          "equK":eq.equ(u=d['uK'], L=d['K'], Lj=d['Kj']),
-                            
-                          "eqpK_real":eq.eqw_real(w_real=d['pK_real'], CPI=d['CPI'], w=d['pK']),
-                            
-                          "eqsigmapK":eq.eqw_curve(w_real=d['pK_real'], alphaw=d['alphapK'], u=d['uK'], sigmaw=d['sigmapK'] ),
-    
-                          "eqIneok":eq.eqIneok(I=d['I'], K=d['K'], alphaIK=d['alphaIK'] )
-                          })
-        solution = np.hstack(list(equations.values()))
-
-        return solution
-    else:
-        print("the closure doesn't exist")
-        sys.exit()
         
+    return solution 
+
+
+
+
+
+
+
         
 ########################################################################
 ########################  CALIBRATION CHECK  ###########################
@@ -716,3 +582,160 @@ def column(matrix, i):
 
 
 
+    """
+    if endo_Knext:
+        equations.update("eqinventory", eq.eqinventory(Knext=d['Knext'], K=d['K'], delta=d['delta'], I=d['I']) )
+                      
+
+    if closure=="johansen": 
+        equations.update({
+                                #"eqsD":eq.eqsD(sD=d['sD'], Ij=d['Ij'], pCj=d['pCj'], Mj=d['Mj'], Xj=d['Xj'], pXj=d['pXj'], GDP=d['GDP']),
+                                ###
+                                "eqMultwI":eq.eqMultiplication(result=d['Ri'],mult1=d['wI'],mult2=d['GDP']),
+                                ###
+                                "eqCESquantityLj":eq.eqCESquantity(Xj=d['Lj'], Zj=d['KLj'], alphaXj=d['alphaLj'], alphaYj=d['alphaKj'], pXj=d['pL'], pYj=d['pK'], sigmaj=d['sigmaKLj'], thetaj=d['bKLj'], theta=d['bKL']),#e-5
+                                ###
+                                "eqFL":eq.eqF(F=d['L'],Fj=d['Lj']),
+                                ###
+                                "eqFK":eq.eqF(F=d['K'],Fj=d['Kj']),
+                                ###
+                                "eqMultB":eq.eqMultiplication(result=d['B'],mult1=d['wB'],mult2=d['GDP'])
+                                }
+                                )
+        
+        solution = np.hstack(list(equations.values()))
+        
+        
+        return solution 
+
+    elif closure=="neoclassic":
+        equations.update({"eqRi":eq.eqRi(Ri=d['Ri'], sL=d['sL'], w=d['w'], Lj=d['Lj'], sK=d['sK'], Kj=d['Kj'], pK=d['pK'], sG=d['sG'], T=d['T'], Rg=d['Rg'], B=d['B']),
+                                      
+                          "eqCESquantityLj":eq.eqCESquantity(Xj=d['Lj'], Zj=d['KLj'], alphaXj=d['alphaLj'], alphaYj=d['alphaKj'], pXj=d['pL'], pYj=d['pK'], sigmaj=d['sigmaKLj'], thetaj=d['bKLj'], theta=d['bKL']),#e-5
+                                      
+                          "eqL":eq.eqF(F=d['L'],Fj=d['Lj']),
+                                      
+                          "eqF":eq.eqF(F=d['K'],Fj=d['Kj']),
+                                      
+                          "eqMult":eq.eqMult(result=d['B'],mult1=d['wB'],mult2=d['GDP'])
+                          })
+        solution = np.hstack(list(equations.values()))
+
+        return solution 
+
+    elif closure=="kaldorian":
+        equations.update({"eqlj":eq.eqlj(l=d['l'], alphalj=d['alphalj'], KLj=d['KLj'], Lj=d['Lj']),
+                                      
+                           "eqRi": eq.eqRi(Ri=d['Ri'], sL=d['sL'], w=d['w'], Lj=d['Lj'], sK=d['sK'], Kj=d['Kj'], pK=d['pK'], sG=d['sG'], T=d['T'], Rg=d['Rg'], B=d['B']),
+                            
+                           "eqwI": eq.eqMultiplication(result=d['Ri'],mult1=d['wI'],mult2=d['GDP']),
+                            
+                           "eqL": eq.eqF(F=d['L'],Fj=d['Lj']),
+                            
+                           "eqK": eq.eqF(F=d['K'],Fj=d['Kj']),
+                            
+                           "eqB": eq.eqMultiplication(result=d['B'],mult1=d['wB'],mult2=d['GDP'])})
+
+        solution = np.hstack(list(equations.values()))
+
+        return solution
+    
+    elif closure=="keynes-marshall":
+        equations.update({"eqRi":eq.eqRi(Ri=d['Ri'], sL=d['sL'], w=d['w'], Lj=d['Lj'], sK=d['sK'], Kj=d['Kj'], pK=d['pK'], sG=d['sG'], T=d['T'], Rg=d['Rg'], B=d['B']),
+                                      
+                          "eqCESquantityLj":eq.eqCESquantity(Xj=d['Lj'], Zj=d['KLj'], alphaXj=d['alphaLj'], alphaYj=d['alphaKj'], pXj=d['pL'], pYj=d['pK'], sigmaj=d['sigmaKLj'], thetaj=d['bKLj'], theta=d['bKL']),#e-5
+                            
+                          "eqwI":eq.eqMultiplication(result=d['Ri'],mult1=d['wI'],mult2=d['GDP']),
+                            
+                          "eqK":eq.eqF(F=d['K'],Fj=d['Kj']),
+                            
+                          "eqB":eq.eqMultiplication(result=d['B'],mult1=d['wB'],mult2=d['GDP'])})
+       
+        solution = np.hstack(list(equations.values()))
+
+        return solution
+
+
+    
+    elif closure=="keynes" or closure=="keynes-kaldor" :
+        equations.update({"eqlj":eq.eqlj(l=d['l'], alphalj=d['alphalj'], KLj=d['KLj'], Lj=d['Lj']),
+                                      
+                          "eqRi":eq.eqRi(Ri=d['Ri'], sL=d['sL'], w=d['w'], Lj=d['Lj'], sK=d['sK'], Kj=d['Kj'], pK=d['pK'], sG=d['sG'], T=d['T'], Rg=d['Rg'], B=d['B']),
+                        
+                          "eqwI":eq.eqMultiplication(result=d['Ri'],mult1=d['wI'],mult2=d['GDP']),
+                            
+                          "equL":eq.equ(u=d['uL'], L=d['L'], Lj=d['Lj']),
+                            
+                          "eqw_real":eq.eqw_real(w_real=d['w_real'], CPI=d['CPI'], w=d['w']),
+                            
+                          "eqw_curve":eq.eqw_curve(w_real=d['w_real'], alphaw=d['alphaw'], u=d['uL'], sigmaw=d['sigmaw'] ),
+                            
+                          "eqK":eq.eqF(F=d['K'],Fj=d['Kj']),
+                            
+                          "eqB":eq.eqMultiplication(result=d['B'],mult1=d['wB'],mult2=d['GDP']),
+                          })
+        solution = np.hstack(list(equations.values()))
+
+        return solution
+    elif closure=="keynes-marshall":
+        equations.update({"eqRi":eq.eqRi(Ri=d['Ri'], sL=d['sL'], w=d['w'], Lj=d['Lj'], sK=d['sK'], Kj=d['Kj'], pK=d['pK'], sG=d['sG'], T=d['T'], Rg=d['Rg'], B=d['B']),
+                        
+                          "eqCESquantityLj":eq.eqCESquantity(Xj=d['Lj'], Zj=d['KLj'], alphaXj=d['alphaLj'], alphaYj=d['alphaKj'], pXj=d['pL'], pYj=d['pK'], sigmaj=d['sigmaKLj'], thetaj=d['bKLj'], theta=d['bKL'], _index=non_zero_index_L),#e-5
+                            
+                          "eqwI":eq.eqMultiplication(result=d['I'],mult1=d['wI'],mult2=d['GDP']),
+                            
+                          "eqK":eq.eqF(F=d['K'],Fj=d['Kj']),
+                            
+                          "eqB":eq.eqMultiplication(result=d['B'],mult1=d['wB'],mult2=d['GDP']),
+                          })
+        solution = np.hstack(list(equations.values()))
+
+        return solution
+    elif closure=="neokeynesian1":
+        equations.update({"eqRi":eq.eqRi(Ri=d['Ri'], sL=d['sL'], w=d['w'], Lj=d['Lj'], sK=d['sK'], Kj=d['Kj'], pK=d['pK'], sG=d['sG'], T=d['T'], Rg=d['Rg'], B=d['B']),
+                                      
+                          "eqCESquantityLj":eq.eqCESquantity(Xj=d['Lj'], Zj=d['KLj'], alphaXj=d['alphaLj'], alphaYj=d['alphaKj'], pXj=d['pL'], pYj=d['pK'], sigmaj=d['sigmaKLj'], thetaj=d['bKLj'], theta=d['bKL'], _index=non_zero_index_L),#e-5
+                            
+                          "equL":eq.equ(u=d['uL'], L=d['L'], Lj=d['Lj']),
+                            
+                          "eqw_real":eq.eqw_real(w_real=d['w_real'], CPI=d['CPI'], w=d['w']),
+                            
+                          "eqw_curve":eq.eqw_curve(w_real=d['w_real'], alphaw=d['alphaw'], u=d['uL'], sigmaw=d['sigmaw'] ),
+                         
+                          "equK":eq.equ(u=d['uK'], L=d['K'], Lj=d['Kj']),
+                            
+                          "eqpK_real":eq.eqw_real(w_real=d['pK_real'], CPI=d['CPI'], w=d['pK']),
+                            
+                          "eqsigmapK":eq.eqw_curve(w_real=d['pK_real'], alphaw=d['alphapK'], u=d['uK'], sigmaw=d['sigmapK'] ),
+        
+                          "eqwB":eq.eqMultiplication(result=d['B'],mult1=d['wB'],mult2=d['GDP']),
+                          })                          
+        solution = np.hstack(list(equations.values()))
+
+        return solution
+    elif closure=="neokeynesian2":
+        equations.update({"eqRi":eq.eqRi(Ri=d['Ri'], sL=d['sL'], w=d['w'], Lj=d['Lj'], sK=d['sK'], Kj=d['Kj'], pK=d['pK'], sG=d['sG'], T=d['T'], Rg=d['Rg'], B=d['B']),
+                                      
+                          "eqCESquantityLj":eq.eqCESquantity(Xj=d['Lj'], Zj=d['KLj'], alphaXj=d['alphaLj'], alphaYj=d['alphaKj'], pXj=d['pL'], pYj=d['pK'], sigmaj=d['sigmaKLj'], thetaj=d['bKLj'], theta=d['bKL'], _index=non_zero_index_L),#e-5
+                            
+                          "equL":eq.equ(u=d['uL'], L=d['L'], Lj=d['Lj']),
+                            
+                          "eqw_real":eq.eqw_real(w_real=d['w_real'], CPI=d['CPI'], w=d['w']),
+                            
+                          "eqw_curve":eq.eqw_curve(w_real=d['w_real'], alphaw=d['alphaw'], u=d['uL'], sigmaw=d['sigmaw'] ),
+                            
+                          "equK":eq.equ(u=d['uK'], L=d['K'], Lj=d['Kj']),
+                            
+                          "eqpK_real":eq.eqw_real(w_real=d['pK_real'], CPI=d['CPI'], w=d['pK']),
+                            
+                          "eqsigmapK":eq.eqw_curve(w_real=d['pK_real'], alphaw=d['alphapK'], u=d['uK'], sigmaw=d['sigmapK'] ),
+    
+                          "eqIneok":eq.eqIneok(I=d['I'], K=d['K'], alphaIK=d['alphaIK'] )
+                          })
+        solution = np.hstack(list(equations.values()))
+
+        return solution
+    else:
+        print("the closure doesn't exist")
+        sys.exit()
+        """

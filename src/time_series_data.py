@@ -97,15 +97,19 @@ class sys_df:
     def dict_to_df(self,dictionary, t):
         for key, value in dictionary.items():
             value_t=value.flatten() if isinstance(value, np.ndarray) else value
+            #self.variable mi serve come initial guess del tempo t+1
             self.variables_df[t].loc[key] = value_t
-            t_idx=np.where(self.years==t)[0][0]
+            t_idx = np.where(self.years==t)[0][0]
             self.fill_parameters_df(key,value_t,t_idx)
+        return self.variables_df
 
     def fill_parameters_df(self, key, value,t):
         index_positions = np.array([j for j, label in enumerate(self.parameters_df.index) if label == key])
-        if key=="pXj":
-            None
+        #if
         if len(index_positions)>1:
+            #where there are nans it means it is endogenous,
+            # so I fill only those positions with the value of the dynamic parameter, 
+            #while I keep the exogenous ones unchanged
             par_mask=self.parameters_df.loc[key].isna().any(axis=1)
             self.parameters_df.iloc[index_positions[par_mask],t]=value
         else:

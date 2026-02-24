@@ -88,146 +88,7 @@ class Variable(endo_exo_indexes):
 
 class calibrationDict(endo_exo_indexes):
     
-    def assignClosure(self,cal):
-        
-        sKLneoclassic = (cal.Ri0+cal.B0)/(cal.w * sum(cal.Lj0) + cal.pK0 * sum(cal.Kj0))
-        
-        sLkaldorian = (cal.Ri0+cal.B0)/(cal.w*sum(cal.Lj0))
-        
-        
-        if self.closure == "johansen":
-            return {**self.commonDict, 
-                         **{#'sD':Variable(self.full_endo(), cal.sD0),
-                            
-                            'K':Variable(self.full_exo(), cal.K0),
-                            'wI':Variable(self.full_exo(),cal.wI),
-                            'wB':Variable(self.full_exo(), cal.wB),
-                            'L':Variable(self.full_exo(), cal.L0)
-                            }
-                         }
 
-        elif self.closure == "neoclassic":
-            return {**self.commonDict, 
-                         **{'K':Variable(self.full_exo(), cal.K0),
-                            'sK':Variable(self.full_exo(), sKLneoclassic),
-                            'sL':Variable(self.full_exo(), sKLneoclassic),
-                            'sG':Variable(self.full_exo(), 0),
-                            'wB':Variable(self.full_exo(), cal.wB),
-                            'L':Variable(self.full_exo(), cal.L0)}
-                         }
-
-        elif self.closure == "kaldorian":
-            return {**self.commonDict, 
-                         **{'l':Variable(self.full_endo(), cal.l0),
-                            
-                            'K':Variable(self.full_exo(), cal.K0),
-                            'alphalj':Variable(self.full_exo(), cal.alphalj),
-                            'sK':Variable(self.full_exo(), 0),
-                            'sL':Variable(self.full_exo(), sLkaldorian),
-                            'sG':Variable(self.full_exo(), 0),
-                            'wI':Variable(self.full_exo(),cal.wI),
-                            'wB':Variable(self.full_exo(), cal.wB),
-                            'L':Variable(self.full_exo(), cal.L0)
-                            }
-                         }
-
-        elif self.closure == "keynes-marshall":
-            return {**self.commonDict, 
-                         **{'K':Variable(self.full_exo(), cal.K0),
-                            'sK':Variable(self.full_exo(), sKLneoclassic),
-                            'sL':Variable(self.full_exo(), sKLneoclassic),
-                            'sG':Variable(self.full_exo(), 0),
-                            'wB':Variable(self.full_exo(), cal.wB),
-                            'wI':Variable(self.full_exo(),cal.wI),
-                                  
-                            }
-                         }
-        
-        elif self.closure == "keynes-kaldor":
-            return {**self.commonDict, 
-                         **{ 'l':Variable(self.full_endo(), cal.l0),
-                            'w_real':Variable(self.full_endo(),cal.w),
-                            'uL':Variable(self.full_endo(),cal.uL0),
-                            
-                            'K':Variable(self.full_exo(), cal.K0),
-                            'alphalj':Variable(self.full_exo(), cal.alphalj),
-                            'sK':Variable(self.full_exo(), 0),
-                            'sL':Variable(self.full_exo(), sLkaldorian),
-                            'sG':Variable(self.full_exo(), 0),
-                            'wI':Variable(self.full_exo(),cal.wI),
-                            'alphaw':Variable(self.full_exo(), cal.alphaw),
-                            'sigmaw':Variable(self.full_exo(), cal.sigmaw),
-                            'wB':Variable(self.full_exo(), cal.wB),
-                            'L':Variable(self.full_exo(), cal.L0u)
-                            
-                            }
-                         }
-        
-        elif self.closure == "keynes":
-            return {**self.commonDict, 
-                         **{ 'l':Variable(self.full_endo(), cal.l0),
-                            'w_real':Variable(self.full_endo(),cal.w),
-                            'uL':Variable(self.full_endo(),cal.uL0),
-                            
-                            'K':Variable(self.full_exo(), cal.K0),
-                            'alphalj':Variable(self.full_exo(), cal.alphalj),
-                            'sK':Variable(self.full_exo(), sKLneoclassic),
-                            'sL':Variable(self.full_exo(), sKLneoclassic),
-                            'sG':Variable(self.full_exo(), 0),
-                            'wI':Variable(self.full_exo(),cal.wI),
-                            'alphaw':Variable(self.full_exo(), cal.alphaw),
-                            'sigmaw':Variable(self.full_exo(), cal.sigmaw),
-                            'wB':Variable(self.full_exo(), cal.wB),
-                            'L':Variable(self.full_exo(), cal.L0u)
-                            }
-                         }
-        
-        elif self.closure == "neokeynesian1":
-            return {**self.commonDict, 
-                         **{'uL':Variable(self.full_endo(),cal.uL0),
-                            'pK_real':Variable(self.full_endo(),cal.pK0),
-                            'uK':Variable(self.full_endo(),cal.uK0),
-                            'w_real':Variable(self.full_endo(),cal.w),
-                             
-                             
-                            'sK':Variable(self.full_exo(), sKLneoclassic),
-                            'sL':Variable(self.full_exo(), sKLneoclassic),
-                            'sG':Variable(self.full_exo(), 0),                            
-                            'alphaw':Variable(self.full_exo(), cal.alphaw),
-                            'sigmaw':Variable(self.full_exo(), cal.sigmaw),
-                            'L':Variable(self.full_exo(), cal.L0u),
-                            'alphapK':Variable(self.full_exo(), cal.alphapK),
-                            'sigmapK':Variable(self.full_exo(), cal.sigmapK),
-                            'K':Variable(self.full_exo(), cal.K0u),
-                            'wB':Variable(self.full_exo(), cal.wB),
-                            
-                            }
-                    }
-
-        elif self.closure == "neokeynesian2":
-            return {**self.commonDict, 
-                         **{'w_real':Variable(self.full_endo(),cal.w),
-                            'uL':Variable(self.full_endo(),cal.uL0),
-                            'pK_real':Variable(self.full_endo(),cal.pK0),
-                            'uK':Variable(self.full_endo(),cal.uK0),
-                            
-                            'sK':Variable(self.full_exo(), sKLneoclassic),
-                            'sL':Variable(self.full_exo(), sKLneoclassic),
-                            'sG':Variable(self.full_exo(), 0),                            
-                            'alphaw':Variable(self.full_exo(), cal.alphaw),
-                            'sigmaw':Variable(self.full_exo(), cal.sigmaw),                            
-                            'L':Variable(self.full_exo(), cal.L0u),
-                            'alphapK':Variable(self.full_exo(), cal.alphapK),
-                            'sigmapK':Variable(self.full_exo(), cal.sigmapK),
-                            'K':Variable(self.full_exo(), cal.K0u),
-                            'alphaIK':Variable(self.full_exo(), cal.alphaIK),
-
-                            }
-                    }
-        else: 
-            print("this closure doesn't exist")
-            sys.exit()
-    
     def to_endo_dict(self):
         result_dict = {}
         for key, variable in self.variables_dict.items():
@@ -253,12 +114,16 @@ class calibrationDict(endo_exo_indexes):
     
 
     
-    def __init__(self, closure,initial_L_gr, endoKnext):
+    def __init__(self,initial_L_gr):
         
         self.sectors_names = sectors
         
         cal = calibrationVariables(initial_L_gr)
         self.commonDict = {
+            'K':Variable(self.full_exo(), cal.K0),
+            'wI':Variable(self.full_exo(),cal.wI),
+            'wB':Variable(self.full_exo(), cal.wB),
+            'L':Variable(self.full_exo(), cal.L0),
             'pL': Variable(self.full_endo(), cal.pL0),
             'pK':Variable(self.full_endo(), cal.pK0),
             'pI':Variable(self.full_endo(), cal.pI0),
@@ -388,13 +253,8 @@ class calibrationDict(endo_exo_indexes):
             
             }
 
-        Knext = Variable(self.full_endo(), cal.K0u_next) if closure in ["neokeynesian1","neokeynesian2"] else Variable(self.full_endo(), cal.K0next)
 
-        self.commonDict = {**self.commonDict, **{'Knext': Knext}} if endoKnext else self.commonDict
-
-        self.closure=closure
-
-        self.variables_dict = self.assignClosure(cal)
+        self.variables_dict = self.commonDict
 
         self.endogeouns_dict = self.to_endo_dict()
 
@@ -540,3 +400,142 @@ bounds={
 
         }
 
+""" def assignClosure(self,cal):
+        
+        sKLneoclassic = (cal.Ri0+cal.B0)/(cal.w * sum(cal.Lj0) + cal.pK0 * sum(cal.Kj0))
+        
+        sLkaldorian = (cal.Ri0+cal.B0)/(cal.w*sum(cal.Lj0))
+        
+        
+        if self.closure == "johansen":
+            return {**self.commonDict, 
+                         **{#'sD':Variable(self.full_endo(), cal.sD0),
+                            
+                            'K':Variable(self.full_exo(), cal.K0),
+                            'wI':Variable(self.full_exo(),cal.wI),
+                            'wB':Variable(self.full_exo(), cal.wB),
+                            'L':Variable(self.full_exo(), cal.L0)
+                            }
+                         }
+
+        elif self.closure == "neoclassic":
+            return {**self.commonDict, 
+                         **{'K':Variable(self.full_exo(), cal.K0),
+                            'sK':Variable(self.full_exo(), sKLneoclassic),
+                            'sL':Variable(self.full_exo(), sKLneoclassic),
+                            'sG':Variable(self.full_exo(), 0),
+                            'wB':Variable(self.full_exo(), cal.wB),
+                            'L':Variable(self.full_exo(), cal.L0)}
+                         }
+
+        elif self.closure == "kaldorian":
+            return {**self.commonDict, 
+                         **{'l':Variable(self.full_endo(), cal.l0),
+                            
+                            'K':Variable(self.full_exo(), cal.K0),
+                            'alphalj':Variable(self.full_exo(), cal.alphalj),
+                            'sK':Variable(self.full_exo(), 0),
+                            'sL':Variable(self.full_exo(), sLkaldorian),
+                            'sG':Variable(self.full_exo(), 0),
+                            'wI':Variable(self.full_exo(),cal.wI),
+                            'wB':Variable(self.full_exo(), cal.wB),
+                            'L':Variable(self.full_exo(), cal.L0)
+                            }
+                         }
+
+        elif self.closure == "keynes-marshall":
+            return {**self.commonDict, 
+                         **{'K':Variable(self.full_exo(), cal.K0),
+                            'sK':Variable(self.full_exo(), sKLneoclassic),
+                            'sL':Variable(self.full_exo(), sKLneoclassic),
+                            'sG':Variable(self.full_exo(), 0),
+                            'wB':Variable(self.full_exo(), cal.wB),
+                            'wI':Variable(self.full_exo(),cal.wI),
+                                  
+                            }
+                         }
+        
+        elif self.closure == "keynes-kaldor":
+            return {**self.commonDict, 
+                         **{ 'l':Variable(self.full_endo(), cal.l0),
+                            'w_real':Variable(self.full_endo(),cal.w),
+                            'uL':Variable(self.full_endo(),cal.uL0),
+                            
+                            'K':Variable(self.full_exo(), cal.K0),
+                            'alphalj':Variable(self.full_exo(), cal.alphalj),
+                            'sK':Variable(self.full_exo(), 0),
+                            'sL':Variable(self.full_exo(), sLkaldorian),
+                            'sG':Variable(self.full_exo(), 0),
+                            'wI':Variable(self.full_exo(),cal.wI),
+                            'alphaw':Variable(self.full_exo(), cal.alphaw),
+                            'sigmaw':Variable(self.full_exo(), cal.sigmaw),
+                            'wB':Variable(self.full_exo(), cal.wB),
+                            'L':Variable(self.full_exo(), cal.L0u)
+                            
+                            }
+                         }
+        
+        elif self.closure == "keynes":
+            return {**self.commonDict, 
+                         **{ 'l':Variable(self.full_endo(), cal.l0),
+                            'w_real':Variable(self.full_endo(),cal.w),
+                            'uL':Variable(self.full_endo(),cal.uL0),
+                            
+                            'K':Variable(self.full_exo(), cal.K0),
+                            'alphalj':Variable(self.full_exo(), cal.alphalj),
+                            'sK':Variable(self.full_exo(), sKLneoclassic),
+                            'sL':Variable(self.full_exo(), sKLneoclassic),
+                            'sG':Variable(self.full_exo(), 0),
+                            'wI':Variable(self.full_exo(),cal.wI),
+                            'alphaw':Variable(self.full_exo(), cal.alphaw),
+                            'sigmaw':Variable(self.full_exo(), cal.sigmaw),
+                            'wB':Variable(self.full_exo(), cal.wB),
+                            'L':Variable(self.full_exo(), cal.L0u)
+                            }
+                         }
+        
+        elif self.closure == "neokeynesian1":
+            return {**self.commonDict, 
+                         **{'uL':Variable(self.full_endo(),cal.uL0),
+                            'pK_real':Variable(self.full_endo(),cal.pK0),
+                            'uK':Variable(self.full_endo(),cal.uK0),
+                            'w_real':Variable(self.full_endo(),cal.w),
+                             
+                             
+                            'sK':Variable(self.full_exo(), sKLneoclassic),
+                            'sL':Variable(self.full_exo(), sKLneoclassic),
+                            'sG':Variable(self.full_exo(), 0),                            
+                            'alphaw':Variable(self.full_exo(), cal.alphaw),
+                            'sigmaw':Variable(self.full_exo(), cal.sigmaw),
+                            'L':Variable(self.full_exo(), cal.L0u),
+                            'alphapK':Variable(self.full_exo(), cal.alphapK),
+                            'sigmapK':Variable(self.full_exo(), cal.sigmapK),
+                            'K':Variable(self.full_exo(), cal.K0u),
+                            'wB':Variable(self.full_exo(), cal.wB),
+                            
+                            }
+                    }
+
+        elif self.closure == "neokeynesian2":
+            return {**self.commonDict, 
+                         **{'w_real':Variable(self.full_endo(),cal.w),
+                            'uL':Variable(self.full_endo(),cal.uL0),
+                            'pK_real':Variable(self.full_endo(),cal.pK0),
+                            'uK':Variable(self.full_endo(),cal.uK0),
+                            
+                            'sK':Variable(self.full_exo(), sKLneoclassic),
+                            'sL':Variable(self.full_exo(), sKLneoclassic),
+                            'sG':Variable(self.full_exo(), 0),                            
+                            'alphaw':Variable(self.full_exo(), cal.alphaw),
+                            'sigmaw':Variable(self.full_exo(), cal.sigmaw),                            
+                            'L':Variable(self.full_exo(), cal.L0u),
+                            'alphapK':Variable(self.full_exo(), cal.alphapK),
+                            'sigmapK':Variable(self.full_exo(), cal.sigmapK),
+                            'K':Variable(self.full_exo(), cal.K0u),
+                            'alphaIK':Variable(self.full_exo(), cal.alphaIK),
+
+                            }
+                    }
+        else: 
+            print("this closure doesn't exist")
+            sys.exit() """
