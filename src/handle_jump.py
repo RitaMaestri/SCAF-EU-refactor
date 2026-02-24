@@ -85,8 +85,7 @@ def step_forward_value(old_value, new_value, growth_rate):
 
     
     if not np.sign(old_value) ==  np.sign(new_value):
-        print("change in sign of the parameters not implemented yet")
-        sys.exit()
+        raise NotImplementedError("change in sign of the parameters not implemented yet")
     
     if old_value == new_value or (old_value - step <= new_value <= old_value + step) :
         return new_value

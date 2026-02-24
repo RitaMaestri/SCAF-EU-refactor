@@ -122,8 +122,7 @@ def extract_var_df(var, pq):
     elif pq == "q":
         var_df= Q
     else:
-        print("wrong pq!")
-        sys.exit()
+        raise ValueError("wrong pq! Expected 'pq', 'p', or 'q'")
     #print(var_df)
     if len(var_df.index)>1:
         var_df.insert(0, "Name", sectors_names_eng, True) 

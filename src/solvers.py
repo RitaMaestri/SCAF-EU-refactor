@@ -40,9 +40,7 @@ def same_number(var,system):
     len_var=len(var)
     len_sys=len(system)
     if len_var != len_sys:
-        print("system has ",len_sys, " equations")
-        print("there are ",len_var, " variables")
-        sys.exit()
+        raise ValueError(f"system has {len_sys} equations but there are {len_var} variables")
 
 ########################  FSOLVE  ########################
 def dict_fsolve(f, dvar, dpar,N):

@@ -367,7 +367,7 @@ def _compute_expensive_params(alphaCj0_nE, target_ni_j_nE, target_etaCj_nE,
 
 class calibrationVariables:
     
-    def __init__(self, L_gr0, L0=None):
+    def __init__(self, L0=None):
         
         #labor
         if L0 is None:   
@@ -557,7 +557,7 @@ class calibrationVariables:
         self.alphaIj=np.zeros(N)
         self.alphaIj[imp.pCjIj!=0]=solI.dvar['alphaIj']
         self.delta=0.04
-        self.g0=L_gr0
+        self.g0=0.019215761298272
         self.pK0 = (sum(imp.pKKj)*(cp(self.g0)+cp(self.delta)))/ cp(self.I0)
         self.Kj0= imp.pKKj / cp(self.pK0)
         self.K0=sum(self.Kj0)

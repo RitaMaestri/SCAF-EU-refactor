@@ -76,14 +76,12 @@ System.parameters_df.to_csv("results/parameters_df_data_sectors.csv")
 for k in parameters_calibration.keys():
     for par in np.array([parameters_calibration[k]]).flatten() :
         if par < bounds[k][0] or par > bounds[k][1]:
-            print("parameter ", k ," out of bounds")
-            sys.exit()
+            raise ValueError(f"parameter {k} out of bounds")
 
 for k in variables_calibration.keys():
     for var in  np.array([variables_calibration[k]]).flatten():
         if var < bounds[k][0] or var > bounds[k][1]:
-            print("variable ", k ," out of bounds")
-            sys.exit()
+            raise ValueError(f"variable {k} out of bounds")
 
 
 
@@ -297,8 +295,7 @@ max_err_cal=max(abs(system(variables_calibration, parameters_calibration)))
 
 if max_err_cal>1e-07:
     d=joint_dict(parameters_calibration,variables_calibration)
-    print("the system is not correctly calibrated")
-    sys.exit()
+    raise RuntimeError("the system is not correctly calibrated")
 
 
 ########################################################################
@@ -392,8 +389,7 @@ def conduct_solution(parameters_origin, parameters_target, system, bounds_variab
         variables = solution.dvar
         maxerror=max(abs( system(solution.dvar, parameters)))
         if maxerror>1e-06:
-            print("the system doesn't converge, maxerror=",maxerror)
-            sys.exit()
+            raise RuntimeError(f"the system doesn't converge, maxerror={maxerror}")
 
     
     return variables
@@ -435,8 +431,7 @@ for t in range(len(years)):
     error=equilibrium_t[1]
     
     if not is_equilibrium:
-        print("the system is not at equilibrium", equilibrium_t[1])
-        sys.exit()
+        raise RuntimeError(f"the system is not at equilibrium: {equilibrium_t[1]}")
 
     System.dict_to_df(var_solution, years[t])
 
@@ -736,6 +731,5 @@ def column(matrix, i):
 
         return solution
     else:
-        print("the closure doesn't exist")
-        sys.exit()
+        raise ValueError("the closure doesn't exist")
         """

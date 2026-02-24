@@ -129,8 +129,7 @@ equilibrium = ( pLLj + pKKj + production_taxes + sales_taxes + pMjMj + pCiYij.su
 
 print("equilibrium:", sum(equilibrium**2))
 if sum(equilibrium**2)>2:
-    "the system is not at the equilibrium"
-    sys.exit()
+    raise RuntimeError("the system is not at the equilibrium")
 
 
 
