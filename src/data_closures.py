@@ -178,10 +178,6 @@ class Variable():
 
 
 
-
-
-
-
 endo_aYij_indexes = [("ENERGY",x) for x in sectors]
 sectors_nE = [x for x in sectors if x != "ENERGY"]
 endo_aYij_indexes.extend([(x,"ENERGY") for x in sectors_nE])
@@ -196,6 +192,7 @@ VARIABLES_SPECS = {
                 is_t_minus_one=False, 
                 bounds=(0, np.inf), 
                 status="exo"),
+
     'wI':Variable(name= "wI", 
                   calibration_value=cal.wI, 
                   dimension='scalar', 
@@ -203,6 +200,7 @@ VARIABLES_SPECS = {
                   is_t_minus_one=False, 
                   bounds=(0, 1), 
                   status="exo"),
+
     'wB':Variable(name= "wB", 
                   calibration_value=cal.wB, 
                   dimension='scalar', 
@@ -210,6 +208,7 @@ VARIABLES_SPECS = {
                   is_t_minus_one=False, 
                   bounds=(-1, 1), 
                   status="exo"),
+
     'L':Variable(name= "L", 
                  calibration_value=cal.L0, 
                  dimension='scalar', 
@@ -217,6 +216,7 @@ VARIABLES_SPECS = {
                  is_t_minus_one=False, 
                  bounds=(0, np.inf), 
                  status="exo"),
+
     'pL': Variable(name= "pL",
                  calibration_value=cal.pL0,
                  dimension='scalar',
@@ -224,6 +224,7 @@ VARIABLES_SPECS = {
                  is_t_minus_one=False,
                  bounds=(0,np.inf),
                  status="endo"),
+
     'pK':Variable(name= "pK",
 				  calibration_value=cal.pK0,
 				  dimension='scalar',
@@ -231,6 +232,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0,np.inf),
 				  status="endo"),
+
     'pI':Variable(name= "pI",
 				  calibration_value=cal.pI0,
 				  dimension='scalar',
@@ -238,6 +240,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0,np.inf),
 				  status="endo"),
+
     'B':Variable(name= "B",
 				  calibration_value=cal.B0,
 				  dimension='scalar',
@@ -245,6 +248,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(-np.inf,np.inf),
 				  status="endo"),
+
     'R':Variable(name= "R",
 				  calibration_value=cal.R0,
 				  dimension='scalar',
@@ -252,6 +256,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0,np.inf),
 				  status="endo"),
+
     'Ri':Variable(name= "Ri",
 				  calibration_value=cal.Ri0,
 				  dimension='scalar',
@@ -259,6 +264,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0,np.inf),
 				  status="endo"),
+
     'Rg':Variable(name= "Rg",
 				  calibration_value=cal.Rg0,
 				  dimension='scalar',
@@ -266,6 +272,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0,np.inf),
 				  status="endo"),
+
     'bKL':Variable(name= "bKL",
 				  calibration_value=cal.bKL,
 				  dimension='scalar',
@@ -281,6 +288,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(-np.inf,np.inf),
 				  status="endo"),
+
     'GDP':Variable(name= "GDP",
 				  calibration_value=cal.GDPreal,
 				  dimension='scalar',
@@ -296,6 +304,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0,np.inf),
 				  status="endo"),
+
     'Lj':Variable(name="Lj",
 				  calibration_value=cal.Lj0,
 				  dimension='vector',
@@ -303,6 +312,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="endo"),
+
     'KLj':Variable(name="KLj",
 				  calibration_value=cal.KLj0,
 				  dimension='vector',
@@ -310,6 +320,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="endo"),
+
     'pKLj':Variable(name="pKLj",
 				  calibration_value=cal.pKLj0,
 				  dimension='vector',
@@ -317,6 +328,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="endo"),
+
     'Yj':Variable(name="Yj",
 				  calibration_value=cal.Yj0,
 				  dimension='vector',
@@ -324,6 +336,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="endo"),
+
     'pYj':Variable(name="pYj",
 				  calibration_value=cal.pYj0,
 				  dimension='vector',
@@ -331,6 +344,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="endo"),
+
     'Cj': Variable(name="Cj",
 				  calibration_value=cal.Cj0,
 				  dimension='vector',
@@ -338,6 +352,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="endo"),
+
     'pCj': Variable(name="pCj",
 				  calibration_value=cal.pCj0,
 				  dimension='vector',
@@ -353,6 +368,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  exo_names=["ENERGY"]),
+
     'pMj': Variable(name="pMj",
 				  calibration_value=cal.pMj0,
 				  dimension='vector',
@@ -360,6 +376,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  exo_names=["ENERGY"]),
+
     'Xj': Variable(name="Xj",
 				  calibration_value=cal.Xj0,
 				  dimension='vector',
@@ -375,6 +392,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="endo"),
+
     'pDj': Variable(name="pDj",
 				  calibration_value=cal.pDj0,
 				  dimension='vector',
@@ -382,6 +400,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="endo"),
+
     'Sj': Variable(name="Sj",
 				  calibration_value=cal.Sj0,
 				  dimension='vector',
@@ -389,6 +408,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="endo"),
+
     'pSj': Variable(name="pSj",
 				  calibration_value=cal.pSj0,
 				  dimension='vector',
@@ -396,6 +416,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="endo"),
+
     'Gj': Variable(name="Gj",
 				  calibration_value=cal.Gj0,
 				  dimension='vector',
@@ -403,6 +424,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="endo"),
+
     'Ij': Variable(name="Ij",
 				  calibration_value=cal.Ij0,
 				  dimension='vector',
@@ -419,6 +441,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="endo"),
+
     'I':Variable(name="I",
 				  calibration_value=cal.I0,
 				  dimension='scalar',
@@ -444,7 +467,6 @@ VARIABLES_SPECS = {
 				  bounds=(0, np.inf),
 				  status="endo"),
 
-
     'pE_TT':Variable(name="pE_TT",
 				  calibration_value=cal.pE_TT,
 				  dimension='scalar',
@@ -452,6 +474,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="endo"),
+
     'pE_TnT':Variable(name="pE_TnT",
 				  calibration_value=cal.pE_TnT,
 				  dimension='scalar',
@@ -459,6 +482,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="endo"),
+
     'pE_B':Variable(name="pE_B",
 				  calibration_value=cal.pE_B,
 				  dimension='scalar',
@@ -466,6 +490,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="endo"),
+
     'pE_Pj':Variable(name="pE_Pj",
 				  calibration_value=cal.pE_Pj,
 				  dimension='vector',
@@ -490,6 +515,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, 1),
 				  status="exo"),
+
     'GDPreal':Variable(name="GDPreal",
 				  calibration_value=cal.GDPreal,
 				  dimension='scalar',
@@ -506,6 +532,7 @@ VARIABLES_SPECS = {
 				  bounds=(-1,
 				  1),
 				  status="exo"),
+
     'tauYj':Variable(name="tauYj",
 				  calibration_value=cal.tauYj0,
 				  dimension='vector',
@@ -522,6 +549,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     'pCtp':Variable(name="pCtp",
 				  calibration_value=cal.pCjtp,
 				  dimension='vector',
@@ -529,6 +557,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=True,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     'Ctp':Variable(name="Ctp",
 				  calibration_value=cal.Ctp,
 				  dimension='vector',
@@ -536,6 +565,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=True,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     'Gtp':Variable(name="Gtp",
 				  calibration_value=cal.Gtp,
 				  dimension='vector',
@@ -543,6 +573,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=True,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     'Itp':Variable(name="Itp",
 				  calibration_value=cal.Itp,
 				  dimension='vector',
@@ -550,6 +581,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=True,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     'pXtp':Variable(name="pXtp",
 				  calibration_value=cal.pXtp,
 				  dimension='vector',
@@ -557,6 +589,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=True,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     'Xtp':Variable(name="Xtp",
 				  calibration_value=cal.Xtp,
 				  dimension='vector',
@@ -564,6 +597,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=True,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     'Mtp':Variable(name="Mtp",
 				  calibration_value=cal.Mtp,
 				  dimension='vector',
@@ -571,6 +605,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=True,
 				  bounds=(0, np.inf),
 				  status="exo"),
+                  
     'alphaKj':Variable(name="alphaKj",
 				  calibration_value=cal.alphaKj0 ,
 				  dimension='vector',
@@ -578,6 +613,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False ,
 				  bounds=(0,1),
 				  status = "exo"),
+
     'alphaLj':Variable(name="alphaLj",
 				  calibration_value=cal.alphaLj,
 				  dimension='vector',
@@ -585,7 +621,6 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, 1),
 				  status="exo"),
-
 
     'aKLj':Variable(name="aKLj",
 				  calibration_value=cal.aKLj,
@@ -595,7 +630,6 @@ VARIABLES_SPECS = {
 				  bounds=(0, np.inf),
 				  endo_names=["ENERGY"]),
 
-
     'alphaCj0':Variable(name="alphaCj0",
 				  calibration_value=cal.alphaCj0,
 				  dimension='vector',
@@ -603,6 +637,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     'alphaGj':Variable(name="alphaGj",
 				  calibration_value=cal.alphaGj,
 				  dimension='vector',
@@ -610,6 +645,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     'alphaIj':Variable(name="alphaIj",
 				  calibration_value=cal.alphaIj,
 				  dimension='vector',
@@ -618,7 +654,6 @@ VARIABLES_SPECS = {
 				  bounds=(0, np.inf),
 				  status="exo"),
 
-
     'alphaXj':Variable(name="alphaXj",
 				  calibration_value=cal.alphaXj0,
 				  dimension='vector',
@@ -626,6 +661,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     'alphaDj':Variable(name="alphaDj",
 				  calibration_value=cal.alphaDj0,
 				  dimension='vector',
@@ -633,6 +669,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     'betaDj':Variable(name="betaDj",
 				  calibration_value=cal.betaDj0,
 				  dimension='vector',
@@ -640,6 +677,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     'betaMj':Variable(name="betaMj",
 				  calibration_value=cal.betaMj0,
 				  dimension='vector',
@@ -655,6 +693,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(-np.inf,np.inf),
 				  status="exo"),
+
     'csij':Variable(name="csij",
 				  calibration_value=cal.csij,
 				  dimension='vector',
@@ -662,6 +701,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(-np.inf,np.inf),
 				  status="exo"),
+
     'sigmaXj':Variable(name="sigmaXj",
 				  calibration_value=cal.sigmaXj,
 				  dimension='vector',
@@ -669,6 +709,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(-np.inf,np.inf),
 				  status="exo"),
+
     'sigmaSj':Variable(name="sigmaSj",
 				  calibration_value=cal.sigmaSj,
 				  dimension='vector',
@@ -676,6 +717,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(-np.inf,np.inf),
 				  status="exo"),
+
     'sigmaKLj':Variable(name="sigmaKLj",
 				  calibration_value=cal.sigmaKLj,
 				  dimension='vector',
@@ -699,6 +741,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="endo"),
+
     'YE_Tj':Variable(name="YE_Tj",
 				  calibration_value=cal.YE_Tj,
 				  dimension='vector',
@@ -706,6 +749,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="endo"),
+
     'YE_Bj':Variable(name="YE_Bj",
 				  calibration_value=cal.YE_Bj,
 				  dimension='vector',
@@ -713,6 +757,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="endo"),
+
     'C_EB':Variable(name="C_EB",
 				  calibration_value=cal.C_EB,
 				  dimension='scalar',
@@ -720,6 +765,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     'C_ET':Variable(name="C_ET",
 				  calibration_value=cal.C_ET,
 				  dimension='scalar',
@@ -743,6 +789,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     'aYE_Pj':Variable(name="aYE_Pj",
 				  calibration_value=cal.aYE_Pj,
 				  dimension='vector',
@@ -750,6 +797,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     'aYE_Tj':Variable(name="aYE_Tj",
 				  calibration_value=cal.aYE_Tj,
 				  dimension='vector',
@@ -765,6 +813,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     'aYij0':Variable(name="aYij0",
 				  calibration_value=cal.aYij0,
 				  dimension='matrix',
@@ -789,6 +838,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     'rhoTT':Variable(name="rhoTT",
 				  calibration_value=cal.rhoTT,
 				  dimension='scalar',
@@ -796,6 +846,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf), 
                   status="exo"),
+
     'rhoTnT':Variable(name="rhoTnT",
 				  calibration_value=cal.rhoTnT,
 				  dimension='scalar',
@@ -803,6 +854,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     'rhoPj':Variable(name="rhoPj",
 				  calibration_value=cal.rhoPj,
 				  dimension='vector',
@@ -842,6 +894,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(-np.inf,np.inf),
 				  status="exo"),
+
     'u_C':Variable(name="u_C",
 				  calibration_value=cal.u_C,
 				  dimension='scalar',
@@ -849,6 +902,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(-np.inf,np.inf),
 				  status="endo"),
+
     "gammaCj_nE":Variable(name="gammaCj_nE",
 				  calibration_value=cal.gammaCj_nE,
 				  dimension='vector',
@@ -856,6 +910,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(-np.inf,np.inf),
 				  status="exo"),
+
     "A_Cj_nE":Variable(name="A_Cj_nE",
 				  calibration_value=cal.A_Cj_nE,
 				  dimension='vector',
@@ -863,6 +918,7 @@ VARIABLES_SPECS = {
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="exo"),
+
     "normalisation_factor":Variable(name="normalisation_factor",
 				  calibration_value=cal.normalisation_factor,
 				  dimension='scalar',
@@ -871,10 +927,9 @@ VARIABLES_SPECS = {
 				  bounds=(-np.inf,np.inf),
 				  status="exo"),
 
-
     }
 
-    
+
     #'lambda_XMj':Variable(self.idx_1D(endo_names = ["STEEL","CHEMICAL"]), cal.lambda_XMj),
     #'lambda_XMj':Variable(self.full_exo(), cal.lambda_XMj),
     #'aYij':Variable(self.idx_2D(endo_names=[("PRIMARY","SECONDARY")]), cal.aYij),

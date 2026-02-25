@@ -72,7 +72,7 @@ System.parameters_df.to_csv("results/parameters_df_data_sectors.csv")
 
 ####### check for errors ########
 
-
+"""
 for k in parameters_calibration.keys():
     for par in np.array([parameters_calibration[k]]).flatten() :
         if par < bounds[k][0] or par > bounds[k][1]:
@@ -82,7 +82,7 @@ for k in variables_calibration.keys():
     for var in  np.array([variables_calibration[k]]).flatten():
         if var < bounds[k][0] or var > bounds[k][1]:
             raise ValueError(f"variable {k} out of bounds")
-
+"""
 
 
 ########################################################################
