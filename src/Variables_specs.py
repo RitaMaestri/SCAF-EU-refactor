@@ -3,6 +3,15 @@ from simple_calibration import calibrationVariables
 from import_GTAP_data import sectors
 from Variable_class import Variable
 
+# This module defines the master dictionary of model variable specifications.
+# Each entry maps a variable key to a configured ``Variable`` instance.
+#
+# Notes on ``is_t_minus_one``:
+# - ``False`` means no lag linkage is used.
+# - A string value means this variable aquires the value of the variable indicated by the string in the previous time step. 
+# 	This is used to automatically populate the first year of the time-series DataFrame with the calibration value of the indicated variable, 
+# 	and to set up the correct lag relationships for dynamic updating in the model solution process.
+
 
 endo_aYij_indexes = [("ENERGY",x) for x in sectors]
 sectors_nE = [x for x in sectors if x != "ENERGY"]
@@ -379,7 +388,7 @@ VARIABLES_SPECS = {
 				  calibration_value=cal.pCjtp,
 				  dimension='vector',
 				  idx_labels=sectors,
-				  is_t_minus_one=True,
+				  is_t_minus_one="pCj",
 				  bounds=(0, np.inf),
 				  status="exo"),
 
@@ -387,7 +396,7 @@ VARIABLES_SPECS = {
 				  calibration_value=cal.Ctp,
 				  dimension='vector',
 				  idx_labels=sectors,
-				  is_t_minus_one=True,
+				  is_t_minus_one="Cj",
 				  bounds=(0, np.inf),
 				  status="exo"),
 
@@ -395,7 +404,7 @@ VARIABLES_SPECS = {
 				  calibration_value=cal.Gtp,
 				  dimension='vector',
 				  idx_labels=sectors,
-				  is_t_minus_one=True,
+				  is_t_minus_one="Gj",
 				  bounds=(0, np.inf),
 				  status="exo"),
 
@@ -403,7 +412,7 @@ VARIABLES_SPECS = {
 				  calibration_value=cal.Itp,
 				  dimension='vector',
 				  idx_labels=sectors,
-				  is_t_minus_one=True,
+				  is_t_minus_one="Ij",
 				  bounds=(0, np.inf),
 				  status="exo"),
 
@@ -411,7 +420,7 @@ VARIABLES_SPECS = {
 				  calibration_value=cal.pXtp,
 				  dimension='vector',
 				  idx_labels=sectors,
-				  is_t_minus_one=True,
+				  is_t_minus_one="pXj",
 				  bounds=(0, np.inf),
 				  status="exo"),
 
@@ -419,7 +428,7 @@ VARIABLES_SPECS = {
 				  calibration_value=cal.Xtp,
 				  dimension='vector',
 				  idx_labels=sectors,
-				  is_t_minus_one=True,
+				  is_t_minus_one="Xj",
 				  bounds=(0, np.inf),
 				  status="exo"),
 
@@ -427,7 +436,7 @@ VARIABLES_SPECS = {
 				  calibration_value=cal.Mtp,
 				  dimension='vector',
 				  idx_labels=sectors,
-				  is_t_minus_one=True,
+				  is_t_minus_one="Mj",
 				  bounds=(0, np.inf),
 				  status="exo"),
                   

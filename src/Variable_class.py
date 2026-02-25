@@ -10,16 +10,37 @@ from itertools import product
 class Variable():
 
     def full_endo(self):
-        #everything is False
+        """Return an exogeneity mask with all entries set to endogenous.
+
+        Returns:
+            Boolean array matching ``self.shape`` with all values set to False.
+        """
+        # In exo_mask convention, False means endogenous.
         return np.zeros(self.shape, dtype=bool)
     
 
     def full_exo(self):
-        #everything is True
+        """Return an exogeneity mask with all entries set to exogenous.
+
+        Returns:
+            Boolean array matching ``self.shape`` with all values set to True.
+        """
+        # In exo_mask convention, True means exogenous.
         return np.ones(self.shape, dtype=bool)
 
 
     def idx_1D(self, exo_names=None, endo_names=None):
+        """Build a 1D exogeneity mask from selected labels.
+
+        Exactly one between ``exo_names`` and ``endo_names`` must be provided.
+
+        Args:
+            exo_names: Labels to be marked exogenous.
+            endo_names: Labels to be marked endogenous.
+
+        Returns:
+            1D boolean mask aligned with ``self.idx_labels``.
+        """
         if (not exo_names == None) and endo_names==None:
             indices_list = [index for index, value in enumerate(self.idx_labels) if value in exo_names]
         elif (not endo_names==None) and exo_names == None:
@@ -33,8 +54,19 @@ class Variable():
         return msk
 
 
-    #takes couple of sectors names: first name is the row identifier, second name is the column identifier. expected [(sec1,sec2),(sec1,sec3),(sec2,sec4)]   
     def idx_2D(self, exo_names=None, endo_names=None):
+        """Build a 2D exogeneity mask from row/column label pairs.
+
+        Each pair is interpreted as ``(row_label, col_label)``.
+        Exactly one between ``exo_names`` and ``endo_names`` must be provided.
+
+        Args:
+            exo_names: Pairs to be marked exogenous.
+            endo_names: Pairs to be marked endogenous.
+
+        Returns:
+            2D boolean mask with the same shape as the variable matrix.
+        """
         
         if (not exo_names == None) and endo_names==None:
             indexes_list = [(self.idx_labels[0].index(row), self.idx_labels[1].index(col)) for row, col in exo_names]
@@ -65,6 +97,11 @@ class Variable():
 
 
     def assign_shape(self):
+        """Infer the numerical shape from variable dimension and labels.
+
+        Returns:
+            Tuple describing the variable shape.
+        """
         if self.idx_labels is not None:
             if self.dimension == "vector":
                 shape = (len(self.idx_labels),)
@@ -78,6 +115,17 @@ class Variable():
             
 
     def assign_exo_mask(self,status, endo_names, exo_names):
+        """Assign the exogeneity mask from either status or endo_names or exo_names. 
+        The three arguments are mutually exclusive, and at least one must be provided.
+
+        Args:
+            status: if provided, must be either "endo" or "exo" and it sets the status of all elements in the variable.
+            endo_names: Labels/pairs declared endogenous. The remaining will be exogenous.
+            exo_names: Labels/pairs declared exogenous. The remaining will be endogenous.
+
+        Returns:
+            Boolean mask where True = exogenous and False = endogenous.
+        """
         if status is not None:
             if status == "endo":
                 return self.full_endo()
@@ -98,12 +146,26 @@ class Variable():
                 return self.idx_2D(exo_names = exo_names)
 
     def assign_calibration_value(self, calibration_value):
+        """Normalize scalar calibration values represented as length-1 arrays.
+
+        Args:
+            calibration_value: Raw calibration value from specs.
+
+        Returns:
+            Scalar value for 1-element arrays, otherwise unchanged input.
+        """
         if isinstance(calibration_value, np.ndarray) and calibration_value.size == 1:
             return calibration_value.item()
         else:
             return calibration_value
 
+
     def check_dimension_idx_labels(self):
+        """Validate consistency between dimension and ``idx_labels`` structure.
+
+        Raises:
+            ValueError: If labels do not match the declared dimension.
+        """
         if self.dimension == "scalar":
             if self.idx_labels != []:
                 raise ValueError(
@@ -124,7 +186,13 @@ class Variable():
         else:
             raise ValueError(f"Variable '{self.name}': unknown dimension '{self.dimension}'")
 
+
     def check_calibration_value_dimension(self):
+        """Validate calibration value shape against the declared dimension.
+
+        Raises:
+            ValueError: If calibration value shape/type is inconsistent.
+        """
         cal = self.calibration_value
         if self.dimension == "scalar":
             if isinstance(cal, np.ndarray) and cal.ndim > 0:
@@ -149,6 +217,11 @@ class Variable():
                 )
 
     def check_calibration_value_bounds(self):
+        """Validate calibration values against variable bounds.
+
+        Raises:
+            ValueError: If any scalar/array element is outside bounds.
+        """
         cal = self.calibration_value
         lb, ub = self.bounds
         if isinstance(cal, np.ndarray):
@@ -165,6 +238,19 @@ class Variable():
                 )
 
     def __init__(self, name, calibration_value, dimension, idx_labels, is_t_minus_one, bounds, status=None, endo_names=None, exo_names=None):
+        """Initialize a Variable and compute all derived masks/metadata.
+
+        Args:
+            name: Variable name.
+            calibration_value: Scalar/vector/matrix baseline value.
+            dimension: One of ``scalar``, ``vector``, or ``matrix``.
+            idx_labels: Labels used for vector/matrix dimensions.
+            is_t_minus_one: False or linked variable name for lag logic.
+            bounds: Tuple of lower and upper numerical bounds.
+            status: Optional global exogeneity status (``endo``/``exo``).
+            endo_names: Optional label selection for endogenous entries.
+            exo_names: Optional label selection for exogenous entries.
+        """
         
         self.name = name
 
@@ -189,6 +275,6 @@ class Variable():
         self.exo_mask = self.assign_exo_mask(status, endo_names, exo_names)
         
         if self.exo_mask is None:
-            raise RuntimeError("exo mask not assigned for variable "+ name)
+            raise RuntimeError("exo mask not assigned for variable " + name)
         
         self.endo_mask = ~ self.exo_mask
