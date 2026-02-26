@@ -1,6 +1,8 @@
 import numpy as np
 import copy
-import sys
+
+from solvers import dict_least_squares
+from time_series_df_functions import timeseries_df_to_endogenous_dict, VARIABLES_SPECS
 
 def get_value_at_position(position, dictionary):
     key, pos = position
@@ -147,3 +149,24 @@ def are_dicts_equal(dict1, dict2):
 
 
 
+def conduct_solution(endo_exo_origin, endo_exo_target, system, bounds_variables, N, timeseries_df, year, threshold= 0.07, growth_rate=0.01):
+    print("finding solution progressively ...")
+
+    parameters_gr = dictionary_gr( endo_exo_target,endo_exo_origin  )
+    positions= find_positions_above_threshold(parameters_gr, threshold)
+    
+    endo_vars=timeseries_df_to_endogenous_dict(timeseries_df, year, VARIABLES_SPECS)
+        
+    while not are_dicts_equal(endo_exo_origin, endo_exo_target) :
+
+        endo_exo_origin = smooth_par_evolution(endo_exo_origin, endo_exo_target, growth_rate, positions)
+
+        solution = dict_least_squares( system, endo_vars, endo_exo_origin, bounds_variables, N, verb=0, check=True)
+        
+        endo_vars = solution.dvar
+        maxerror=max(abs( system(solution.dvar, endo_exo_origin)))
+        if maxerror>1e-06:
+            raise RuntimeError(f"the system doesn't converge, maxerror={maxerror}")
+
+    
+    return endo_vars
