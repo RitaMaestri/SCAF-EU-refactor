@@ -338,8 +338,8 @@ def reformat_bounds_for_solver(VARIABLES_SPECS):
     for var in VARIABLES_SPECS.values():
         cal_val = var.calibration_value
         arr = cal_val if isinstance(cal_val, np.ndarray) else np.array([cal_val])
-        non_zero_count = np.count_nonzero(arr)
-        rows.extend([var.bounds] * non_zero_count)
+        endo_non_zero_count = np.count_nonzero(arr[var.endo_mask])
+        rows.extend([var.bounds] * endo_non_zero_count)
     return [[row[i] for row in rows] for i in (0, 1)]
 
 
