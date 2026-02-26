@@ -54,7 +54,7 @@ timeseries_df=build_and_fill_timeseries_df(VARIABLES_SPECS,growth_ratios_df,year
 
 endo_var_calibration = timeseries_df_to_endogenous_dict(timeseries_df, years[0], VARIABLES_SPECS)
 
-exo_var_calibration = timeseries_df_to_unsolved_year_dict(timeseries_df, years[0], VARIABLES_SPECS)
+exo_var_calibration_unsolved = timeseries_df_to_unsolved_year_dict(timeseries_df, years[0], VARIABLES_SPECS)
 
 
 
@@ -282,10 +282,10 @@ def system(var, par):
 ########################################################################
 
 
-max_err_cal=max(abs(system(endo_var_calibration, exo_var_calibration)))
+max_err_cal=max(abs(system(endo_var_calibration, exo_var_calibration_unsolved)))
 
 if max_err_cal>1e-07:
-    d=joint_dict(exo_var_calibration,endo_var_calibration)
+    d=joint_dict(exo_var_calibration_unsolved,endo_var_calibration)
     raise RuntimeError("the system is not correctly calibrated")
 
 
@@ -397,7 +397,7 @@ for t in range(len(years)):
     if t==0:
         endo_vars=endo_var_calibration #kick(endo_var_calibration)
 
-        endo_exo_vars=exo_var_calibration 
+        endo_exo_vars=exo_var_calibration_unsolved 
     else:
         endo_vars=timeseries_df_to_endogenous_dict(timeseries_df, years[t-1], VARIABLES_SPECS) #kick(System.df_to_dict(var=True, t=years[t-1]))
     

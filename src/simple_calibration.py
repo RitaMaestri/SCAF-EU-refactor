@@ -557,7 +557,7 @@ class calibrationVariables:
         self.alphaIj=np.zeros(N)
         self.alphaIj[imp.pCjIj!=0]=solI.dvar['alphaIj']
         self.delta=0.04
-        self.g0=0.019215761298272
+        self.g0=0.003985893420850095
         self.pK0 = (sum(imp.pKKj)*(cp(self.g0)+cp(self.delta)))/ cp(self.I0)
         self.Kj0= imp.pKKj / cp(self.pK0)
         self.K0=sum(self.Kj0)
@@ -757,7 +757,7 @@ class calibrationVariables:
 
 
 
-a=calibrationVariables(0.003985893420850095)
+#a=calibrationVariables(0.003985893420850095)
 
 
 # export_calib_dict={
