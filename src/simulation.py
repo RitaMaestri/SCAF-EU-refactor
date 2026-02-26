@@ -15,7 +15,7 @@ from simple_calibration import A,M,SE,E,ST,CH,T
 import warnings
 import handle_jump as jump
 from Variables_specs import VARIABLES_SPECS
-from build_time_series_df import build_and_fill_timeseries_df, timeseries_df_to_endogenous_dict, timeseries_df_to_exo_endo_dict, timeseries_df_to_unsolved_year_dict, dict_to_timeseries_df
+from build_time_series_df import reformat_bounds_for_solver, build_and_fill_timeseries_df, timeseries_df_to_endogenous_dict, timeseries_df_to_exo_endo_dict, timeseries_df_to_unsolved_year_dict, dict_to_timeseries_df
 warnings.filterwarnings("ignore")
 
 #############################################################
@@ -294,29 +294,9 @@ if max_err_cal>1e-07:
 ########################################################################
 
 
-#### set the bounds in the good format for the solver ####
-def multiply_bounds_len(key,this_bounds,this_variables):
-    return [this_bounds[key] for i in range(len(this_variables[key].flatten()))]
-
-def bounds_dict(this_bounds,this_variables):
-    return dict((k, multiply_bounds_len(k,this_bounds,this_variables) ) for k in this_variables.keys())
-
-def flatten_bounds_dict(this_bounds,this_variables):
-    return np.vstack(list(bounds_dict(this_bounds,this_variables).values()))
 
 
-#####  create a reduced dictionary for variables (without zeros) and correspondent set of bounds#####
-
-def to_array(candidate):
-    return candidate if isinstance(candidate, np.ndarray) else np.array([candidate])
-
-variables_values = [ to_array(endo_var_calibration[keys])[to_array(endo_var_calibration[keys]) !=0 ] for keys in endo_var_calibration.keys()]
-
-var_keys = list(endo_var_calibration.keys())
-
-non_zero_variables = {var_keys[i]: variables_values[i] for i in range(len(var_keys))}
-
-bounds_variables = [[row[i] for row in flatten_bounds_dict(bounds, non_zero_variables)] for i in (0,1)]
+bounds_variables = reformat_bounds_for_solver(VARIABLES_SPECS)
 
 #number_modified=10, percentage_modified=0.1, modification=0.1, seed=4
 

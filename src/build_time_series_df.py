@@ -318,6 +318,32 @@ def dict_to_timeseries_df(var_dict, timeseries_df, year, VARIABLES_SPECS, year_c
 
 
 
+def reformat_bounds_for_solver(VARIABLES_SPECS):
+    """Build the flat bounds list expected by the solver from VARIABLES_SPECS.
+
+    For each Variable in VARIABLES_SPECS, calibration_value elements that are
+    non-zero are kept and the variable's bounds tuple is replicated once per
+    such element.  The result mirrors the ``bounds_variables`` format: a list
+    of two lists ``[lower_bounds, upper_bounds]``, one entry per non-zero
+    scalar element across all variables.
+
+    Args:
+        VARIABLES_SPECS: dict mapping variable keys to Variable instances,
+            each carrying a ``calibration_value`` and a ``bounds`` tuple.
+
+    Returns:
+        A list of two lists [lower_bounds, upper_bounds].
+    """
+    rows = []
+    for var in VARIABLES_SPECS.values():
+        cal_val = var.calibration_value
+        arr = cal_val if isinstance(cal_val, np.ndarray) else np.array([cal_val])
+        non_zero_count = np.count_nonzero(arr)
+        rows.extend([var.bounds] * non_zero_count)
+    return [[row[i] for row in rows] for i in (0, 1)]
+
+
+
 timeseries_df_template = build_timeseries_df(VARIABLES_SPECS, year_cols)
 
 timeseries_df = fill_timeseries(timeseries_df_template, growth_ratios_df, year_cols, VARIABLES_SPECS)
