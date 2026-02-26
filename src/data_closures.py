@@ -607,7 +607,7 @@ VARIABLES_SPECS = {
 				  status="exo"),
                   
     'alphaKj':Variable(name="alphaKj",
-				  calibration_value=cal.alphaKj0 ,
+				  calibration_value=cal.alphaKj ,
 				  dimension='vector',
 				  idx_labels=sectors ,
 				  is_t_minus_one=False ,
@@ -1095,38 +1095,6 @@ bounds={
         }
 
 
-class calibrationDict(endo_exo_indexes):
-
-    def to_endo_dict(self):
-        result_dict = {}
-        for key, variable in self.variables_dict.items():
-            if isinstance(variable.calibration_value, np.ndarray):
-                masked_array = variable.calibration_value[variable.endo_mask]
-                if masked_array.size > 0:
-                    result_dict[key] = masked_array
-            elif variable.endo_mask:
-                result_dict[key]=variable.calibration_value  
-        
-        return result_dict
-    
-    
-    def to_exo_dict(self):
-        result_dict = {}
-        for key, variable in self.variables_dict.items():
-            result_dict[key]=variable.calibration_value
-            if isinstance(variable.calibration_value, np.ndarray):
-                result_dict[key][variable.endo_mask]=float("nan")  
-            elif variable.endo_mask:
-                    result_dict[key] = float("nan")  
-        return result_dict
-    
-    def __init__(self, variables_dict):
-
-        self.variables_dict = variables_dict
-
-        self.endogeouns_dict = self.to_endo_dict()
-
-        self.exogenous_dict = self.to_exo_dict()
 
 class endo_exo_indexes:
     def full_endo(self):
@@ -1170,7 +1138,40 @@ class endo_exo_indexes:
         
         rows,cols=zip(*sorted_indexes_list)
         return [list(rows), list(cols)]
+
+class calibrationDict(endo_exo_indexes):
+
+    def to_endo_dict(self):
+        result_dict = {}
+        for key, variable in self.variables_dict.items():
+            if isinstance(variable.calibration_value, np.ndarray):
+                masked_array = variable.calibration_value[variable.endo_mask]
+                if masked_array.size > 0:
+                    result_dict[key] = masked_array
+            elif variable.endo_mask:
+                result_dict[key]=variable.calibration_value  
+        
+        return result_dict
     
+    
+    def to_exo_dict(self):
+        result_dict = {}
+        for key, variable in self.variables_dict.items():
+            result_dict[key]=variable.calibration_value
+            if isinstance(variable.calibration_value, np.ndarray):
+                result_dict[key][variable.endo_mask]=float("nan")  
+            elif variable.endo_mask:
+                    result_dict[key] = float("nan")  
+        return result_dict
+    
+    def __init__(self, variables_dict):
+
+        self.variables_dict = variables_dict
+
+        self.endogeouns_dict = self.to_endo_dict()
+
+        self.exogenous_dict = self.to_exo_dict()
+
 
 
 """ def assignClosure(self,cal):

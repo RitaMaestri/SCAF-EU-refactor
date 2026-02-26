@@ -1,51 +1,49 @@
 import numpy as np
 import pandas as pd
 import sys
-from data_closures import bounds, N, calibrationDict
-from import_GTAP_data import non_zero_index_G, non_zero_index_I, non_zero_index_X, non_zero_index_M, non_zero_index_Yij,non_zero_index_L,sectors
+#from data_closures import bounds, N, calibrationDict
+from import_GTAP_data import non_zero_index_G, non_zero_index_I, non_zero_index_X, non_zero_index_M, non_zero_index_Yij,non_zero_index_L,sectors, N
 import model_equations as eq
 from solvers import dict_least_squares
-from time_series_data import sys_df
+#from time_series_data import sys_df
 from datetime import datetime
 import random
 import math
 import copy
+from data_closures import bounds
 from simple_calibration import A,M,SE,E,ST,CH,T
 import warnings
 import handle_jump as jump
-from build_exo_timeseries import build_exogenous_timeseries
-from variables_dict import VARIABLE_SPECS
+from Variables_specs import VARIABLES_SPECS
+from build_time_series_df import build_and_fill_timeseries_df, timeseries_df_to_endogenous_dict, timeseries_df_to_exo_endo_dict, timeseries_df_to_unsolved_year_dict, dict_to_timeseries_df
 warnings.filterwarnings("ignore")
 
 #############################################################
 #######################  SETUP  #############################
 #############################################################
 
+#input file name
+input_file =  "REMIND_exogenous_data_sectors"
+
+
+
 now = datetime.now()
 dt_string = now.strftime("%d-%m-%Y_%H:%M")
-exogenous_data = "REMIND_exogenous_data_sectors"
-###### PARAMETERS SETTING ###########
+add_string = "test"
+output_file_name = str().join(["results/",
+                    add_string, "(", dt_string, ")", ".csv"])
 
-# closure : "johansen" , "neoclassic", "kaldorian", "keynes-marshall", "keynes", "keynes-kaldor","neokeynesian1", "neokeynesian2"   ########
-#closure = "johansen"
 
-add_string = "REMIND-" + str(N) + "sectors"
+
 
 growth_ratios_df = pd.read_csv(
-    "data/"+exogenous_data+".csv") 
+    "data/"+input_file+".csv") 
 
-years = np.array([eval(i) for i in growth_ratios_df.columns[4:]])
-stop = years[-1]
-start = years[0]
+years_int = np.array([eval(i) for i in growth_ratios_df.columns[3:]])
+years = [str(y) for y in years_int]
 
-endo_Knext=False
+timeseries_df=build_and_fill_timeseries_df(VARIABLES_SPECS,growth_ratios_df,years)
 
-Lg_rate = -0.019215761298272
-
-dynamic_parameters = {}
-
-name = str().join(["results/", str(start), "-", str(stop),
-                    add_string, "(", dt_string, ")", ".csv"])
 
 
 ########################################################################
@@ -53,28 +51,21 @@ name = str().join(["results/", str(start), "-", str(stop),
 ########################################################################
 
 
-calibration = calibrationDict(Lg_rate)
 
-variables_calibration = calibration.endogeouns_dict
+endo_var_calibration = timeseries_df_to_endogenous_dict(timeseries_df, years[0], VARIABLES_SPECS)
 
-parameters_calibration = calibration.exogenous_dict
+exo_var_calibration = timeseries_df_to_unsolved_year_dict(timeseries_df, years[0], VARIABLES_SPECS)
 
-exo_mask = {k: v.exo_mask for k, v in calibration.variables_dict.items()}
 
-## Build the system ##
-growth_ratios=build_exogenous_timeseries(sectors, exo_mask, growth_ratios_df, [str(x) for x in years],
-                              variable_col="variable",
-                              sector1_col="Sector_1",
-                              sector2_col="Sector_2")
 
-System=sys_df(years, growth_ratios, variables_calibration, parameters_calibration)
-System.parameters_df.to_csv("results/parameters_df_data_sectors.csv")
+#System=sys_df(years, growth_ratios, variables_calibration, endo_exo_var_calibration)
+#System.parameters_df.to_csv("results/parameters_df_data_sectors.csv")
 
 ####### check for errors ########
 
 """
-for k in parameters_calibration.keys():
-    for par in np.array([parameters_calibration[k]]).flatten() :
+for k in endo_exo_var_calibration.keys():
+    for par in np.array([endo_exo_var_calibration[k]]).flatten() :
         if par < bounds[k][0] or par > bounds[k][1]:
             raise ValueError(f"parameter {k} out of bounds")
 
@@ -90,7 +81,7 @@ for k in variables_calibration.keys():
 ########################################################################
 
 
-def fill_nans(par_value, var_value):
+def fill_nans(par_value, var_value, key):
     if isinstance(par_value, np.ndarray):
         par_copy = par_value.copy()
         if par_copy.ndim == 2:
@@ -111,9 +102,9 @@ def joint_dict(par, var):
     # Iterate through keys of A that are also present in B
     for key in var.keys() & par.keys():
         if np.isscalar(var[key]):
-            d[key] = fill_nans(par[key], np.array([var[key]]))
+            d[key] = fill_nans(par[key], np.array([var[key]]), key)
         else:
-            d[key] = fill_nans(par[key], var[key])
+            d[key] = fill_nans(par[key], var[key],key)
     return d
 
 
@@ -277,7 +268,7 @@ def system(var, par):
     solution = np.hstack(list(equations.values()))
         
         
-    return solution 
+    return solution
 
 
 
@@ -291,10 +282,10 @@ def system(var, par):
 ########################################################################
 
 
-max_err_cal=max(abs(system(variables_calibration, parameters_calibration)))
+max_err_cal=max(abs(system(endo_var_calibration, exo_var_calibration)))
 
 if max_err_cal>1e-07:
-    d=joint_dict(parameters_calibration,variables_calibration)
+    d=joint_dict(exo_var_calibration,endo_var_calibration)
     raise RuntimeError("the system is not correctly calibrated")
 
 
@@ -319,9 +310,9 @@ def flatten_bounds_dict(this_bounds,this_variables):
 def to_array(candidate):
     return candidate if isinstance(candidate, np.ndarray) else np.array([candidate])
 
-variables_values = [ to_array(variables_calibration[keys])[to_array(variables_calibration[keys]) !=0 ] for keys in variables_calibration.keys()]
+variables_values = [ to_array(endo_var_calibration[keys])[to_array(endo_var_calibration[keys]) !=0 ] for keys in endo_var_calibration.keys()]
 
-var_keys = list(variables_calibration.keys())
+var_keys = list(endo_var_calibration.keys())
 
 non_zero_variables = {var_keys[i]: variables_values[i] for i in range(len(var_keys))}
 
@@ -370,29 +361,27 @@ def equilibrium(pKLj, KLj, pMj, Mj, pYj, Yj, pCj, pY_Ej, pXj, Yij, Cj, Gj, Ij, X
 
 ######### HANDLE PARAMETER'S JUMP ##################
 
-def conduct_solution(parameters_origin, parameters_target, system, bounds_variables, N, threshold= 0.07, growth_rate=0.01):
+def conduct_solution(endo_exo_origin, endo_exo_target, system, bounds_variables, N, threshold= 0.07, growth_rate=0.01):
     print("finding solution progressively ...")
 
-    parameters_gr = jump.dictionary_gr( parameters_target,parameters_origin  )
+    parameters_gr = jump.dictionary_gr( endo_exo_target,endo_exo_origin  )
     positions= jump.find_positions_above_threshold(parameters_gr, threshold)
     
-    variables=System.df_to_dict(var=True, t=years[t-1])
-    
-    parameters=parameters_origin
-    
-    while not jump.are_dicts_equal(parameters, parameters_target) :
-
-        parameters = jump.smooth_par_evolution(parameters, parameters_target, growth_rate, positions)
-
-        solution = dict_least_squares( system, variables, parameters, bounds_variables, N, verb=0, check=True)
+    endo_vars=timeseries_df_to_endogenous_dict(timeseries_df, years[t-1], VARIABLES_SPECS)
         
-        variables = solution.dvar
-        maxerror=max(abs( system(solution.dvar, parameters)))
+    while not jump.are_dicts_equal(endo_exo_origin, endo_exo_target) :
+
+        endo_exo_origin = jump.smooth_par_evolution(endo_exo_origin, endo_exo_target, growth_rate, positions)
+
+        solution = dict_least_squares( system, endo_vars, endo_exo_origin, bounds_variables, N, verb=0, check=True)
+        
+        endo_vars = solution.dvar
+        maxerror=max(abs( system(solution.dvar, endo_exo_origin)))
         if maxerror>1e-06:
             raise RuntimeError(f"the system doesn't converge, maxerror={maxerror}")
 
     
-    return variables
+    return endo_vars
 
 
 
@@ -406,23 +395,25 @@ for t in range(len(years)):
     print("year: ", years[t])
     
     if t==0:
-        variables=variables_calibration #kick(variables_calibration)
-    else:
-        variables=System.df_to_dict(var=True, t=years[t-1]) #kick(System.df_to_dict(var=True, t=years[t-1]))
-    
-    parameters=System.df_to_dict(var=False, t=years[t])
-    
-    sol = dict_least_squares( system, variables, parameters, bounds_variables, N, verb=1, check=True)
-        
-    maxerror=max(abs( system(sol.dvar, parameters)))
+        endo_vars=endo_var_calibration #kick(endo_var_calibration)
 
-    var_solution=sol.dvar
-    d=joint_dict(parameters, var_solution)
+        endo_exo_vars=exo_var_calibration 
+    else:
+        endo_vars=timeseries_df_to_endogenous_dict(timeseries_df, years[t-1], VARIABLES_SPECS) #kick(System.df_to_dict(var=True, t=years[t-1]))
+    
+        endo_exo_vars=timeseries_df_to_exo_endo_dict(timeseries_df, years[t], VARIABLES_SPECS)
+    
+    sol = dict_least_squares( system, endo_vars, endo_exo_vars, bounds_variables, N, verb=1, check=True)
+        
+    maxerror=max(abs( system(sol.dvar, endo_exo_vars)))
+
+    endo_solution=sol.dvar
+    d=joint_dict(endo_exo_vars, endo_solution)
     
     if maxerror>1e-06:
-        parameters_origin=System.df_to_dict(var=False, t=years[t-1])
-        var_solution=conduct_solution(parameters_origin, parameters, system, bounds_variables, N, threshold= 0.07, growth_rate=0.01)
-        d=joint_dict(parameters, var_solution)
+        endo_exo_origin=timeseries_df_to_exo_endo_dict(timeseries_df, years[t-1], VARIABLES_SPECS)
+        endo_solution=conduct_solution(endo_exo_origin, endo_exo_vars, system, bounds_variables, N, threshold= 0.07, growth_rate=0.01)
+        d=joint_dict(endo_exo_vars, endo_solution)
         print("the system converged!")
 
 
@@ -433,19 +424,14 @@ for t in range(len(years)):
     if not is_equilibrium:
         raise RuntimeError(f"the system is not at equilibrium: {equilibrium_t[1]}")
 
-    System.dict_to_df(var_solution, years[t])
+    timeseries_df= dict_to_timeseries_df(endo_solution, timeseries_df, years[t], VARIABLES_SPECS, years) 
 
-    if endo_Knext and years[t]<years[-2] :
-        System.evolve_K(t+1)
-    if t>0 and t<len(years)-2:
-        System.evolve_tp(t)
-        
        
-    
-    
 #  SAVE CSV  
+timeseries_df.to_csv(output_file_name, index=False)
 
-System.parameters_df.to_csv(name)
+
+#System.parameters_df.to_csv(output_file_name)
    
 
 ########################################################################

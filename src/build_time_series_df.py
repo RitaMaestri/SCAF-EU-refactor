@@ -178,33 +178,99 @@ def build_and_fill_timeseries_df(VARIABLES_SPECS, growth_ratios_df, year_cols):
 
 
 
-def timeseries_df_to_dict(timeseries_df, year, status):
+
+def timeseries_df_to_endogenous_dict(timeseries_df, year, VARIABLES_SPECS):
     """Convert one year slice of the DataFrame into a variable dictionary.
 
     Rows are first filtered by status. Then each variable name is mapped to:
     - a scalar if it appears once,
-    - a 1D NumPy array if it appears multiple times.
+    - a 1D NumPy array for vectors,
+    - a 2D NumPy array for matrices.
 
     Args:
         timeseries_df: Time-series DataFrame.
         year: Year column to extract.
-        status: Row status to filter (for example, ``endogenous`` or ``exogenous``).
+        VARIABLES_SPECS: Dictionary of Variable objects keyed by variable name.
 
     Returns:
-        Dictionary mapping variable names to scalar or 1D array values.
+        Dictionary mapping variable names to scalar, 1D, or 2D array values.
     """
-    filtered = timeseries_df[timeseries_df["status"] == status]
-    dict = {}
-    for var_name, group in filtered.groupby("variable_name", sort=False):
-        values = group[year].values
-        dict[var_name] = values[0] if len(values) == 1 else values
-
-    return dict
+    filtered = timeseries_df[timeseries_df["status"] == "endogenous"]
+    endogenous_dict = timeseries_df_to_exo_endo_dict(filtered, year, VARIABLES_SPECS)
+    return endogenous_dict
 
 
 
 
-def var_dict_to_timeseries_df(var_dict, timeseries_df, year, VARIABLES_SPECS, year_cols):
+
+
+def timeseries_df_to_unsolved_year_dict(timeseries_df, year, VARIABLES_SPECS):
+    """Extract one year from the time-series DataFrame as a full-variable dict.
+
+    For each variable, all entries are included at their natural dimensionality.
+    Exogenous entries keep their filled values; endogenous entries are set to
+    NaN, representing the state of a year that has not yet been solved.
+    Matrix variables are returned as 2D NumPy arrays.
+
+    Args:
+        timeseries_df: Time-series DataFrame produced by ``fill_timeseries``.
+        year: Year column to extract.
+        VARIABLES_SPECS: Dictionary of Variable objects keyed by variable name.
+
+    Returns:
+        Dictionary mapping variable names to scalar, 1D, or 2D NumPy array values,
+        with NaN at every endogenous position.
+    """
+    df = timeseries_df.copy()
+    endo_mask = df["status"] == "endogenous"
+    df.loc[endo_mask, year] = np.nan
+    return timeseries_df_to_exo_endo_dict(df, year, VARIABLES_SPECS)
+
+
+
+
+
+
+
+
+def timeseries_df_to_exo_endo_dict(timeseries_df, year, VARIABLES_SPECS):
+    """Extract one year from the time-series DataFrame as a variable dictionary.
+
+    For each variable, values are returned at the dimensionality defined in ``VARIABLES_SPECS``:
+    scalars as scalars, vectors as 1D arrays, and matrices as 2D arrays.
+
+    Args:
+        timeseries_df: Time-series DataFrame.
+        year: Year column to extract.
+        VARIABLES_SPECS: Dictionary of Variable objects keyed by variable name.
+
+    Returns:
+        Dictionary mapping variable names to scalar, 1D, or 2D array values.
+    """
+    result = {}
+    for var_name, group in timeseries_df.groupby("variable_name", sort=False):
+        values_from_df = group[year].values
+        
+        var_specs = VARIABLES_SPECS.get(var_name)
+        if var_specs.dimension == "matrix":
+            n_rows = len(var_specs.idx_labels[0])
+            n_cols = len(var_specs.idx_labels[1])
+            if len(values_from_df) == n_rows * n_cols:
+                result[var_name] = values_from_df.reshape(n_rows, n_cols)
+            else:
+                result[var_name] = values_from_df  # variable with both endo and exo elements: if endo elements are selected a vector is returned 
+        else:
+            result[var_name] = values_from_df[0] if len(values_from_df) == 1 else values_from_df
+    return result
+
+
+
+
+
+
+
+
+def dict_to_timeseries_df(var_dict, timeseries_df, year, VARIABLES_SPECS, year_cols):
     """Write endogenous values from a dictionary into one year of the DataFrame.
 
     The function updates the selected year for endogenous rows using ``var_dict``.
@@ -231,7 +297,8 @@ def var_dict_to_timeseries_df(var_dict, timeseries_df, year, VARIABLES_SPECS, ye
         if np.isscalar(values):
             df.loc[indices, year] = values
         else:
-            for idx, val in zip(indices, values):
+            flat_values = np.asarray(values).flatten()
+            for idx, val in zip(indices, flat_values):
                 df.at[idx, year] = val
 
     # Fill lagged variables: var(year+1) gets linked_var(year).
@@ -255,6 +322,6 @@ timeseries_df_template = build_timeseries_df(VARIABLES_SPECS, year_cols)
 
 timeseries_df = fill_timeseries(timeseries_df_template, growth_ratios_df, year_cols, VARIABLES_SPECS)
 
-dict=timeseries_df_to_dict(timeseries_df, year_cols[0], "endogenous")
+dict=timeseries_df_to_endogenous_dict(timeseries_df, year_cols[0], VARIABLES_SPECS)
 
-updated_df = var_dict_to_timeseries_df(dict, timeseries_df, year_cols[1], VARIABLES_SPECS, year_cols)
+updated_df = dict_to_timeseries_df(dict, timeseries_df, year_cols[1], VARIABLES_SPECS, year_cols)
