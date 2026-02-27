@@ -1,13 +1,17 @@
 {
   "database": "GTAP",
   "parameters": [
-    "betaCj_nE",
-    "computed_ni_j_nE",
-    "computed_etaCj_nE",
-    "gammaCj_nE",
-    "u_C",
-    "A_Cj_nE",
-    "normalisation_factor"
+    "I0",
+    "alphaIj",
+    "pI0"
   ],
-  "N": 7
+  "N": 7,
+  "pCjIj_nonzero_indices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    6
+  ]
 }
