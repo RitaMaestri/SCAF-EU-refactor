@@ -365,6 +365,45 @@ def _compute_expensive_params(alphaCj0_nE, target_ni_j_nE, target_etaCj_nE,
     }
 
 
+def _load_energy_matrix_from_csv(df, variable_type, row_labels, col_map, default_fill=0.0):
+    """Build an (n_rows, 4) energy matrix from a calibration CSV DataFrame.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Full calibration DataFrame read from calibration_2020.csv.
+    variable_type : str
+        Value to match on the ``Variable`` column (e.g. ``"Volume"``,
+        ``"Price"``, ``"Rho"``, ``"Technical_coefficient"``).
+    row_labels : list of str
+        Ordered row names; length determines the number of matrix rows.
+    col_map : dict
+        Maps ``"Energy uses"`` strings found in the CSV to 0-based column
+        indices.  Entries whose energy-use label is absent from *col_map* are
+        ignored.
+    default_fill : float
+        Value used to pre-fill the matrix before CSV values are inserted.
+
+    Returns
+    -------
+    np.ndarray, shape ``(len(row_labels), 4)``
+    """
+    mat = np.full((len(row_labels), 4), default_fill, dtype=float)
+    # Find the year-2020 column label (int or str depending on pandas version)
+    year_col = next((c for c in df.columns if str(c) == "2020"), None)
+    if year_col is None:
+        raise ValueError("Column '2020' not found in calibration CSV.")
+    subset = df[df["Variable"] == variable_type]
+    for _, row in subset.iterrows():
+        consumer   = row["Energy consumers"]
+        energy_use = row["Energy uses"]
+        if consumer in row_labels and energy_use in col_map:
+            r = row_labels.index(consumer)
+            c = col_map[energy_use]
+            mat[r, c] = float(row[year_col])
+    return mat
+
+
 class calibrationVariables:
     
     def __init__(self, L0=None):
@@ -396,9 +435,7 @@ class calibrationVariables:
         self.tauYj0 = imp.production_taxes/( imp.pYjYj - imp.production_taxes)
 
         self.tauSj0 = imp.sales_taxes / (imp.pCiYij.sum(axis=1)+imp.pCjCj+imp.pCjGj+imp.pCjIj - imp.sales_taxes)
-        self.tauL0 = imp.labor_taxes / (imp.pLLj - imp.labor_taxes)
         self.pCj0 = (1+cp(self.tauSj0))*cp(self.pSj0)
-        self.w= cp(self.pL0)/(1+cp(self.tauL0))
         
         #quantità
         self.Ij0 = imp.pCjIj/ cp(self.pCj0)
@@ -429,35 +466,26 @@ class calibrationVariables:
         
         #scalari
 
-        self.T0= sum(imp.production_taxes + imp.sales_taxes + imp.labor_taxes)
         self.B0=sum(imp.pXjXj)-sum(imp.pMjMj)
         self.R0= sum(imp.pCjCj)
         self.Ri0= sum(imp.pCjIj)
         self.Rg0= sum(imp.pCjGj)
-        self.l0=sum(cp(self.Lj0)/ cp(self.KLj0))
         self.GDP0= sum(imp.pCjCj+imp.pCjGj+imp.pCjIj+imp.pXjXj-imp.pMjMj)
         
 
-        ### aternative closures
-        self.uL0 = 0.105
-        self.sigmaw= 0.
-        self.uK0 = 0.105
-        self.sigmapK= -0.1
         
         # elasticities 
         self.sigmaXj=imp.sigmaXj.astype(float)
         self.sigmaSj=imp.sigmaSj.astype(float)
         self.sigmaKLj=imp.sigmaKLj.astype(float)
 
-        #self.etaXj=(imp.sigmaXj-1)/imp.sigmaXj
-        
+
         self.etaSj=(imp.sigmaSj-1)/imp.sigmaSj
         self.etaXj=(imp.sigmaXj-1)/imp.sigmaXj
         self.etaKLj=(imp.sigmaKLj-1)/imp.sigmaKLj
 
         
         self.aKLj= cp(self.KLj0)/ cp(self.Yj0)
-        self.lambda_KL = 1
         
         def compute_alphas_CES(Q1j,Q2j,p1j,p2j,etaj):
             alphaj = 1 / (
@@ -490,11 +518,7 @@ class calibrationVariables:
         self.csij = compute_theta_CES(Zj= cp(self.Sj0),alpha1j= cp(self.betaMj),alpha2j= cp(self.betaDj),Q1j= cp(self.Mj0),Q2j= cp(self.Dj0),etaj= cp(self.etaSj))
         
         self.alphaCj0 = imp.pCjCj / cp(self.R0)
-        self.lambda_E = 1
-        self.lambda_nE = 1
         self.alphaGj = imp.pCjGj/ cp(self.Rg0)
-        self.alphalj = cp(self.Lj0)/(cp(self.KLj0)*cp(self.l0))
-        self.alphaw = cp(self.w)/(cp(self.uL0)**cp(self.sigmaw))
         self.wB = cp(self.B0)/ cp(self.GDP0)
         self.wG = cp(self.Rg0)/ cp(self.GDP0)
         self.wI = cp(self.Ri0)/ cp(self.GDP0)
@@ -505,9 +529,6 @@ class calibrationVariables:
         self.pXtp= cp(self.pXj)
         self.Xtp= cp(self.Xj0)
         self.Mtp = cp(self.Mj0)
-        #self.betaRj= (imp.epsilonPCj+1)/(self.alphaCj-1)
-        #self.epsilonRj=imp.epsilonRj
-        self.sD0=sum(imp.pCjIj+imp.pXjXj-imp.pMjMj)/ cp(self.GDP0)
         
         #calibrate alphaIj, I and pI
         
@@ -561,18 +582,11 @@ class calibrationVariables:
         self.pK0 = (sum(imp.pKKj)*(cp(self.g0)+cp(self.delta)))/ cp(self.I0)
         self.Kj0= imp.pKKj / cp(self.pK0)
         self.K0=sum(self.Kj0)
-        self.alphapK = cp(self.pK0)/(cp(self.uK0)**cp(self.sigmapK))
-        self.alphaIK = cp(self.Ri0)/ cp(self.K0)
-        self.K0next = cp(self.K0) * (1-cp(self.delta)) + cp(self.I0)
-        self.L0u=sum(self.Lj0)/(1-cp(self.uL0))
-        self.K0u=sum(self.Kj0)/(1-cp(self.uK0))
-        self.K0u_next= cp(self.K0u) * (1-cp(self.delta)) + cp(self.I0)
+        
         self.GDPPI=1
-        self.CPI=1
         self.alphaLj= compute_alphas_CES(Q1j= cp(self.Lj0),Q2j= cp(self.Kj0),p1j= cp(self.pL0),p2j= cp(self.pK0),etaj= cp(self.etaKLj))
         self.alphaKj= compute_alphas_CES(Q1j= cp(self.Kj0),Q2j= cp(self.Lj0),p1j= cp(self.pK0),p2j= cp(self.pL0),etaj= cp(self.etaKLj))
-        self.gammaj = compute_theta_CES(Zj= cp(self.KLj0), alpha1j= cp(self.alphaKj), alpha2j= cp(self.alphaLj), Q1j= cp(self.Kj0), Q2j= cp(self.Lj0),etaj= cp(self.etaKLj))
-        #this is 1 by default for the E sector so calibrate accordingly
+        # #this is 1 by default for the E sector so calibrate accordingly
         self.bKL=1
         self.bKLj = cp(self.KLj0)*cp(self.bKL)/np.float_power(cp(self.alphaLj)*np.float_power(cp(self.Lj0),cp(self.etaKLj)) + cp(self.alphaKj) * np.float_power(cp(self.Kj0),cp(self.etaKLj)), 1/ cp(self.etaKLj))
         self.target_ni_j=imp.ni_j
@@ -610,8 +624,7 @@ class calibrationVariables:
         if cached_params is not None:
             # Load from cache
             self.betaCj_nE = cached_params['betaCj_nE']
-            self.computed_ni_j_nE = cached_params['computed_ni_j_nE']
-            self.computed_etaCj_nE = cached_params['computed_etaCj_nE']
+            
             self.gammaCj_nE = cached_params['gammaCj_nE']
             self.u_C = cached_params['u_C']
             self.A_Cj_nE = cached_params['A_Cj_nE']
@@ -625,8 +638,7 @@ class calibrationVariables:
             
             # Assign to self
             self.betaCj_nE = computed_params['betaCj_nE']
-            self.computed_ni_j_nE = computed_params['computed_ni_j_nE']
-            self.computed_etaCj_nE = computed_params['computed_etaCj_nE']
+            
             self.gammaCj_nE = computed_params['gammaCj_nE']
             self.u_C = computed_params['u_C']
             self.A_Cj_nE = computed_params['A_Cj_nE']
@@ -671,10 +683,8 @@ class calibrationVariables:
 
         self.s_LDV_C = float(shares.loc["s_LDV_C"])
         self.s_LDV_T = float(shares.loc["s_LDV_T"])
-        self.s_LDV_nonT = float(shares.loc["s_LDV_nonT"])
-
+        
         self.s_trucks_T = float(shares.loc["s_trucks_T"])
-        self.s_trucks_nonT = float(shares.loc["s_trucks_nonT"])
         
         self.YE_Tj[T]=(self.s_LDV*self.s_LDV_T+self.s_trucks*self.s_trucks_T+self.s_other_transport)*cp(self.E_T)
         self.C_ET = self.s_LDV_C * (self.s_LDV * cp(self.E_T))
@@ -737,13 +747,10 @@ class calibrationVariables:
 
         #adjusted variables
         self.aYij= cp(self.Yij0) / cp(self.Yj0[None,:])
-        self.Rh_E = imp.pCjCj[E]
-        self.Rh_nE = self.R0 - self.Rh_E
+        
         self.pCjtp= cp(self.pCj0)
         self.Ctp= cp(self.Cj0)
         
-        self.lambda_KLM = 1
-        self.lambda_XMj=np.array([float(0)]*N)
         
         self.aKLj0=cp(self.aKLj)
         self.aYij0=cp(self.aYij)
@@ -753,7 +760,90 @@ class calibrationVariables:
         self.rhoTnT=cp(self.pE_TnT)/cp(self.pE_Ej[E])
         self.rhoPj= cp(self.pE_Pj)/cp(self.pE_Ej[E])
 
+        #### ENERGY MATRICES ####
 
+        # Load calibration CSV once for matrix initialisation
+        _cal_csv_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "data", "calibration_2020.csv")
+        _df_cal = pd.read_csv(_cal_csv_path)
+        _row_labels = sectors + ["HOUSEHOLDS"]
+
+        # column order: T=0, B=1, P=2, PE=3
+        _col_map = {"T": 0, "B": 1, "P": 2, "PE": 3}
+
+        self.E_vol = _load_energy_matrix_from_csv(
+            _df_cal, "Volume", _row_labels, _col_map, default_fill=0.0)
+
+        self.pE    = _load_energy_matrix_from_csv(
+            _df_cal, "Price", _row_labels, _col_map, default_fill=0.0)
+
+        # Rho has no PE rows in CSV; PE column defaults to 1.0
+        self.rhoE  = _load_energy_matrix_from_csv(
+            _df_cal, "Rho", _row_labels, _col_map, default_fill=0.0)
+        self.rhoE[:, 3] = 1.0
+
+        # Technical_coefficient: computed from intermediate variables (same as aYE_*j / Yj0).
+        # Columns: T=0, B=1, P=2, PE=3.  Last row (HOUSEHOLDS) = 0 by construction.
+        self.a_Ej = np.zeros((len(_row_labels), 4))
+        self.a_Ej[:N, 0] = cp(self.YE_Tj) / cp(self.Yj0)   # T
+        self.a_Ej[:N, 1] = cp(self.YE_Bj) / cp(self.Yj0)   # B
+        self.a_Ej[:N, 2] = cp(self.YE_Pj) / cp(self.Yj0)   # P
+        self.a_Ej[:N, 3] = cp(self.YE_Ej) / cp(self.Yj0)   # PE
+
+        self.Yij0[E,:] = cp(self.E_vol.sum(axis=1)[:-1])
+        self.Cj0[E] = cp(self.E_vol.sum(axis=1)[-1])
+
+        self.pCj0[E] = imp.pCjCj[E]/cp(self.Cj0[E])
+        self.pY_Ej = imp.pCiYij[E,:]/cp(self.Yij0[E,:])
+
+        self.lambda_KLM = 1
+
+        # Remove individual energy variables now consolidated into the matrices above
+        del self.YE_Pj, self.YE_Ej, self.YE_Tj, self.YE_Bj
+        del self.C_ET, self.C_EB
+        del self.pE_TT, self.pE_TnT, self.pE_B, self.pE_Pj, self.pE_Ej
+        del self.rhoB, self.rhoTT, self.rhoTnT, self.rhoPj
+        del self.aYE_Bj, self.aYE_Pj, self.aYE_Tj, self.aYE_Ej
+        del self.non_zero_index_aYE_Bj, self.non_zero_index_aYE_Pj, self.non_zero_index_aYE_Tj
+
+        # self.lambda_XMj=np.array([float(0)]*N)
+        # self.Rh_E = imp.pCjCj[E]
+        # self.computed_ni_j_nE = cached_params['computed_ni_j_nE']
+        # self.computed_etaCj_nE = cached_params['computed_etaCj_nE']
+        # self.computed_ni_j_nE = computed_params['computed_ni_j_nE']
+        # self.computed_etaCj_nE = computed_params['computed_etaCj_nE']
+        # self.s_trucks_nonT = float(shares.loc["s_trucks_nonT"])
+        # self.s_LDV_nonT = float(shares.loc["s_LDV_nonT"])
+        # self.gammaj = compute_theta_CES(Zj= cp(self.KLj0), alpha1j= cp(self.alphaKj), alpha2j= cp(self.alphaLj), Q1j= cp(self.Kj0), Q2j= cp(self.Lj0),etaj= cp(self.etaKLj))
+        # self.alphapK = cp(self.pK0)/(cp(self.uK0)**cp(self.sigmapK))
+        # self.alphaIK = cp(self.Ri0)/ cp(self.K0)
+        # self.K0next = cp(self.K0) * (1-cp(self.delta)) + cp(self.I0)
+        # self.L0u=sum(self.Lj0)/(1-cp(self.uL0))
+        # self.K0u=sum(self.Kj0)/(1-cp(self.uK0))
+        # self.K0u_next= cp(self.K0u) * (1-cp(self.delta)) + cp(self.I0)
+        #self.betaRj= (imp.epsilonPCj+1)/(self.alphaCj-1)
+        #self.epsilonRj=imp.epsilonRj
+        # self.sD0=sum(imp.pCjIj+imp.pXjXj-imp.pMjMj)/ cp(self.GDP0)
+        # self.alphalj = cp(self.Lj0)/(cp(self.KLj0)*cp(self.l0))
+        # self.alphaw = cp(self.w)/(cp(self.uL0)**cp(self.sigmaw))
+        # self.lambda_E = 1
+        # self.lambda_nE = 1
+        # self.lambda_KL = 1
+        #self.etaXj=(imp.sigmaXj-1)/imp.sigmaXj
+        ### aternative closures
+        # self.uL0 = 0.105
+        # self.sigmaw= 0.
+        # self.uK0 = 0.105
+        # self.sigmapK= -0.1
+        # self.T0= sum(imp.production_taxes + imp.sales_taxes + imp.labor_taxes)
+        # self.w= cp(self.pL0)/(1+cp(self.tauL0))
+        # self.tauL0 = imp.labor_taxes / (imp.pLLj - imp.labor_taxes)
+        # self.l0=sum(cp(self.Lj0)/ cp(self.KLj0))
+        
+        # self.CPI=1
+        # self.Rh_nE = self.R0 - self.Rh_E
+        
 
 
 
@@ -779,450 +869,4 @@ class calibrationVariables:
 #     w = csv.DictWriter(f, export_calib_dict.keys())
 #     w.writeheader()
 #     w.writerow(export_calib_dict)
-
-
-def create_calibration_csv(calibration_obj, output_file="data/calibration_2020.csv"):
-    """
-    Create a CSV file with the same format as data/input_format.csv,
-    but with calibration data for the year 2020 only, with other years left blank.
-    
-    Mapping:
-    - YE_Ej → PE (Primary Energy) for ENERGY sector only
-    - YE_Pj → P (Process Energy) for all sectors with non-zero values
-    - YE_Tj → T (Transport Energy) for all sectors
-    - YE_Bj → B (Buildings Energy) for all sectors with non-zero values
-    - C_EB → B (Buildings Energy) for HOUSEHOLDS
-    - C_ET → T (Transport Energy) for HOUSEHOLDS
-    
-    Parameters
-    ----------
-    calibration_obj : calibrationVariables
-        An instance of calibrationVariables containing the calibration results
-    output_file : str
-        Path to the output CSV file
-    """
-    
-    # Read the template file to get the structure
-    template_df = pd.read_csv("data/input_format.csv")
-    
-    # Get unique values for each column (except the year columns)
-    all_years = [str(year) for year in range(2020, 2101, 5)]
-    
-    # Create a list to store all rows
-    rows = []
-    
-    # Get the sector mappings from the calibration object
-    # These are the actual indices used in the model
-    from simple_calibration import A, M, SE, E, ST, CH, T
-    
-    # Map actual indices to sector names
-    index_to_sector = {
-        A: "AGRICULTURE",
-        M: "MANUFACTURE", 
-        SE: "SERVICES",
-        E: "ENERGY",
-        ST: "STEEL",
-        CH: "CHEMICAL",
-        T: "TRANSPORTATION",
-    }
-    
-    # Include HOUSEHOLDS with HOUSEHOLDS-specific mapping
-    all_sector_names = [
-        "AGRICULTURE",
-        "MANUFACTURE", 
-        "SERVICES",
-        "ENERGY",
-        "STEEL",
-        "CHEMICAL",
-        "TRANSPORTATION",
-        "HOUSEHOLDS"
-    ]
-    
-    # Get model, scenario, and region from template
-    model = template_df["Model"].iloc[0]
-    scenario = template_df["Scenario"].iloc[0]
-    region = template_df["Region"].iloc[0]
-    
-    # Create rows for Volume data
-    for sector_name in all_sector_names:
-        
-        # Find the sector index
-        sector_idx = None
-        for idx, name in index_to_sector.items():
-            if name == sector_name:
-                sector_idx = idx
-                break
-        
-        # PE (Primary Energy)
-        row = {
-            "Model": model,
-            "Scenario": scenario,
-            "Region": region,
-            "Variable": "Volume",
-            "Energy consumers": sector_name,
-            "Energy uses": "PE",
-            "Unit": "EJ"
-        }
-        for year in all_years:
-            if year == "2020":
-                if sector_name == "ENERGY" and sector_idx is not None:
-                    row[year] = calibration_obj.YE_Ej[sector_idx]
-                else:
-                    row[year] = 0
-            else:
-                row[year] = 0
-        rows.append(row)
-        
-        # P (Process Energy)
-        row = {
-            "Model": model,
-            "Scenario": scenario,
-            "Region": region,
-            "Variable": "Volume",
-            "Energy consumers": sector_name,
-            "Energy uses": "P",
-            "Unit": "EJ"
-        }
-        for year in all_years:
-            if year == "2020":
-                if sector_idx is not None:
-                    row[year] = calibration_obj.YE_Pj[sector_idx]
-                else:
-                    row[year] = 0
-            else:
-                row[year] = 0
-        rows.append(row)
-        
-        # T (Transport Energy)
-        row = {
-            "Model": model,
-            "Scenario": scenario,
-            "Region": region,
-            "Variable": "Volume",
-            "Energy consumers": sector_name,
-            "Energy uses": "T",
-            "Unit": "EJ"
-        }
-        for year in all_years:
-            if year == "2020":
-                if sector_name == "HOUSEHOLDS":
-                    # C_ET for HOUSEHOLDS transport
-                    row[year] = calibration_obj.C_ET
-                elif sector_idx is not None:
-                    row[year] = calibration_obj.YE_Tj[sector_idx]
-                else:
-                    row[year] = 0
-            else:
-                row[year] = 0
-        rows.append(row)
-        
-        # B (Buildings Energy)
-        row = {
-            "Model": model,
-            "Scenario": scenario,
-            "Region": region,
-            "Variable": "Volume",
-            "Energy consumers": sector_name,
-            "Energy uses": "B",
-            "Unit": "EJ"
-        }
-        for year in all_years:
-            if year == "2020":
-                if sector_name == "HOUSEHOLDS":
-                    # C_EB for HOUSEHOLDS buildings
-                    row[year] = calibration_obj.C_EB
-                elif sector_idx is not None:
-                    row[year] = calibration_obj.YE_Bj[sector_idx]
-                else:
-                    row[year] = 0
-            else:
-                row[year] = 0
-        rows.append(row)
-    
-    # Create rows for Price data
-    # Mapping:
-    # - pE_B: all sectors, B
-    # - pE_TT: TRANSPORTATION, T
-    # - pE_TnT: all sectors except TRANSPORTATION, T
-    # - pE_Pj: all sectors (by position), P
-    # - pE_Ej: all sectors, PE
-    
-    for sector_name in all_sector_names:
-        
-        # Find the sector index
-        sector_idx = None
-        for idx, name in index_to_sector.items():
-            if name == sector_name:
-                sector_idx = idx
-                break
-        
-        # PE (Primary Energy) - pE_Ej
-        row = {
-            "Model": model,
-            "Scenario": scenario,
-            "Region": region,
-            "Variable": "Price",
-            "Energy consumers": sector_name,
-            "Energy uses": "PE",
-            "Unit": "EJ"
-        }
-        for year in all_years:
-            if year == "2020":
-                if sector_idx is not None:
-                    row[year] = calibration_obj.pE_Ej[sector_idx]
-                else:
-                    row[year] = 0
-            else:
-                row[year] = 0
-        rows.append(row)
-        
-        # P (Process Energy) - pE_Pj
-        row = {
-            "Model": model,
-            "Scenario": scenario,
-            "Region": region,
-            "Variable": "Price",
-            "Energy consumers": sector_name,
-            "Energy uses": "P",
-            "Unit": "EJ"
-        }
-        for year in all_years:
-            if year == "2020":
-                if sector_idx is not None:
-                    row[year] = calibration_obj.pE_Pj[sector_idx]
-                else:
-                    row[year] = 0
-            else:
-                row[year] = 0
-        rows.append(row)
-        
-        # T (Transport Energy) - pE_TT or pE_TnT depending on sector
-        row = {
-            "Model": model,
-            "Scenario": scenario,
-            "Region": region,
-            "Variable": "Price",
-            "Energy consumers": sector_name,
-            "Energy uses": "T",
-            "Unit": "EJ"
-        }
-        for year in all_years:
-            if year == "2020":
-                if sector_name == "TRANSPORTATION":
-                    row[year] = calibration_obj.pE_TT
-                else:
-                    # All other sectors (including HOUSEHOLDS) get pE_TnT
-                    row[year] = calibration_obj.pE_TnT
-            else:
-                row[year] = 0
-        rows.append(row)
-        
-        # B (Buildings Energy) - pE_B (same for all sectors)
-        row = {
-            "Model": model,
-            "Scenario": scenario,
-            "Region": region,
-            "Variable": "Price",
-            "Energy consumers": sector_name,
-            "Energy uses": "B",
-            "Unit": "EJ"
-        }
-        for year in all_years:
-            if year == "2020":
-                row[year] = calibration_obj.pE_B
-            else:
-                row[year] = 0
-        rows.append(row)
-    
-    # Create rows for Rho data
-    # Mapping:
-    # - rhoB: all sectors, B
-    # - rhoTT: TRANSPORTATION, T
-    # - rhoTnT: all sectors except TRANSPORTATION, T
-    # - rhoPj: all sectors (by position), P
-    # Note: No PE (Primary Energy) rows for Rho
-    
-    for sector_name in all_sector_names:
-        
-        # Find the sector index
-        sector_idx = None
-        for idx, name in index_to_sector.items():
-            if name == sector_name:
-                sector_idx = idx
-                break
-        
-        # P (Process Energy) - rhoPj
-        row = {
-            "Model": model,
-            "Scenario": scenario,
-            "Region": region,
-            "Variable": "Rho",
-            "Energy consumers": sector_name,
-            "Energy uses": "P",
-            "Unit": ""
-        }
-        for year in all_years:
-            if year == "2020":
-                if sector_idx is not None:
-                    row[year] = calibration_obj.rhoPj[sector_idx]
-                else:
-                    row[year] = 0
-            else:
-                row[year] = 0
-        rows.append(row)
-        
-        # T (Transport Energy) - rhoTT or rhoTnT depending on sector
-        row = {
-            "Model": model,
-            "Scenario": scenario,
-            "Region": region,
-            "Variable": "Rho",
-            "Energy consumers": sector_name,
-            "Energy uses": "T",
-            "Unit": ""
-        }
-        for year in all_years:
-            if year == "2020":
-                if sector_name == "TRANSPORTATION":
-                    row[year] = calibration_obj.rhoTT
-                else:
-                    # All other sectors (including HOUSEHOLDS) get rhoTnT
-                    row[year] = calibration_obj.rhoTnT
-            else:
-                row[year] = 0
-        rows.append(row)
-        
-        # B (Buildings Energy) - rhoB (same for all sectors)
-        row = {
-            "Model": model,
-            "Scenario": scenario,
-            "Region": region,
-            "Variable": "Rho",
-            "Energy consumers": sector_name,
-            "Energy uses": "B",
-            "Unit": ""
-        }
-        for year in all_years:
-            if year == "2020":
-                row[year] = calibration_obj.rhoB
-            else:
-                row[year] = 0
-        rows.append(row)
-    
-    # Create rows for Technical Coefficients (a)
-    # Mapping:
-    # - aYE_Bj: all sectors, B
-    # - aYE_Pj: all sectors, P
-    # - aYE_Tj: all sectors, T
-    # - aYE_Ej: all sectors, only non-zero for ENERGY; E
-    # Note: No PE rows for technical coefficients
-    
-    # Calculate aYE_Ej if not already in calibration_obj
-    aYE_Ej = calibration_obj.YE_Ej / calibration_obj.Yj0
-    
-    for sector_name in all_sector_names:
-        # Skip HOUSEHOLDS for technical coefficients
-        if sector_name == "HOUSEHOLDS":
-            continue
-        
-        # Find the sector index
-        sector_idx = None
-        for idx, name in index_to_sector.items():
-            if name == sector_name:
-                sector_idx = idx
-                break
-        
-        # P (Process Energy) - aYE_Pj
-        row = {
-            "Model": model,
-            "Scenario": scenario,
-            "Region": region,
-            "Variable": "Technical_coefficient",
-            "Energy consumers": sector_name,
-            "Energy uses": "P",
-            "Unit": ""
-        }
-        for year in all_years:
-            if year == "2020":
-                if sector_idx is not None:
-                    row[year] = calibration_obj.aYE_Pj[sector_idx]
-                else:
-                    row[year] = 0
-            else:
-                row[year] = 0
-        rows.append(row)
-        
-        # T (Transport Energy) - aYE_Tj
-        row = {
-            "Model": model,
-            "Scenario": scenario,
-            "Region": region,
-            "Variable": "Technical_coefficient",
-            "Energy consumers": sector_name,
-            "Energy uses": "T",
-            "Unit": ""
-        }
-        for year in all_years:
-            if year == "2020":
-                if sector_idx is not None:
-                    row[year] = calibration_obj.aYE_Tj[sector_idx]
-                else:
-                    row[year] = 0
-            else:
-                row[year] = 0
-        rows.append(row)
-        
-        # B (Buildings Energy) - aYE_Bj
-        row = {
-            "Model": model,
-            "Scenario": scenario,
-            "Region": region,
-            "Variable": "Technical_coefficient",
-            "Energy consumers": sector_name,
-            "Energy uses": "B",
-            "Unit": ""
-        }
-        for year in all_years:
-            if year == "2020":
-                if sector_idx is not None:
-                    row[year] = calibration_obj.aYE_Bj[sector_idx]
-                else:
-                    row[year] = 0
-            else:
-                row[year] = 0
-        rows.append(row)
-        
-        # E (Primary Energy) - aYE_Ej (only non-zero for ENERGY sector)
-        row = {
-            "Model": model,
-            "Scenario": scenario,
-            "Region": region,
-            "Variable": "Technical_coefficient",
-            "Energy consumers": sector_name,
-            "Energy uses": "E",
-            "Unit": ""
-        }
-        for year in all_years:
-            if year == "2020":
-                if sector_idx is not None:
-                    row[year] = aYE_Ej[sector_idx]
-                else:
-                    row[year] = 0
-            else:
-                row[year] = 0
-        rows.append(row)
-    
-    # Convert to DataFrame and save
-    output_df = pd.DataFrame(rows)
-    
-    # Reorder columns to match template
-    column_order = ["Model", "Scenario", "Region", "Variable", "Energy consumers", "Energy uses", "Unit"] + all_years
-    output_df = output_df[column_order]
-    
-    # Save to CSV
-    output_df.to_csv(output_file, index=False)
-    print(f"Calibration CSV saved to {output_file}")
-    
-    return output_df
-
 

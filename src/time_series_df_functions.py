@@ -344,10 +344,10 @@ def reformat_bounds_for_solver(VARIABLES_SPECS):
 
 
 
-timeseries_df_template = build_timeseries_df(VARIABLES_SPECS, year_cols)
+#timeseries_df_template = build_timeseries_df(VARIABLES_SPECS, year_cols)
 
-timeseries_df = fill_timeseries(timeseries_df_template, growth_ratios_df, year_cols, VARIABLES_SPECS)
+#timeseries_df = fill_timeseries(timeseries_df_template, growth_ratios_df, year_cols, VARIABLES_SPECS)
 
-dict=timeseries_df_to_endogenous_dict(timeseries_df, year_cols[0], VARIABLES_SPECS)
+#dict=timeseries_df_to_endogenous_dict(timeseries_df, year_cols[0], VARIABLES_SPECS)
 
-updated_df = dict_to_timeseries_df(dict, timeseries_df, year_cols[1], VARIABLES_SPECS, year_cols)
+#updated_df = dict_to_timeseries_df(dict, timeseries_df, year_cols[1], VARIABLES_SPECS, year_cols)

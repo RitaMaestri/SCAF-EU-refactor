@@ -17,13 +17,14 @@ from Variables_specs import VARIABLES_SPECS
 from time_series_df_functions import reformat_bounds_for_solver, build_and_fill_timeseries_df, timeseries_df_to_endogenous_dict, timeseries_df_to_exo_endo_dict, timeseries_df_to_unsolved_year_dict, dict_to_timeseries_df
 from system_of_equations import system, joint_dict
 
-from run_setup import growth_ratios_df, years, output_file_name
 
 
 
 ########################################################################
 ########################## BUILD TIMESERIES DF #########################
 ########################################################################
+
+from run_setup import growth_ratios_df, years, output_file_name
 
 timeseries_df=build_and_fill_timeseries_df(VARIABLES_SPECS,growth_ratios_df,years)
 
