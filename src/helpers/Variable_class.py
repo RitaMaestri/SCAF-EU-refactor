@@ -1,5 +1,5 @@
 import numpy as np 
-from simple_calibration import calibrationVariables
+from calibration import calibrationVariables
 from import_GTAP_data import sectors
 from itertools import product
 

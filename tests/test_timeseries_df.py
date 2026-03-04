@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-
+import sys
+sys.path.append('/home/rita/Documents/Tesi/Projects/SCAF-EU-refactor/src')
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -8,7 +9,7 @@ warnings.filterwarnings("ignore")
 
 from import_GTAP_data import N
 from Variables_specs import VARIABLES_SPECS
-from time_series_df_functions import build_timeseries_df
+from helpers.time_series_df_functions import build_timeseries_df
 
 
 

@@ -1,7 +1,7 @@
 import numpy as np 
-from simple_calibration import calibrationVariables
+from calibration import calibrationVariables
 from import_GTAP_data import sectors
-from Variable_class import Variable
+from helpers.Variable_class import Variable
 
 # This module defines the master dictionary of model variable specifications.
 # Each entry maps a variable key to a configured ``Variable`` instance.

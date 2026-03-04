@@ -10,11 +10,11 @@ warnings.filterwarnings("ignore")
 
 
 from import_GTAP_data import N
-from solvers import dict_least_squares
-from simple_calibration import E
-from handle_jump import conduct_solution
+from helpers.solvers import dict_least_squares
+from calibration import E
+from helpers.handle_jump import conduct_solution
 from Variables_specs import VARIABLES_SPECS
-from time_series_df_functions import reformat_bounds_for_solver, build_and_fill_timeseries_df, timeseries_df_to_endogenous_dict, timeseries_df_to_exo_endo_dict, timeseries_df_to_unsolved_year_dict, dict_to_timeseries_df
+from helpers.time_series_df_functions import reformat_bounds_for_solver, build_and_fill_timeseries_df, timeseries_df_to_endogenous_dict, timeseries_df_to_exo_endo_dict, timeseries_df_to_unsolved_year_dict, dict_to_timeseries_df
 from system_of_equations import system, joint_dict
 
 

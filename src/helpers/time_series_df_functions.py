@@ -1,6 +1,6 @@
 import numpy as np 
 import pandas as pd
-from Variable_class import Variable
+from helpers.Variable_class import Variable
 from Variables_specs import VARIABLES_SPECS
 
 

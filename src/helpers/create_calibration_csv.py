@@ -33,7 +33,7 @@ def create_calibration_csv(calibration_obj, output_file="data/calibration_2020.c
     
     # Get the sector mappings from the calibration object
     # These are the actual indices used in the model
-    from simple_calibration import A, M, SE, E, ST, CH, T
+    from calibration import A, M, SE, E, ST, CH, T
     
     # Map actual indices to sector names
     index_to_sector = {

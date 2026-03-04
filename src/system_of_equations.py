@@ -1,7 +1,7 @@
 import numpy as np
-import model_equations as eq
+import helpers.model_equations as eq
 from import_GTAP_data import N, non_zero_index_G, non_zero_index_I, non_zero_index_X, non_zero_index_M, non_zero_index_Yij
-from simple_calibration import A,M,SE,E,ST,CH,T
+from calibration import A,M,SE,E,ST,CH,T
 
 def fill_nans(par_value, var_value, key):
     if isinstance(par_value, np.ndarray):

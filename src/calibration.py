@@ -4,7 +4,7 @@ from import_GTAP_data import N,sectors
 from copy import deepcopy as cp
 import pandas as pd
 import os
-from calibration_solvers import _compute_solI_params, _compute_CDES_params, load_expensive_params, save_expensive_params
+from helpers.calibration_solvers import _compute_solI_params, _compute_CDES_params, load_expensive_params, save_expensive_params
 
 #import pandas as pd
 

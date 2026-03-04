@@ -1,8 +1,8 @@
 import numpy as np
 import copy
 
-from solvers import dict_least_squares
-from time_series_df_functions import timeseries_df_to_endogenous_dict, VARIABLES_SPECS
+from helpers.solvers import dict_least_squares
+from helpers.time_series_df_functions import timeseries_df_to_endogenous_dict, VARIABLES_SPECS
 
 def get_value_at_position(position, dictionary):
     key, pos = position
