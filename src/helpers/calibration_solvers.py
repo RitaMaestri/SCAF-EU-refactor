@@ -2,7 +2,8 @@
 import numpy as np 
 import import_GTAP_data as imp
 from import_GTAP_data import N,sectors
-from solvers import dict_least_squares, dict_minimize
+from helpers.solvers import dict_least_squares, dict_minimize
+from Variables_specs import VARIABLES_SPECS
 import scipy
 from functools import partial
 import os
@@ -366,7 +367,7 @@ def _compute_CDES_params(alphaCj0_nE, target_ni_j_nE, target_etaCj_nE,
     
     bounds= create_ordered_bounds(variables, bounds_dict)
     
-    solA_Cj = dict_least_squares(systemA_C, variables , parameters, bounds, N, check=False,verb=0)
+    solA_Cj = dict_least_squares(systemA_C, variables , parameters, bounds, VARIABLES_SPECS, check=False,verb=0)
     
     A_Cj_nE=solA_Cj.dvar["A_Cj"]
     
@@ -447,7 +448,7 @@ def _compute_solI_params(pCj0, Ij0, Ri0, pCjIj, N_val):
 
     bounds = create_ordered_bounds(variables, bounds_dict)
 
-    solI = dict_least_squares(systemI, variables, parameters, bounds, N_val,
+    solI = dict_least_squares(systemI, variables, parameters, bounds, VARIABLES_SPECS,
                               check=False, verb=0)
 
     alphaIj_full = np.zeros(N_val)

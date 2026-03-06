@@ -630,12 +630,75 @@ def eqaYij0(aYij0, aYij, lambda_KLM):
     return zero
 
 
-def eqrho(pEi, p_EE, rho, _index=None):
-    if isinstance(_index, np.ndarray):
-        zero= 1-rho[_index]/(pEi[_index]/p_EE)      #print("Yij check: ",(Yij[_index[0],_index[1]]==dt.variables['Yijn0']).all())
-    else:    
-        zero= 1-rho/(pEi/p_EE)
+#def eqrho(pEi, p_EE, rho, _index=None):
+#    if isinstance(_index, np.ndarray):
+#        zero= 1-rho[_index]/(pEi[_index]/p_EE)      #print("Yij check: ",(Yij[_index[0],_index[1]]==dt.variables['Yijn0']).all())
+#    else:    
+#        zero= 1-rho/(pEi/p_EE)
+#        zero
+#    return zero
+
+
+def eqEnergyVolumesSum(E_matrix, Y_Ej, C_E, _index=None):
+
+    col_sum = E_matrix.sum(axis=1)      # array di N elementi
+    target = np.append(Y_Ej, C_E)     # array di N elementi
+
+    zero = 1-col_sum / target
+
+    zero=zero.flatten()
     return zero
 
 
 
+def eqEnergyPrices(E_matrix, Y_Ej, C_E, pE_matrix, pY_Ej, p_CE, _index=None):
+
+    Y_Ej_values = pY_Ej * Y_Ej
+    C_E_values = p_CE * C_E
+    E_matrix_values= E_matrix*pE_matrix
+
+    zero=eqEnergyVolumesSum(E_matrix_values,Y_Ej_values,C_E_values, _index=_index)
+
+    return zero
+
+
+
+def eqRhos(pE, rhos):
+    
+    computed_rhos = pE[:,:-1] / pE[:, [-1]]
+    zero = 1 - rhos / computed_rhos
+    zero = zero.flatten()
+
+    return zero
+
+def eqPricePrimaryEnergy(pE, energy_index):
+    Primary_Energy_col = pE[:, -1]                 # ultima colonna (N,)
+    mask = np.arange(pE.shape[0]) != E
+    
+    PE_prices_nonE_sectors =Primary_Energy_col[mask]
+    PE_price_E = pE[energy_index, -1]  
+
+    zero = 1 - PE_prices_nonE_sectors/ PE_price_E
+
+    return zero
+
+    
+
+def eqaEj(a_Eej, E_vol, Yj, _index=None):
+    #index must be in the form of a tuple of arrays (row indices, column indices)
+    a_wo_households = a_Eej[:-1, :]
+    E_wo_households = E_vol[:-1, :]
+
+    # moltiplica tutte le colonne per Yj (broadcast su colonne)
+    # (Yj è (N-1,), lo trasformo in (N-1, 1) per moltiplicare riga-per-riga)
+    prod = a_wo_households * Yj[:, None]
+
+    if _index is not None:
+        prod = prod[_index]
+        E_wo_households = E_wo_households[_index]
+        zero = 1 - E_wo_households / prod
+    else:
+        zero = 1 - E_wo_households / prod
+        zero=zero.flatten()
+    
+    return zero

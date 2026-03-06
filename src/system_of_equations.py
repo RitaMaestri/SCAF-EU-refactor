@@ -33,14 +33,16 @@ def joint_dict(par, var):
 def system(var, par):
 
     d=joint_dict(par,var)
-    non_zero_index_pE_Pj=np.array(np.where(d["pE_Pj"] != 0)).flatten()
-    non_zero_index_aYE_Bj=np.array(np.where(d["aYE_Bj"] != 0)).flatten()
-    non_zero_index_aYE_Pj=np.array(np.where(d["aYE_Pj"] != 0)).flatten()
-    non_zero_index_aYE_Tj=np.array(np.where(d["aYE_Tj"] != 0)).flatten()
+    ## for computational reasons, we need to exclude the equations that involve variables that are zero 
+    # in the initial calibration, as they would cause the solver to diverge. 
+    # the solver checks if the number of equations is the same as the number of NON ZERO endogenousvariables
+    non_zero_index_intermediate_E_vol = np.where(d["E_vol"][:-1, :] != 0) #where the energy volumes are not zero in the matrix w/o households
     index_wo_E=np.delete(np.array(range(N)), E)
     index_E=np.array([E])
     index_wo_E_SE=np.delete(index_wo_E, SE)
+    
     global equations
+    # ADD NON ZERO INDEXES FOR ENERGY MATRICES
     equations= {
         ###
         "eqCESquantityKj":eq.eqCESquantity(Xj=d['Kj'], Zj=d['KLj'], alphaXj=d['alphaKj'], alphaYj=d['alphaLj'], pXj=d['pK'], pYj=d['pL'], sigmaj=d['sigmaKLj'], thetaj=d['bKLj'], theta=d['bKL']),#e-5
@@ -99,28 +101,17 @@ def system(var, par):
 
         #energy coupling
         ###
-        "eqC_E":eq.eqsum_scalar(d['Cj'][E], d['C_EB'],d['C_ET']),
-        ###
-        "eqY_E":eq.eqsum_arr(d['Yij'][E,:], d['YE_Pj'], d['YE_Bj'],d['YE_Tj'], d['YE_Ej']  ),
-        ###
-        "eqpC_E":eq.eqsum_pEYE(p_CE=d["pCj"][E], pY_Ej=d['pY_Ej'], C_E=d['Cj'][E], Y_Ej=d['Yij'][E,:], 
-                               pE_B=d['pE_B'], C_EB=d['C_EB'], YE_Bj=d['YE_Bj'], pE_Pj=d['pE_Pj'], 
-                               YE_Pj=d['YE_Pj'], pE_TnT=d['pE_TnT'], pE_TT=d['pE_TT'], C_ET=d['C_ET'], 
-                               YE_Tj=d['YE_Tj'], pE_Ej=d['pE_Ej'], YE_Ej=d['YE_Ej']),
-        ###
-        "eqrhoB": eq.eqrho(pEi=d['pE_B'], p_EE=d['pE_Ej'][E], rho=d["rhoB"]), #
-        ###
-        "eqrhoTT": eq.eqrho(pEi=d['pE_TT'], p_EE=d['pE_Ej'][E], rho=d["rhoTT"]), #
-        ###
-        "eqrhoTnT": eq.eqrho(pEi=d['pE_TnT'], p_EE=d['pE_Ej'][E], rho=d["rhoTnT"]), #
-        ###
-        "eqrhoPj": eq.eqrho(pEi=d['pE_Pj'], p_EE=d['pE_Ej'][E], rho=d["rhoPj"],_index=non_zero_index_pE_Pj ), #
-        ###
-        "eqLeontiefVolumes_YE_B":eq.eqLeontiefVolumes(quantity=d['YE_Bj'],technical_coeff=d['aYE_Bj'],output=d['Yj'],_index=non_zero_index_aYE_Bj),
-        ###
-        "eqLeontiefVolumes_YE_P":eq.eqLeontiefVolumes(quantity=d['YE_Pj'],technical_coeff=d['aYE_Pj'],output=d['Yj'],_index=non_zero_index_aYE_Pj),
-        ###
-        "eqLeontiefVolumes_YE_T":eq.eqLeontiefVolumes(quantity=d['YE_Tj'],technical_coeff=d['aYE_Tj'],output=d['Yj'],_index=non_zero_index_aYE_Tj),
+    
+        "eqEnergyVolumes":eq.eqEnergyVolumesSum(E_matrix=d["E_vol"],Y_Ej=d['Yij'][E,:],C_E=d['Cj'][E]),
+        
+        "eqEnergyValues":eq.eqEnergyPrices(E_matrix=d["E_vol"],Y_Ej=d['Yij'][E,:],C_E=d['Cj'][E],pE_matrix=d["pE"],pY_Ej=d['pY_Ej'],p_CE=d['pCj'][E]),
+        
+        "eqRhos":eq.eqRhos(pE=d["pE"], rhos=d["rhoE"]),
+
+        "eqaEj":eq.eqaEj(a_Eej=d["a_Ej"], E_vol=d["E_vol"], Yj=d['Yj'], _index = non_zero_index_intermediate_E_vol),
+
+        "eqPrimaryEnergyPrices":eq.eqPricePrimaryEnergy(pE=d["pE"], energy_index=E),
+
 
 
         ### CDES
@@ -131,7 +122,7 @@ def system(var, par):
         "eq_R_E":eq.eq_R_E(R_E=d["R_E"], pC_E=d["pCj"][E], C_E=d["Cj"][E]),
         ###
         "eq_RH_nE":eq.eq_RH_nE(R=d["R"], R_E=d["R_E"], R_nE=d["R_nE"]),
-                ###
+        ###
         "eqpCE":eq.eqsum_pESE(p_SE=d['pSj'][E], tauSE=d['tauSj'][E], S_E=d['Sj'][E], Y_Ej=d['Yij'][E,:], C_E=d['Cj'][E], pY_Ej=d['pY_Ej'], p_CE=d['pCj'][E]),#
         ###
         "eqaKLj0":eq.eqaKLj0(aKLj0=d['aKLj0'], aKLj=d['aKLj'], lambda_KLM=d['lambda_KLM']),

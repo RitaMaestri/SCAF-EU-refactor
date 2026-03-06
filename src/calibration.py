@@ -17,6 +17,12 @@ CH = sectors.index("CHEMICAL")
 T = sectors.index("TRANSPORTATION")
 
 
+# Load calibration CSV once for matrix initialisation
+cal_csv_path = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "data", "calibration_2020.csv")
+df_cal = pd.read_csv(cal_csv_path)
+
 
 
 
@@ -42,9 +48,9 @@ def _load_energy_matrix_from_csv(df, variable_type, row_labels, col_map, default
 
     Returns
     -------
-    np.ndarray, shape ``(len(row_labels), 4)``
+    np.ndarray, shape ``(len(row_labels), len(col_map))``
     """
-    mat = np.full((len(row_labels), 4), default_fill, dtype=float)
+    mat = np.full((len(row_labels), len(col_map)), default_fill, dtype=float)
     # Find the year-2020 column label (int or str depending on pandas version)
     year_col = next((c for c in df.columns if str(c) == "2020"), None)
     if year_col is None:
@@ -284,26 +290,23 @@ class calibrationVariables:
 
         #### ENERGY MATRICES ####
 
-        # Load calibration CSV once for matrix initialisation
-        _cal_csv_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "data", "calibration_2020.csv")
-        _df_cal = pd.read_csv(_cal_csv_path)
+
         _row_labels = sectors + ["HOUSEHOLDS"]
 
         # column order: T=0, B=1, P=2, PE=3
         _col_map = {"T": 0, "B": 1, "P": 2, "PE": 3}
+        _rhos_col_map = {"T": 0, "B": 1, "P": 2}  # Rho has no PE column in CSV
 
         self.E_vol = _load_energy_matrix_from_csv(
-            _df_cal, "Volume", _row_labels, _col_map, default_fill=0.0)
+            df_cal, "Volume", _row_labels, _col_map, default_fill=0.0)
 
         self.pE    = _load_energy_matrix_from_csv(
-            _df_cal, "Price", _row_labels, _col_map, default_fill=0.0)
+            df_cal, "Price", _row_labels, _col_map, default_fill=0.0)
 
         # Rho has no PE rows in CSV; PE column defaults to 1.0
         self.rhoE  = _load_energy_matrix_from_csv(
-            _df_cal, "Rho", _row_labels, _col_map, default_fill=0.0)
-        self.rhoE[:, 3] = 1.0
+            df_cal, "Rho", _row_labels, _rhos_col_map, default_fill=0.0)
+        
 
         _row_map = {label: idx for idx, label in enumerate(_row_labels)}
         _households_idx = _row_map["HOUSEHOLDS"]

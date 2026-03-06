@@ -149,7 +149,7 @@ def are_dicts_equal(dict1, dict2):
 
 
 
-def conduct_solution(endo_exo_origin, endo_exo_target, system, bounds_variables, N, timeseries_df, year, threshold= 0.07, growth_rate=0.01):
+def conduct_solution(endo_exo_origin, endo_exo_target, system, bounds_variables, timeseries_df, year, threshold= 0.07, growth_rate=0.01):
     print("finding solution progressively ...")
 
     parameters_gr = dictionary_gr( endo_exo_target,endo_exo_origin  )
@@ -161,7 +161,7 @@ def conduct_solution(endo_exo_origin, endo_exo_target, system, bounds_variables,
 
         endo_exo_origin = smooth_par_evolution(endo_exo_origin, endo_exo_target, growth_rate, positions)
 
-        solution = dict_least_squares( system, endo_vars, endo_exo_origin, bounds_variables, N, verb=0, check=True)
+        solution = dict_least_squares( system, endo_vars, endo_exo_origin, bounds_variables, VARIABLES_SPECS, verb=0, check=True)
         
         endo_vars = solution.dvar
         maxerror=max(abs( system(solution.dvar, endo_exo_origin)))

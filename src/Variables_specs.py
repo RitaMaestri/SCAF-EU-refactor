@@ -12,12 +12,14 @@ from helpers.Variable_class import Variable
 # 	This is used to automatically populate the first year of the time-series DataFrame with the calibration value of the indicated variable, 
 # 	and to set up the correct lag relationships for dynamic updating in the model solution process.
 
-
-endo_aYij_indexes = [("ENERGY",x) for x in sectors]
 sectors_nE     = [x for x in sectors if x != "ENERGY"]
 sectors_plus_hh = sectors + ["HOUSEHOLDS"]
 energy_types    = ["T", "B", "P", "PE"]
+energy_types_wo_PE = ["T", "B", "P"]
+
+endo_aYij_indexes = [("ENERGY",x) for x in sectors]
 endo_aYij_indexes.extend([(x,"ENERGY") for x in sectors_nE])
+
 cal = calibrationVariables()
 
 VARIABLES_SPECS = {
@@ -309,8 +311,7 @@ VARIABLES_SPECS = {
 				  idx_labels=[sectors_plus_hh, energy_types],
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
-				  exo_names=[(s, "PE") for s in sectors_plus_hh]
-				            + [("HOUSEHOLDS", "T"), ("HOUSEHOLDS", "B")]),
+				  exo_names = [("HOUSEHOLDS", "T"), ("HOUSEHOLDS", "B")]),
 
     'pE':Variable(name="pE",
 				  calibration_value=cal.pE,
@@ -318,12 +319,12 @@ VARIABLES_SPECS = {
 				  idx_labels=[sectors_plus_hh, energy_types],
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
-				  exo_names=[(s, "PE") for s in sectors_plus_hh if s != "ENERGY"]),
+				  status="endo"),
 
     'rhoE':Variable(name="rhoE",
 				  calibration_value=cal.rhoE,
 				  dimension='matrix',
-				  idx_labels=[sectors_plus_hh, energy_types],
+				  idx_labels=[sectors_plus_hh, energy_types_wo_PE],
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
 				  status="exo"),

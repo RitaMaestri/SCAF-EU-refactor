@@ -16,23 +16,29 @@ def non_zero_index(dvar):
     array_var= to_array(dvar)
     return np.where(array_var != 0)[0]
 
-def to_dict(vec, dvec, N, is_variable):  #takes array WITHOUT ZEROS, returns dict of arrays (of equal dimensions and keys as dvec)
+def to_dict(vec, dvec, is_variable, variables_specs=None):  #takes array WITHOUT ZEROS, returns dict of arrays (of equal dimensions and keys as dvec)
     lengths = np.array([int(np.prod(np.shape(item))) for item in dvec.values()])
-    #N=int(min(lengths[lengths!=1]))
-    keys=dvec.keys()
+    keys = list(dvec.keys())
     #add zeros to vector
     if(is_variable):
         zeros=np.zeros(len(to_array(dvec)))
         zeros[non_zero_index(dvec)]=vec
         vec=zeros
     #create array of arrays
-    vec = np.split(vec,np.cumsum(lengths))[:-1]
-    #create array of arrays and matrices (if needed)
-    vec = [np.reshape(i, (N, N)) if len(i) == N**2 else i for i in vec]
+    chunks = np.split(vec,np.cumsum(lengths))[:-1]
+    #reshape each chunk using idx_labels from variables_specs (supports non-square matrices)
+    vec = []
+    for key, chunk in zip(keys, chunks):
+        spec = variables_specs.get(key) if variables_specs is not None else None
+        if (spec is not None
+                and getattr(spec, 'dimension', None) == 'matrix'
+                and len(getattr(spec, 'idx_labels', [])) == 2):
+            shape = (len(spec.idx_labels[0]), len(spec.idx_labels[1]))
+            chunk = np.reshape(chunk, shape)
+        vec.append(chunk)
     for i in range(len(vec)):
         if isinstance(vec[i], np.ndarray) and vec[i].size == 1:
             vec[i]=vec[i].item()
-            #print("to_dict ", list(keys)[i] )
     return dict(zip(keys, vec))
 
 
@@ -85,7 +91,7 @@ def convert_bounds_to_minimize(lsq_bounds):
 
 def dict_minimize(f, dvar, dpar,N, bounds, constraint):
     result = optimize.minimize(
-        fun=lambda x,y: cost_function(f(to_dict(x,dvar,N, True), to_dict(y,dpar,N, False))),# wrap the argument in a dict
+        fun=lambda x,y: cost_function(f(to_dict(x,dvar,True), to_dict(y,dpar,False))),# wrap the argument in a dict
         x0=to_array(dvar), # unwrap the initial dictionary
         bounds=convert_bounds_to_minimize(bounds),
         args= to_array(dpar),
@@ -93,29 +99,28 @@ def dict_minimize(f, dvar, dpar,N, bounds, constraint):
         constraints=constraint,
         options={"maxiter":60000,'gtol': 1e-14, 'disp': True}
     )
-    result.dvar= to_dict(result.x, dvar,N,True
-)
+    result.dvar= to_dict(result.x, dvar,True)
     result.d= {**result.dvar, **dpar}
     return result;
 
 
 ####################  LEAST_SQUARE  #########################
 
-def dict_least_squares(f, dvar, dpar, bounds, N, verb=1, check=True):
+def dict_least_squares(f, dvar, dpar, bounds, variables_specs, verb=1, check=True):
     #check same number
     if check:
         non_zero_dvar=to_array(dvar)[to_array(dvar)!=0]
         same_number(non_zero_dvar,f(dvar,dpar))
     
     result = optimize.least_squares(
-        lambda x,y: f(to_dict(x,dvar,N,is_variable=True), to_dict(y,dpar,N,is_variable=False)),# wrap the argument in a dict
+        lambda x,y: f(to_dict(x,dvar,is_variable=True,variables_specs=variables_specs), to_dict(y,dpar,is_variable=False,variables_specs=variables_specs)),# wrap the argument in a dict
         to_array(dvar)[to_array(dvar)!=0], # unwrap the initial dictionary
         bounds=bounds,
         args= list([to_array(dpar)],),
         verbose=verb
     )
 
-    result.dvar= to_dict(result.x, dvar,N, is_variable=True)
+    result.dvar= to_dict(result.x, dvar, is_variable=True, variables_specs=variables_specs)
     result.d= {**result.dvar, **dpar}
     return result;
 
@@ -136,14 +141,14 @@ class MyBounds:
 
 def dict_basinhopping(f, dvar, dpar, mybounds,N):
     result = optimize.basinhopping(
-        lambda x,y: cost_function(f(to_dict(x,dvar,N, is_variable=True), to_dict(y,dpar,N, is_variable=False))),# wrap the argument in a dict
+        lambda x,y: cost_function(f(to_dict(x,dvar,is_variable=True), to_dict(y,dpar,is_variable=False))),# wrap the argument in a dict
         x0=to_array(dvar), # unwrap the initial dictionary     
         #niter=2,
         minimizer_kwargs = dict(method="L-BFGS-B",  bounds=mybounds.bounds, args= to_array(dpar)),
         accept_test=mybounds,
         stepsize=10
     )
-    result.dvar= to_dict(result.x, dvar)
+    result.dvar= to_dict(result.x, dvar, is_variable=True)
     result.d= {**result.dvar, **dpar}
     return result
 

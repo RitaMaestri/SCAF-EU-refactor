@@ -9,14 +9,15 @@ warnings.filterwarnings("ignore")
 
 
 
-from import_GTAP_data import N
 from helpers.solvers import dict_least_squares
 from calibration import E
 from helpers.handle_jump import conduct_solution
 from Variables_specs import VARIABLES_SPECS
 from helpers.time_series_df_functions import reformat_bounds_for_solver, build_and_fill_timeseries_df, timeseries_df_to_endogenous_dict, timeseries_df_to_exo_endo_dict, timeseries_df_to_unsolved_year_dict, dict_to_timeseries_df
 from system_of_equations import system, joint_dict
+#from calibration import calibrationVariables
 
+###calibration 
 
 
 
@@ -25,6 +26,7 @@ from system_of_equations import system, joint_dict
 ########################################################################
 
 from run_setup import growth_ratios_df, years, output_file_name
+
 
 timeseries_df=build_and_fill_timeseries_df(VARIABLES_SPECS,growth_ratios_df,years)
 
@@ -106,7 +108,7 @@ for t in range(len(years)):
     
         endo_exo_vars=timeseries_df_to_exo_endo_dict(timeseries_df, years[t], VARIABLES_SPECS)
     
-    sol = dict_least_squares( system, endo_vars, endo_exo_vars, solver_bounds, N, verb=1, check=True)
+    sol = dict_least_squares( system, endo_vars, endo_exo_vars, solver_bounds, VARIABLES_SPECS, verb=1, check=True)
         
     maxerror=max(abs( system(sol.dvar, endo_exo_vars)))
 
@@ -116,7 +118,7 @@ for t in range(len(years)):
     if maxerror>1e-06:
         print("conducting solution: UNTESTESTED")
         endo_exo_origin=timeseries_df_to_exo_endo_dict(timeseries_df, years[t-1], VARIABLES_SPECS)
-        endo_solution=conduct_solution(endo_exo_origin, endo_exo_vars, system, solver_bounds, N, timeseries_df,years[t-1], threshold= 0.07, growth_rate=0.01)
+        endo_solution=conduct_solution(endo_exo_origin, endo_exo_vars, system, solver_bounds, timeseries_df,years[t-1], threshold= 0.07, growth_rate=0.01)
         d=joint_dict(endo_exo_vars, endo_solution)
         print("the system converged!")
 

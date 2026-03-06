@@ -9,7 +9,7 @@ warnings.filterwarnings("ignore")
 
 from import_GTAP_data import N
 from Variables_specs import VARIABLES_SPECS
-from helpers.time_series_df_functions import build_timeseries_df
+from helpers.time_series_df_functions import build_and_fill_timeseries_df
 
 
 
@@ -20,8 +20,9 @@ from helpers.time_series_df_functions import build_timeseries_df
 
 from run_setup import years
 
-output_file_name = "results/test_template_df.csv" #temporary, to be replaced with the one from run_setup
+input_file_name = "data/REMIND_exogenous_data_reformatted.csv" #temporary, to be replaced with the one from run_setup
+growth_ratios_df = pd.read_csv(input_file_name)
+output_file_name = "results/template_df_evolution.csv" #temporary, to be replaced with the one from run_setup
 
-timeseries_df=build_timeseries_df(VARIABLES_SPECS,years)
-
+timeseries_df=build_and_fill_timeseries_df(VARIABLES_SPECS,growth_ratios_df,years)
 timeseries_df.to_csv(output_file_name, index=False)      
