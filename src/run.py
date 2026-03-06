@@ -10,14 +10,11 @@ warnings.filterwarnings("ignore")
 
 
 from helpers.solvers import dict_least_squares
-from calibration import E
+from calibration import E, calibrationVariables
 from helpers.handle_jump import conduct_solution
-from Variables_specs import VARIABLES_SPECS
 from helpers.time_series_df_functions import reformat_bounds_for_solver, build_and_fill_timeseries_df, timeseries_df_to_endogenous_dict, timeseries_df_to_exo_endo_dict, timeseries_df_to_unsolved_year_dict, dict_to_timeseries_df
 from system_of_equations import system, joint_dict
-#from calibration import calibrationVariables
-
-###calibration 
+# Initialize calibration values for all variables
 
 
 
@@ -26,6 +23,11 @@ from system_of_equations import system, joint_dict
 ########################################################################
 
 from run_setup import growth_ratios_df, years, output_file_name
+from Variables_specs import VARIABLES_SPECS, CALIBRATION_MAPPING
+
+cal = calibrationVariables()
+for var in VARIABLES_SPECS.values():
+    var.initialize_calibration_value(cal, CALIBRATION_MAPPING)
 
 
 timeseries_df=build_and_fill_timeseries_df(VARIABLES_SPECS,growth_ratios_df,years)

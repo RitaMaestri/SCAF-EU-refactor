@@ -1,6 +1,4 @@
 import numpy as np 
-from calibration import calibrationVariables
-from import_GTAP_data import sectors
 from itertools import product
 
 
@@ -237,12 +235,27 @@ class Variable():
                     f"Variable '{self.name}': calibration value {cal} is outside bounds [{lb}, {ub}]"
                 )
 
-    def __init__(self, name, calibration_value, dimension, idx_labels, is_t_minus_one, bounds, status=None, endo_names=None, exo_names=None):
+    def initialize_calibration_value(self, cal, mapping):
+        """Assign and validate the calibration value from a calibrationVariables instance.
+
+        Args:
+            cal: A calibrationVariables instance.
+            mapping: Dict mapping variable names to calibrationVariables attribute names.
+        """
+        attr = mapping[self.name]
+        self.calibration_value = self.assign_calibration_value(getattr(cal, attr))
+        self.check_calibration_value_dimension()
+        self.check_calibration_value_bounds()
+
+
+    def __init__(self, name, dimension, idx_labels, is_t_minus_one, bounds, status=None, endo_names=None, exo_names=None):
         """Initialize a Variable and compute all derived masks/metadata.
+
+        Calibration values are not set here. Call ``initialize_calibration_value``
+        after construction to assign and validate them.
 
         Args:
             name: Variable name.
-            calibration_value: Scalar/vector/matrix baseline value.
             dimension: One of ``scalar``, ``vector``, or ``matrix``.
             idx_labels: Labels used for vector/matrix dimensions.
             is_t_minus_one: False or linked variable name for lag logic.
@@ -262,13 +275,9 @@ class Variable():
 
         self.bounds = bounds
 
-        self.calibration_value = self.assign_calibration_value(calibration_value)
+        self.calibration_value = None
 
         self.check_dimension_idx_labels()
-
-        self.check_calibration_value_dimension()
-
-        self.check_calibration_value_bounds()
 
         self.shape = self.assign_shape()
         
