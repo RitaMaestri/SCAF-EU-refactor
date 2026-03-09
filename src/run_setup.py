@@ -14,7 +14,7 @@ add_string = "test"
 output_file_name = str().join(["results/", add_string, "(", dt_string, ")", ".csv"])
 
 #growth ratios df
-input_file =  "REMIND_exogenous_data_reformatted" #temporary, to be replaced with the one from run_setup
+input_file =  "REMIND_exogenous_data_reformatted" 
 growth_ratios_df = pd.read_csv("data/"+input_file+".csv") 
 
 #years

@@ -16,30 +16,68 @@ def non_zero_index(dvar):
     array_var= to_array(dvar)
     return np.where(array_var != 0)[0]
 
-def to_dict(vec, dvec, is_variable, variables_specs=None):  #takes array WITHOUT ZEROS, returns dict of arrays (of equal dimensions and keys as dvec)
+def to_dict(vec, dvec, is_variable, variables_specs=None):
+    """
+    Convert a flat array back into a dictionary mirroring the structure of dvec.
+
+    Parameters
+    ----------
+    vec : array-like
+        Flat array of values to distribute into the dictionary.
+        When is_variable=True this is the *compact* form (non-zero entries only);
+        when is_variable=False it is the full-length array.
+    dvec : dict
+        Template dictionary whose keys and value shapes define the output structure.
+    is_variable : bool
+        - True  → vec is compact (zeros stripped). Re-insert zeros at their original
+                  positions, split into per-variable segments, and return as-is
+                  (no reshaping). The solver operates on flat variable vectors.
+        - False → vec is full-length (parameters). Split into per-variable segments
+                  and reshape each one using idx_labels from variables_specs, so that
+                  non-square matrices (e.g. pE of shape (N+1)×4) are correctly
+                  reconstructed as 2D arrays.
+    variaresults/test(06-03-2026_17:19).csvbles_specs : dict or None
+        VARIABLES_SPECS dictionary mapping variable names to Variable objects.
+        Used only when is_variable=False to determine the reshape target for each
+        matrix variable. If None, segments are returned without reshaping.
+
+    Returns
+    -------
+    dict
+        Keys from dvec, values as numpy arrays (or scalars for size-1 arrays)
+        with shapes matching the original dvec entries.
+    """
     lengths = np.array([int(np.prod(np.shape(item))) for item in dvec.values()])
     keys = list(dvec.keys())
-    #add zeros to vector
-    if(is_variable):
-        zeros=np.zeros(len(to_array(dvec)))
-        zeros[non_zero_index(dvec)]=vec
-        vec=zeros
-    #create array of arrays
-    chunks = np.split(vec,np.cumsum(lengths))[:-1]
-    #reshape each chunk using idx_labels from variables_specs (supports non-square matrices)
-    vec = []
-    for key, chunk in zip(keys, chunks):
-        spec = variables_specs.get(key) if variables_specs is not None else None
-        if (spec is not None
-                and getattr(spec, 'dimension', None) == 'matrix'
-                and len(getattr(spec, 'idx_labels', [])) == 2):
-            shape = (len(spec.idx_labels[0]), len(spec.idx_labels[1]))
-            chunk = np.reshape(chunk, shape)
-        vec.append(chunk)
-    for i in range(len(vec)):
-        if isinstance(vec[i], np.ndarray) and vec[i].size == 1:
-            vec[i]=vec[i].item()
-    return dict(zip(keys, vec))
+
+    if is_variable:
+        # Re-insert zeros stripped before passing to the solver, then split into
+        # per-variable flat segments. No reshaping: the solver works with 1D vectors.
+        zeros = np.zeros(len(to_array(dvec)))
+        zeros[non_zero_index(dvec)] = vec
+        vec = zeros
+        vec_segments = np.split(vec, np.cumsum(lengths))[:-1]
+        return dict(zip(keys, vec_segments))
+
+    else:
+        # Full-length parameter vector: split then reshape each segment to its
+        # original matrix shape as declared in variables_specs via idx_labels.
+        vec_segments = np.split(vec, np.cumsum(lengths))[:-1]
+        reshaped_segments = []
+        for key, segment in zip(keys, vec_segments):
+            spec = variables_specs.get(key) if variables_specs is not None else None
+            if (spec is not None
+                    and getattr(spec, 'dimension', None) == 'matrix'
+                    and len(getattr(spec, 'idx_labels', [])) == 2):
+                # Reshape to (rows, cols) derived from idx_labels, supporting
+                # non-square matrices such as pE: (sectors_plus_hh) x (energy_types).
+                shape = (len(spec.idx_labels[0]), len(spec.idx_labels[1]))
+                segment = np.reshape(segment, shape)
+            # Unwrap single-element arrays to plain Python scalars.
+            if isinstance(segment, np.ndarray) and segment.size == 1:
+                segment = segment.item()
+            reshaped_segments.append(segment)
+        return dict(zip(keys, reshaped_segments))
 
 
 def same_number(var,system):

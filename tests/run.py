@@ -6,7 +6,7 @@ from lib import compare_results
 
 
 compare_results(
-        file_a="results/test(26-02-2026_17:24).csv",
+        file_a="results/test(06-03-2026_17:19).csv",
         file_b="results/benchmark_1.csv",
         value_col="2020"
     )
