@@ -22,10 +22,10 @@ from system_of_equations import system, joint_dict
 ########################## BUILD TIMESERIES DF #########################
 ########################################################################
 
-from run_setup import growth_ratios_df, years, output_file_name, energy_calibration_data
+from run_setup import growth_ratios_df, years, output_file_name, energy_calibration_data, population_calibration_data, calibration_year
 from Variables_specs import VARIABLES_SPECS, CALIBRATION_MAPPING
 
-cal = calibrationVariables(energy_calibration_data)
+cal = calibrationVariables(calibration_year, energy_calibration_data, population_calibration_data)
 for var in VARIABLES_SPECS.values():
     var.initialize_calibration_value(cal, CALIBRATION_MAPPING)
 

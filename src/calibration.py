@@ -19,13 +19,13 @@ T = sectors.index("TRANSPORTATION")
 
 
 
-def _load_energy_matrix_from_csv(df, variable_type, row_labels, col_map, default_fill=0.0):
+def _load_energy_matrix_from_csv(df, variable_type, row_labels, col_map, default_fill=0.0, calibration_year=None):
     """Build an (n_rows, 4) energy matrix from a calibration CSV DataFrame.
 
     Parameters
     ----------
     df : pd.DataFrame
-        Full calibration DataFrame read from calibration_2020.csv.
+        Full calibration DataFrame read from the calibration CSV.
     variable_type : str
         Value to match on the ``Variable`` column (e.g. ``"Volume"``,
         ``"Price"``, ``"Rho"``, ``"Technical_coefficient"``).
@@ -43,10 +43,10 @@ def _load_energy_matrix_from_csv(df, variable_type, row_labels, col_map, default
     np.ndarray, shape ``(len(row_labels), len(col_map))``
     """
     mat = np.full((len(row_labels), len(col_map)), default_fill, dtype=float)
-    # Find the year-2020 column label (int or str depending on pandas version)
-    year_col = next((c for c in df.columns if str(c) == "2020"), None)
+    # Find the calibration-year column label (int or str depending on pandas version)
+    year_col = next((c for c in df.columns if str(c) == str(calibration_year)), None)
     if year_col is None:
-        raise ValueError("Column '2020' not found in calibration CSV.")
+        raise ValueError(f"Column '{calibration_year}' not found in calibration CSV.")
     subset = df[df["Variable"] == variable_type]
     for _, row in subset.iterrows():
         consumer   = row["Energy consumers"]
@@ -76,7 +76,7 @@ def compute_theta_CES(Zj,alpha1j,alpha2j,Q1j,Q2j,etaj):
 
 class calibrationVariables:
     
-    def __init__(self, energy_calibration_data, L0=None):
+    def __init__(self, calibration_year, energy_calibration_data, population_calibration_data, L0=None):
         
         #labor
         if L0 is None:   
@@ -135,14 +135,14 @@ class calibrationVariables:
         _rhos_col_map = {"T": 0, "B": 1, "P": 2}  # Rho has no PE column in CSV
 
         self.E_vol = _load_energy_matrix_from_csv(
-            energy_calibration_data, "Volume", _row_labels, _col_map, default_fill=0.0)
+            energy_calibration_data, "Volume", _row_labels, _col_map, default_fill=0.0, calibration_year=calibration_year)
 
         self.pE    = _load_energy_matrix_from_csv(
-            energy_calibration_data, "Price", _row_labels, _col_map, default_fill=0.0)
+            energy_calibration_data, "Price", _row_labels, _col_map, default_fill=0.0, calibration_year=calibration_year)
 
         # Rho has no PE rows in CSV; PE column defaults to 1.0
         self.rhoE  = _load_energy_matrix_from_csv(
-            energy_calibration_data, "Rho", _row_labels, _rhos_col_map, default_fill=0.0)
+            energy_calibration_data, "Rho", _row_labels, _rhos_col_map, default_fill=0.0, calibration_year=calibration_year)
         
 
         _row_map = {label: idx for idx, label in enumerate(_row_labels)}
@@ -180,7 +180,9 @@ class calibrationVariables:
 
         
         
-
+        #####################################
+        #### OTHER CALIBRATION VARIABLES ####
+        #####################################
         
         #scalari
 
@@ -259,8 +261,11 @@ class calibrationVariables:
 
 
         self.delta=0.04
-        self.g0=-0.019215761298272
-        self.pK0 = (sum(imp.pKKj)*(cp(self.g0)+cp(self.delta)))/ cp(self.I0)
+        _pop_year_cols = sorted([c for c in population_calibration_data.columns if str(c).lstrip('-').isdigit()], key=lambda c: int(str(c)))
+        _pop_calibration_year = next(c for c in _pop_year_cols if str(c) == str(calibration_year))
+        _pop_next = next(c for c in _pop_year_cols if int(str(c)) > int(calibration_year))
+        self.population_growth_rate = float(population_calibration_data[_pop_next].iloc[0]) / float(population_calibration_data[_pop_calibration_year].iloc[0]) - 1
+        self.pK0 = (sum(imp.pKKj)*(cp(self.population_growth_rate)+cp(self.delta)))/ cp(self.I0)
         self.Kj0= imp.pKKj / cp(self.pK0)
         self.K0=sum(self.Kj0)
         
