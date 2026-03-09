@@ -5,13 +5,7 @@ from Variables_specs import VARIABLES_SPECS
 
 
 
-exogenous_data = "REMIND_exogenous_data_sectors"
 
-growth_ratios_df = pd.read_csv(
-    "data/"+exogenous_data+".csv") 
-
-years = np.array([eval(i) for i in growth_ratios_df.columns[3:]])
-year_cols = [str(y) for y in years]
 
 
 

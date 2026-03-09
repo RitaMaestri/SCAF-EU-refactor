@@ -76,8 +76,10 @@ def compute_theta_CES(Zj,alpha1j,alpha2j,Q1j,Q2j,etaj):
 
 class calibrationVariables:
     
-    def __init__(self, calibration_year, energy_calibration_data, population_calibration_data, armington_elasticities_df, export_elasticities_df, kl_elasticities_df, income_elasticities_df, compensated_price_elasticities_df, L0=None):
+    def __init__(self, calibration_year, energy_calibration_data, population_calibration_data, armington_elasticities_df, export_elasticities_df, kl_elasticities_df, income_elasticities_df, compensated_price_elasticities_df, assumed_variables_df, L0=None):
         
+        _av = assumed_variables_df["value"]
+
         #labor
         if L0 is None:   
             self.pL0 = 1
@@ -91,14 +93,13 @@ class calibrationVariables:
         
         #prezzi
         
-        self.pYj0=np.array([float(1000)]*N)
-        self.pSj0=np.array([float(1000)]*N)
-        self.pKLj0=np.array([float(1000)]*N)
-        self.pXj0=np.array([float(1000)]*N)
-        self.pDj0=np.array([float(1000)]*N)
-        self.pXj=np.array([float(1000)]*N)
+        self.pYj0=np.full(N, float(_av["pYj0"]))
+        self.pSj0=np.full(N, float(_av["pSj0"]))
+        self.pKLj0=np.full(N, float(_av["pKLj0"]))
+        self.pXj0=np.full(N, float(_av["pXj0"]))
+        self.pDj0=np.full(N, float(_av["pDj0"]))
+        self.pXj=cp(self.pXj0)
         self.pMj0=cp(self.pXj0)
-        self.pXj0=cp(self.pXj)
 
         #taxes
         
@@ -262,20 +263,23 @@ class calibrationVariables:
 
 
 
-        self.delta=0.04
+        self.delta=float(_av["delta"])
+        
         _pop_year_cols = sorted([c for c in population_calibration_data.columns if str(c).lstrip('-').isdigit()], key=lambda c: int(str(c)))
         _pop_calibration_year = next(c for c in _pop_year_cols if str(c) == str(calibration_year))
         _pop_next = next(c for c in _pop_year_cols if int(str(c)) > int(calibration_year))
         self.population_growth_rate = float(population_calibration_data[_pop_next].iloc[0]) / float(population_calibration_data[_pop_calibration_year].iloc[0]) - 1
+        
         self.pK0 = (sum(imp.pKKj)*(cp(self.population_growth_rate)+cp(self.delta)))/ cp(self.I0)
         self.Kj0= imp.pKKj / cp(self.pK0)
         self.K0=sum(self.Kj0)
         
-        self.GDPPI=1
+        self.GDPPI=float(_av["GDPPI"])
         self.alphaLj= compute_alphas_CES(Q1j= cp(self.Lj0),Q2j= cp(self.Kj0),p1j= cp(self.pL0),p2j= cp(self.pK0),etaj= cp(self.etaKLj))
         self.alphaKj= compute_alphas_CES(Q1j= cp(self.Kj0),Q2j= cp(self.Lj0),p1j= cp(self.pK0),p2j= cp(self.pL0),etaj= cp(self.etaKLj))
         # #this is 1 by default for the E sector so calibrate accordingly
-        self.bKL=1
+        
+        self.bKL=float(_av["bKL"])
         self.bKLj = cp(self.KLj0)*cp(self.bKL)/np.float_power(cp(self.alphaLj)*np.float_power(cp(self.Lj0),cp(self.etaKLj)) + cp(self.alphaKj) * np.float_power(cp(self.Kj0),cp(self.etaKLj)), 1/ cp(self.etaKLj))
         self.target_ni_j  = compensated_price_elasticities_df.squeeze().reindex(sectors).to_numpy()
         self.target_etaCj = income_elasticities_df.squeeze().reindex(sectors).to_numpy()
@@ -335,7 +339,7 @@ class calibrationVariables:
         
 
 
-        self.lambda_KLM = 1
+        self.lambda_KLM = float(_av["lambdaKLM"])
 
         self.aYij= cp(self.Yij0) / cp(self.Yj0[None,:])
         

@@ -21,6 +21,9 @@ growth_ratios_df = pd.read_csv("data/"+input_file+".csv")
 energy_calibration_data = pd.read_csv("data/calibration/REMIND_energy_data.csv")
 population_calibration_data = pd.read_csv("data/calibration/SSP2_population.csv")
 
+#assumed variables
+assumed_variables_df = pd.read_csv("data/calibration/assumed_variables.csv", index_col="variable_name")
+
 #elasticity data
 armington_elasticities_df = pd.read_csv("data/calibration/GTAP_Armington_elasticities7.csv", index_col="commodity")
 export_elasticities_df = pd.read_csv("data/calibration/GTAP_export_elasticities7.csv", index_col="code")
