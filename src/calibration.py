@@ -76,7 +76,7 @@ def compute_theta_CES(Zj,alpha1j,alpha2j,Q1j,Q2j,etaj):
 
 class calibrationVariables:
     
-    def __init__(self, calibration_year, energy_calibration_data, population_calibration_data, L0=None):
+    def __init__(self, calibration_year, energy_calibration_data, population_calibration_data, armington_elasticities_df, export_elasticities_df, kl_elasticities_df, income_elasticities_df, compensated_price_elasticities_df, L0=None):
         
         #labor
         if L0 is None:   
@@ -194,15 +194,17 @@ class calibrationVariables:
         
 
         
-        # elasticities 
-        self.sigmaXj=imp.sigmaXj.astype(float)
-        self.sigmaSj=imp.sigmaSj.astype(float)
-        self.sigmaKLj=imp.sigmaKLj.astype(float)
+        # elasticities
+        _sigmaSj  = armington_elasticities_df.squeeze().reindex(sectors).to_numpy().astype(float)
+        _sigmaXj  = export_elasticities_df.squeeze().reindex(sectors).to_numpy().astype(float)
+        _sigmaKLj = kl_elasticities_df.squeeze().reindex(sectors).to_numpy().astype(float)
+        self.sigmaSj  = _sigmaSj
+        self.sigmaXj  = _sigmaXj
+        self.sigmaKLj = _sigmaKLj
 
-
-        self.etaSj=(imp.sigmaSj-1)/imp.sigmaSj
-        self.etaXj=(imp.sigmaXj-1)/imp.sigmaXj
-        self.etaKLj=(imp.sigmaKLj-1)/imp.sigmaKLj
+        self.etaSj  = (_sigmaSj  - 1) / _sigmaSj
+        self.etaXj  = (_sigmaXj  - 1) / _sigmaXj
+        self.etaKLj = (_sigmaKLj - 1) / _sigmaKLj
 
         
         self.aKLj= cp(self.KLj0)/ cp(self.Yj0)
@@ -275,8 +277,8 @@ class calibrationVariables:
         # #this is 1 by default for the E sector so calibrate accordingly
         self.bKL=1
         self.bKLj = cp(self.KLj0)*cp(self.bKL)/np.float_power(cp(self.alphaLj)*np.float_power(cp(self.Lj0),cp(self.etaKLj)) + cp(self.alphaKj) * np.float_power(cp(self.Kj0),cp(self.etaKLj)), 1/ cp(self.etaKLj))
-        self.target_ni_j=imp.ni_j
-        self.target_etaCj=imp.etaCj
+        self.target_ni_j  = compensated_price_elasticities_df.squeeze().reindex(sectors).to_numpy()
+        self.target_etaCj = income_elasticities_df.squeeze().reindex(sectors).to_numpy()
         
         #take off energy sector
         

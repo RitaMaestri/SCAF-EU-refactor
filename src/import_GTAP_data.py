@@ -167,28 +167,6 @@ pSjSj = pCjCj + pCjGj + pCjIj + pCiYij.sum(axis=1) - sales_taxes
 pDjDj = pSjSj - pMjMj
 (pSjSj - pMjMj) / (pYjYj-pXjXj)
 
-#GTAP Import elasticities + default export elasticities (-2 for all sectors)
-
-Armington_elasticities=pd.read_csv("data/GTAP_Armington_elasticities7.csv", index_col="commodity").squeeze()
-Armington_elasticities=Armington_elasticities.reindex(sectors)
-sigmaSj=Armington_elasticities.to_numpy()
-
-export_elasticities=pd.read_csv("data/GTAP_export_elasticities7.csv", index_col="code").squeeze()
-export_elasticities=export_elasticities.reindex(sectors)
-sigmaXj=np.array(export_elasticities)
-
-KL_elasticities=pd.read_csv("data/KL_elasticities7.csv", index_col="commodity").squeeze()
-KL_elasticities=KL_elasticities.reindex(sectors)
-sigmaKLj=KL_elasticities.to_numpy()
-
-income_elasticities=pd.read_csv("data/income_elasticities7.csv", index_col="commodity").squeeze()
-income_elasticities=income_elasticities.reindex(sectors)
-etaCj=income_elasticities.to_numpy()
-
-compensated_own_price_elasticities=pd.read_csv("data/compensated_own_price_elasticities7.csv", index_col="commodity").squeeze()
-compensated_own_price_elasticities=compensated_own_price_elasticities.reindex(sectors)
-ni_j=compensated_own_price_elasticities.to_numpy()
-
 non_zero_index_G=np.array(np.where(pCjGj != 0)).flatten()
 non_zero_index_I=np.array(np.where(pCjIj != 0)).flatten()
 non_zero_index_X=np.array(np.where(pXjXj != 0)).flatten()
