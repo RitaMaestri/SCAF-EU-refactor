@@ -17,6 +17,9 @@ output_file_name = str().join(["results/", add_string, "(", dt_string, ")", ".cs
 input_file =  "REMIND_exogenous_data_reformatted" 
 growth_ratios_df = pd.read_csv("data/"+input_file+".csv") 
 
+#energy calibration data
+energy_calibration_data = pd.read_csv("data/calibration_2020.csv")
+
 #years
 years_int = np.array([eval(i) for i in growth_ratios_df.columns[3:]])
 years = [str(y) for y in years_int]

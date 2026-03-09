@@ -3,7 +3,6 @@ import import_GTAP_data as imp
 from import_GTAP_data import N,sectors
 from copy import deepcopy as cp
 import pandas as pd
-import os
 from helpers.calibration_solvers import _compute_solI_params, _compute_CDES_params, load_expensive_params, save_expensive_params
 
 #import pandas as pd
@@ -15,13 +14,6 @@ E = sectors.index("ENERGY")
 ST = sectors.index("STEEL")
 CH = sectors.index("CHEMICAL")
 T = sectors.index("TRANSPORTATION")
-
-
-# Load calibration CSV once for matrix initialisation
-cal_csv_path = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "data", "calibration_2020.csv")
-df_cal = pd.read_csv(cal_csv_path)
 
 
 
@@ -68,7 +60,7 @@ def _load_energy_matrix_from_csv(df, variable_type, row_labels, col_map, default
 
 class calibrationVariables:
     
-    def __init__(self, L0=None):
+    def __init__(self, energy_calibration_data, L0=None):
         
         #labor
         if L0 is None:   
@@ -298,14 +290,14 @@ class calibrationVariables:
         _rhos_col_map = {"T": 0, "B": 1, "P": 2}  # Rho has no PE column in CSV
 
         self.E_vol = _load_energy_matrix_from_csv(
-            df_cal, "Volume", _row_labels, _col_map, default_fill=0.0)
+            energy_calibration_data, "Volume", _row_labels, _col_map, default_fill=0.0)
 
         self.pE    = _load_energy_matrix_from_csv(
-            df_cal, "Price", _row_labels, _col_map, default_fill=0.0)
+            energy_calibration_data, "Price", _row_labels, _col_map, default_fill=0.0)
 
         # Rho has no PE rows in CSV; PE column defaults to 1.0
         self.rhoE  = _load_energy_matrix_from_csv(
-            df_cal, "Rho", _row_labels, _rhos_col_map, default_fill=0.0)
+            energy_calibration_data, "Rho", _row_labels, _rhos_col_map, default_fill=0.0)
         
 
         _row_map = {label: idx for idx, label in enumerate(_row_labels)}
