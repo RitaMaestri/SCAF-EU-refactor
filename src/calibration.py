@@ -58,6 +58,22 @@ def _load_energy_matrix_from_csv(df, variable_type, row_labels, col_map, default
     return mat
 
 
+def compute_alphas_CES(Q1j,Q2j,p1j,p2j,etaj):
+    alphaj = 1 / (
+        1 + np.float_power( Q2j , (1 - etaj) ) * p2j / ( np.float_power( Q1j , 1-etaj ) * p1j )
+        )
+    return alphaj
+
+def compute_theta_CES(Zj,alpha1j,alpha2j,Q1j,Q2j,etaj):
+    thetaj = Zj / ( 
+        np.float_power( 
+            alpha1j * np.float_power(Q1j,etaj) + alpha2j * np.float_power( Q2j,etaj) ,
+            1/etaj )
+        )
+    
+    return thetaj
+
+
 class calibrationVariables:
     
     def __init__(self, energy_calibration_data, L0=None):
@@ -83,14 +99,14 @@ class calibrationVariables:
         self.pXj=np.array([float(1000)]*N)
         self.pMj0=cp(self.pXj0)
         self.pXj0=cp(self.pXj)
-        
+
         #taxes
         
         self.tauYj0 = imp.production_taxes/( imp.pYjYj - imp.production_taxes)
 
         self.tauSj0 = imp.sales_taxes / (imp.pCiYij.sum(axis=1)+imp.pCjCj+imp.pCjGj+imp.pCjIj - imp.sales_taxes)
         self.pCj0 = (1+cp(self.tauSj0))*cp(self.pSj0)
-        
+                
         #quantità
         self.Ij0 = imp.pCjIj/ cp(self.pCj0)
         self.Cj0 = imp.pCjCj/ cp(self.pCj0)
@@ -103,13 +119,42 @@ class calibrationVariables:
         self.Dj0= imp.pDjDj / cp(self.pDj0)
         self.Yj0= imp.pYjYj / cp(self.pYj0)        
         self.Sj0= imp.pSjSj / cp(self.pSj0)        
+
+        #########################
+        #### ENERGY COUPLING ####
+        #########################
+
+
+        #### ENERGY MATRICES ####
+
+
+        _row_labels = sectors + ["HOUSEHOLDS"]
+
+        # column order: T=0, B=1, P=2, PE=3
+        _col_map = {"T": 0, "B": 1, "P": 2, "PE": 3}
+        _rhos_col_map = {"T": 0, "B": 1, "P": 2}  # Rho has no PE column in CSV
+
+        self.E_vol = _load_energy_matrix_from_csv(
+            energy_calibration_data, "Volume", _row_labels, _col_map, default_fill=0.0)
+
+        self.pE    = _load_energy_matrix_from_csv(
+            energy_calibration_data, "Price", _row_labels, _col_map, default_fill=0.0)
+
+        # Rho has no PE rows in CSV; PE column defaults to 1.0
+        self.rhoE  = _load_energy_matrix_from_csv(
+            energy_calibration_data, "Rho", _row_labels, _rhos_col_map, default_fill=0.0)
         
-        
-        
-        
+
+        _row_map = {label: idx for idx, label in enumerate(_row_labels)}
+        _households_idx = _row_map["HOUSEHOLDS"]
+        _non_household_rows = [
+            idx for idx in _row_map.values()
+            if idx != _households_idx
+        ]
+
         #adjusting energy quantity and price
 
-        self.Sj0[E]=91.9143818
+        self.Sj0[E]=self.E_vol.sum()
         self.pSj0[E]=imp.pSjSj[E] / cp(self.Sj0[E])
 
         self.Dj0[E]=cp(self.Sj0[E])-cp(self.Mj0[E])
@@ -117,6 +162,25 @@ class calibrationVariables:
         
         self.Yj0[E]=cp(self.Xj0[E])+cp(self.Dj0[E])
         self.pYj0[E]=imp.pYjYj[E] / cp(self.Yj0[E])
+
+        self.Yij0[E,:] = cp(self.E_vol.sum(axis=1)[:-1])
+        self.Cj0[E] = cp(self.E_vol.sum(axis=1)[-1])
+
+        self.pCj0[E] = imp.pCjCj[E]/cp(self.Cj0[E])
+        self.pY_Ej = imp.pCiYij[E,:]/cp(self.Yij0[E,:])
+
+        # Technical_coefficient: computed from intermediate variables (same as aYE_*j / Yj0).
+        # Columns: T=0, B=1, P=2, PE=3.  Last row (HOUSEHOLDS) = 0 by construction.
+        self.a_Ej = np.zeros((len(_row_labels), 4))
+        self.a_Ej[:N, 0] = cp(self.E_vol[_non_household_rows, _col_map["T"]]) / cp(self.Yj0)   # T
+        self.a_Ej[:N, 1] = cp(self.E_vol[_non_household_rows, _col_map["B"]]) / cp(self.Yj0)   # B
+        self.a_Ej[:N, 2] = cp(self.E_vol[_non_household_rows, _col_map["P"]]) / cp(self.Yj0)   # P
+        self.a_Ej[:N, 3] = cp(self.E_vol[_non_household_rows, _col_map["PE"]]) / cp(self.Yj0)   # PE
+
+
+        
+        
+
         
         #scalari
 
@@ -141,20 +205,7 @@ class calibrationVariables:
         
         self.aKLj= cp(self.KLj0)/ cp(self.Yj0)
         
-        def compute_alphas_CES(Q1j,Q2j,p1j,p2j,etaj):
-            alphaj = 1 / (
-                1 + np.float_power( Q2j , (1 - etaj) ) * p2j / ( np.float_power( Q1j , 1-etaj ) * p1j )
-                )
-            return alphaj
-        
-        def compute_theta_CES(Zj,alpha1j,alpha2j,Q1j,Q2j,etaj):
-            thetaj = Zj / ( 
-                np.float_power( 
-                    alpha1j * np.float_power(Q1j,etaj) + alpha2j * np.float_power( Q2j,etaj) ,
-                    1/etaj )
-                )
-            
-            return thetaj
+
         
 
         self.alphaXj= compute_alphas_CES(Q1j= cp(self.Xj0),Q2j= cp(self.Dj0),p1j= cp(self.pXj0),p2j= cp(self.pDj0),etaj= cp(self.etaXj))
@@ -275,60 +326,15 @@ class calibrationVariables:
             # Save to cache
             save_expensive_params(db_name, computed_params)
         
-        #########################
-        #### ENERGY COUPLING ####
-        #########################
 
-
-        #### ENERGY MATRICES ####
-
-
-        _row_labels = sectors + ["HOUSEHOLDS"]
-
-        # column order: T=0, B=1, P=2, PE=3
-        _col_map = {"T": 0, "B": 1, "P": 2, "PE": 3}
-        _rhos_col_map = {"T": 0, "B": 1, "P": 2}  # Rho has no PE column in CSV
-
-        self.E_vol = _load_energy_matrix_from_csv(
-            energy_calibration_data, "Volume", _row_labels, _col_map, default_fill=0.0)
-
-        self.pE    = _load_energy_matrix_from_csv(
-            energy_calibration_data, "Price", _row_labels, _col_map, default_fill=0.0)
-
-        # Rho has no PE rows in CSV; PE column defaults to 1.0
-        self.rhoE  = _load_energy_matrix_from_csv(
-            energy_calibration_data, "Rho", _row_labels, _rhos_col_map, default_fill=0.0)
-        
-
-        _row_map = {label: idx for idx, label in enumerate(_row_labels)}
-        _households_idx = _row_map["HOUSEHOLDS"]
-        _non_household_rows = [
-            idx for idx in _row_map.values()
-            if idx != _households_idx
-        ]
-
-        # Technical_coefficient: computed from intermediate variables (same as aYE_*j / Yj0).
-        # Columns: T=0, B=1, P=2, PE=3.  Last row (HOUSEHOLDS) = 0 by construction.
-        self.a_Ej = np.zeros((len(_row_labels), 4))
-        self.a_Ej[:N, 0] = cp(self.E_vol[_non_household_rows, _col_map["T"]]) / cp(self.Yj0)   # T
-        self.a_Ej[:N, 1] = cp(self.E_vol[_non_household_rows, _col_map["B"]]) / cp(self.Yj0)   # B
-        self.a_Ej[:N, 2] = cp(self.E_vol[_non_household_rows, _col_map["P"]]) / cp(self.Yj0)   # P
-        self.a_Ej[:N, 3] = cp(self.E_vol[_non_household_rows, _col_map["PE"]]) / cp(self.Yj0)   # PE
-
-
-        self.Yij0[E,:] = cp(self.E_vol.sum(axis=1)[:-1])
-        self.Cj0[E] = cp(self.E_vol.sum(axis=1)[-1])
-
-        self.pCj0[E] = imp.pCjCj[E]/cp(self.Cj0[E])
-        self.pY_Ej = imp.pCiYij[E,:]/cp(self.Yij0[E,:])
 
         self.lambda_KLM = 1
 
         self.aYij= cp(self.Yij0) / cp(self.Yj0[None,:])
         
+
         self.pCjtp= cp(self.pCj0)
         self.Ctp= cp(self.Cj0)
-        
         
         self.aKLj0=cp(self.aKLj)
         self.aYij0=cp(self.aYij)
