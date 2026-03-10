@@ -76,19 +76,18 @@ def compute_theta_CES(Zj,alpha1j,alpha2j,Q1j,Q2j,etaj):
 
 class calibrationVariables:
     
-    def __init__(self, calibration_year, energy_calibration_data, population_calibration_data, armington_elasticities_df, export_elasticities_df, kl_elasticities_df, income_elasticities_df, compensated_price_elasticities_df, assumed_variables_df, L0=None):
+    def __init__(self, calibration_year, energy_calibration_data, population_calibration_data, armington_elasticities_df, export_elasticities_df, kl_elasticities_df, income_elasticities_df, compensated_price_elasticities_df, assumed_variables_df):
         
         _av = assumed_variables_df["value"]
 
-        #labor
-        if L0 is None:   
-            self.pL0 = 1
-            self.Lj0= imp.pLLj / cp(self.pL0)
-            self.L0=sum(cp(self.Lj0))
-        else:
-            self.L0=L0
-            self.pL0=sum(imp.pLLj)/L0
-            self.Lj0 = imp.pLLj / cp(self.pL0)
+        _pop_year_cols = sorted([c for c in population_calibration_data.columns if str(c).lstrip('-').isdigit()], key=lambda c: int(str(c)))
+        calibration_year = next(c for c in _pop_year_cols if str(c) == str(calibration_year))
+        next_year = next(c for c in _pop_year_cols if int(str(c)) > int(calibration_year))
+        
+
+        self.L0=population_calibration_data[calibration_year].iloc[0]
+        self.pL0=sum(imp.pLLj)/self.L0
+
         
         
         #prezzi
@@ -112,7 +111,7 @@ class calibrationVariables:
         self.Ij0 = imp.pCjIj/ cp(self.pCj0)
         self.Cj0 = imp.pCjCj/ cp(self.pCj0)
         self.Gj0 = imp.pCjGj/ cp(self.pCj0)
-
+        self.Lj0 = imp.pLLj / cp(self.pL0)
         self.Yij0 = imp.pCiYij/ cp(self.pCj0[:,None])
         self.KLj0= imp.pKLjKLj / cp(self.pKLj0)
         self.Xj0= imp.pXjXj / cp(self.pXj0)
@@ -265,10 +264,7 @@ class calibrationVariables:
 
         self.delta=float(_av["delta"])
         
-        _pop_year_cols = sorted([c for c in population_calibration_data.columns if str(c).lstrip('-').isdigit()], key=lambda c: int(str(c)))
-        _pop_calibration_year = next(c for c in _pop_year_cols if str(c) == str(calibration_year))
-        _pop_next = next(c for c in _pop_year_cols if int(str(c)) > int(calibration_year))
-        self.population_growth_rate = float(population_calibration_data[_pop_next].iloc[0]) / float(population_calibration_data[_pop_calibration_year].iloc[0]) - 1
+        self.population_growth_rate = float(population_calibration_data[next_year].iloc[0]) / float(population_calibration_data[calibration_year].iloc[0]) - 1
         
         self.pK0 = (sum(imp.pKKj)*(cp(self.population_growth_rate)+cp(self.delta)))/ cp(self.I0)
         self.Kj0= imp.pKKj / cp(self.pK0)

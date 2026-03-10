@@ -45,7 +45,7 @@ for var in VARIABLES_SPECS.values():
 timeseries_df=build_and_fill_timeseries_df(VARIABLES_SPECS,growth_ratios_df,years)
 
 solver_bounds = reformat_bounds_for_solver(VARIABLES_SPECS)
-        
+
 
 
 ########################################################################
