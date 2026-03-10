@@ -1,8 +1,8 @@
-data/SAMfiles/*
-data/elasticities_N=3,30,65_and_other
-data/excel data computation
-results/*
-src/transport_calibration.csv
-__pycache__
-.vscode
-data/old
+Solver/data/SAMfiles/*
+Solver/data/elasticities_N=3,30,65_and_other
+Solver/data/excel data computation
+Solver/results/*
+Solver/src/transport_calibration.csv
+Solver/__pycache__
+Solver/.vscode
+Solver/data/old

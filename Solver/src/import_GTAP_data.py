@@ -14,10 +14,10 @@ mydict={}
 
 
 region="EUR"
-#folder_all="/home/rita/Documents/Tesi/Code/aggregation GTAP/SAMfiles/all/"
-folder_all="/home/rita/Documents/Tesi/Code/aggregation_GTAP/SAMfiles EUR 7/SAMfiles/all/"
-#folder_reg="/home/rita/Documents/Tesi/Code/aggregation GTAP/SAMfiles/france/"    
-folder_reg="/home/rita/Documents/Tesi/Code/aggregation_GTAP/SAMfiles EUR 7/SAMfiles/"+region+"/"
+#folder_all="Solver/data/SAMfiles/all/"
+folder_all="Solver/data/SAMfiles/all/"
+#folder_reg="Solver/data/SAMfiles/france/"
+folder_reg="Solver/data/SAMfiles/"+region+"/"
 
 
 files_all = glob.glob(folder_all+"*.csv")

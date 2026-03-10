@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-def create_calibration_csv(calibration_obj, output_file="data/calibration_2020.csv"):
+def create_calibration_csv(calibration_obj, output_file="Solver/data/calibration_2020.csv"):
     """
     Create a CSV file with the same format as data/input_format.csv,
     but with calibration data for the year 2020 only, with other years left blank.
@@ -23,7 +23,7 @@ def create_calibration_csv(calibration_obj, output_file="data/calibration_2020.c
     """
     
     # Read the template file to get the structure
-    template_df = pd.read_csv("data/input_format.csv")
+    template_df = pd.read_csv("Solver/data/input_format.csv")
     
     # Get unique values for each column (except the year columns)
     all_years = [str(year) for year in range(2020, 2101, 5)]
