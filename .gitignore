@@ -6,3 +6,15 @@ Solver/src/transport_calibration.csv
 Solver/__pycache__
 Solver/.vscode
 Solver/data/old
+Data_preprocessing/raw_data/IEA/*
+Data_preprocessing/raw_data/ΔNGFS/*
+Data_preprocessing/raw_data/NGFS/*
+Data_preprocessing/src/Energy_trade_scenarisation/cache
+Data_preprocessing/src/Energy_trade_scenarisation/output
+Data_preprocessing/data_calibration_evolution
+Data_preprocessing/src/reformat_EXIOBASE/output
+Data_preprocessing/src/Hybridization/cache
+Data_preprocessing/src/IEA/result/aggregate_residential_agriculture_2020.csv
+Data_preprocessing/src/Filter_NGFS/cache
+.~lock.*
+*.pyc

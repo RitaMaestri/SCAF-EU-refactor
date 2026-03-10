@@ -1,0 +1,12 @@
+"energy_use","consumer","availability"
+"R&C","HOUSEHOLDS","to_fill"
+"R&C","SERVICES",1
+"PAS","HOUSEHOLDS",1
+"PAS","TRANSPORTATION",1
+"ST","STEEL",1
+"ST","MANUFACTURE",1
+"CH","CHEMICAL",1
+"CH","ENERGY",1
+"IND","AGRICULTURE","to_fill"
+"IND","MANUFACTURE",1
+"PE","ENERGY",1

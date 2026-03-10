@@ -1,0 +1,5 @@
+{
+"NGFS":"/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/raw_data/NGFS/IAM_data.xlsx",
+"filtered_NGFS":"/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/src/Filter_NGFS/cache/filtered_NGFS.csv",
+"out_path": "/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/data_calibration_evolution/Filtered_NGFS/filtered_NGFS.csv"
+}

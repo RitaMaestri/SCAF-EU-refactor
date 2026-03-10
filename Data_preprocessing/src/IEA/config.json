@@ -1,0 +1,5 @@
+{
+    "IEA_input_csv": "/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/raw_data/IEA/res_agri_fish_2020.csv",
+    "output_folder": "/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/src/IEA/result",
+    "mapping_folder": "/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/src/IEA/mapping"
+}

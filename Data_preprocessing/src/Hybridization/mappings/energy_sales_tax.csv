@@ -1,0 +1,18 @@
+block_name,type,level1,level2,consumer
+Tax_block,row,Tax_imp,AGRICULTURE,AGRICULTURE
+Tax_block,row,Tax_imp,MANUFACTURE,MANUFACTURE
+Tax_block,row,Tax_imp,SERVICES,SERVICES
+Tax_block,row,Tax_imp,STEEL,STEEL
+Tax_block,row,Tax_imp,CHEMICAL,CHEMICAL
+Tax_block,row,Tax_imp,ENERGY,ENERGY
+Tax_block,row,Tax_imp,TRANSPORTATION,TRANSPORTATION
+Tax_block,row,Tax_dom,AGRICULTURE,AGRICULTURE
+Tax_block,row,Tax_dom,MANUFACTURE,MANUFACTURE
+Tax_block,row,Tax_dom,SERVICES,SERVICES
+Tax_block,row,Tax_dom,STEEL,STEEL
+Tax_block,row,Tax_dom,CHEMICAL,CHEMICAL
+Tax_block,row,Tax_dom,ENERGY,ENERGY
+Tax_block,row,Tax_dom,TRANSPORTATION,TRANSPORTATION
+Tax_block,row,Tax,HSLD Imp,HOUSEHOLDS
+Tax_block,row,Tax,HSLD Dom,HOUSEHOLDS
+Tax_block,col,Imp,ENERGY,NaN
