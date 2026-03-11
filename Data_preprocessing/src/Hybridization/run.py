@@ -12,9 +12,9 @@ warnings.filterwarnings("ignore")
 
 
 from lib import (filter_NGFS,
-                 augment_NGFS,
                  aggregate_IOT_energy_consumption,
                  aggregate_energy_uses,
+                 get_NGFS_units,
                  generate_output_template,
                  Energy_Values_Allocation,
                  fill_calibration_year,
@@ -40,9 +40,7 @@ this_folder = os.path.dirname(__file__)
 config = json.load(open(this_folder+"/config.json"))
 
 NGFS_path=config["NGFS"]
-NGFS_filtered_path=config["NGFS_filtered"]
 NGFS_augmented_path=config["NGFS_augmented"]
-supplementary_data_path=config["supplementary_NGFS_data"]
 cache_path= config["cache_path"]
 
 IEA_mapping_path=config["IEA_mapping"]
@@ -60,32 +58,26 @@ IOTs_path= config["IOTs_path"]
 out_path= config["out_path"]
 
 energy_sales_taxes_mapping_path = config["energy_sales_taxes_mapping"]
+value_unit = config["value_unit"]
 
 regions_mapping= pd.read_csv(regions_mapping_path, header=0)
-regions=regions_mapping["region_NGFS"]
-########### AUGMENT NGFS #############
+#regions=regions_mapping["region_NGFS"]
+########### FILTER NGFS #############
 
-#import data
-NGFS_filtered = filter_NGFS(NGFS_filtered_path, NGFS_path)
-
-supplementary_data = pd.read_excel(supplementary_data_path, header=0)
-
-#augment NGFS
-augmented_NGFS = augment_NGFS(NGFS_filtered, supplementary_data)
-augmented_NGFS = augmented_NGFS[augmented_NGFS['Region'] != 'World']
-
-#export data
-augmented_NGFS.to_csv(NGFS_augmented_path, index=False)
-
-#delete useless data
-del(NGFS_filtered,supplementary_data)
+NGFS_raw = pd.read_csv(NGFS_path, sep=';')
+augmented_NGFS = filter_NGFS(NGFS_raw, NGFS_augmented_path)
 ############ AGGREGATE NGFS ENERGY TYPES ##############
 #import mapping
-
+augmented_NGFS.to_csv(cache_path+"REMIND_augmented.csv", index=False)
 map_NGFS_energy_uses = pd.read_excel(map_NGFS_path, header=0)
+volume_unit, price_unit = get_NGFS_units(augmented_NGFS, map_NGFS_energy_uses)
+if "volume_unit" in config:
+    volume_unit = config["volume_unit"]
+if "price_unit" in config:
+    price_unit = config["price_unit"]
 
 # aggregate NGFS energy types
-markets_dict = aggregate_energy_uses(augmented_NGFS,map_NGFS_energy_uses)
+markets_dict = aggregate_energy_uses(augmented_NGFS, map_NGFS_energy_uses, value_unit, price_unit)
 
 NGFS_prices = markets_dict["prices"]
 
@@ -183,7 +175,7 @@ energy_consumers_opt = list(energy_consumers_df[mask_consumers]["energy_consumer
 energy_uses_opt = list(energy_uses_df[mask_uses]["energy_use"])
 
 
-consumers_X_uses_df = generate_output_template(augmented_NGFS, energy_consumers_opt, energy_uses_opt,"US$2010/GJ","EJ")
+consumers_X_uses_df = generate_output_template(augmented_NGFS, energy_consumers_opt, energy_uses_opt, price_unit, volume_unit)
 consumers_X_uses_calibration_df = consumers_X_uses_df.copy()
 
 
@@ -272,7 +264,7 @@ projected_df = project_variables(output = projected_volumes_df, reference = NGFS
 
 projected_df.to_csv(cache_path+"projected_output.csv", index=False)
 
-aggregated_df = aggregate_prices_volumes(projected_df)
+aggregated_df = aggregate_prices_volumes(projected_df, value_unit)
 
 aggregated_df.to_csv(cache_path+"aggregated_output.csv", index=False)
 
@@ -288,13 +280,13 @@ delta_mask = energy_consumers_df["allocation_exception"]
 
 delta_label = list(energy_consumers_df[delta_mask]["energy_consumer"])[0]
 
-delta_vol=compute_delta_volumes(IOT_energy_consumption_dict, mean_energy_prices_df, delta_label)
+delta_vol = compute_delta_volumes(IOT_energy_consumption_dict, mean_energy_prices_df, delta_label, volume_unit)
 
 #######################
 ### CONCATENATE DFs ###
 #######################
 
-vol_df=aggregated_df.loc[aggregated_df["Variable"]=="Volume"]
+vol_df = aggregated_df.loc[aggregated_df["Variable"]=="Volume"]
 
 final_df = append_delta_volumes_and_smr(vol_df,delta_vol,specific_margin_rates)
 

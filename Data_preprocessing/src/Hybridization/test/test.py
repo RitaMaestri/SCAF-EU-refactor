@@ -7,7 +7,7 @@ import math
 # Aggiunge la cartella Hybridization (parent di test/) al path
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from lib import Energy_Values_Allocation,aggregate_energy_uses, aggregate_IOT_energy_consumption,aggregate_by_consumer_and_use, rename_regions, build_availabilities_df
+from lib import Energy_Values_Allocation, aggregate_energy_uses, aggregate_IOT_energy_consumption, aggregate_by_consumer_and_use, rename_regions, build_availabilities_df, filter_NGFS
 
 #####################################
 ### TEST Energy_Values_Allocation ###
@@ -318,3 +318,59 @@ def test_specific_margin_rates_lower_bound(smr_df):
         print("✅ All specific margin rates are >= -1")
 
 test_specific_margin_rates_lower_bound(smr_df)
+
+
+##################################################
+##### TEST filter_NGFS ###########################
+##################################################
+
+def test_filter_NGFS():
+    """
+    Test that filter_NGFS:
+    - drops year columns before 2020
+    - drops rows where Region == 'World'
+    - saves the result to the specified output path
+    """
+    import tempfile
+
+    data = {
+        "Model":    ["REMIND", "REMIND", "REMIND", "REMIND"],
+        "Scenario": ["SSP2-NPi2025"] * 4,
+        "Region":   ["CAZ", "EUR", "World", "CHA"],
+        "Variable": ["Final Energy|Industry"] * 4,
+        "Unit":     ["EJ/yr"] * 4,
+        "2005":     [1.0, 2.0, 3.0, 4.0],
+        "2010":     [1.1, 2.1, 3.1, 4.1],
+        "2015":     [1.2, 2.2, 3.2, 4.2],
+        "2020":     [1.3, 2.3, 3.3, 4.3],
+        "2025":     [1.4, 2.4, 3.4, 4.4],
+    }
+    df = pd.DataFrame(data)
+
+    with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as f:
+        tmp_path = f.name
+
+    try:
+        result = filter_NGFS(df, tmp_path)
+
+        # No pre-2020 year columns
+        year_cols = [c for c in result.columns if str(c).isdigit()]
+        assert all(int(c) >= 2020 for c in year_cols), \
+            f"Pre-2020 year columns still present: {[c for c in year_cols if int(c) < 2020]}"
+
+        # No World rows
+        assert "World" not in result["Region"].values, \
+            "Region='World' rows were not removed"
+
+        # Correct number of rows (3 non-World rows)
+        assert len(result) == 3, f"Expected 3 rows, got {len(result)}"
+
+        # Output CSV was created
+        assert os.path.exists(tmp_path), "Output CSV was not created"
+
+        print("test_filter_NGFS passed ✅")
+    finally:
+        os.remove(tmp_path)
+
+
+test_filter_NGFS()

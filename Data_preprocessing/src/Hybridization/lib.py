@@ -9,24 +9,18 @@ from scipy.optimize import minimize
 import itertools
 from math import isclose
 
-def filter_NGFS(NGFS_filtered_path, NGFS_path):
-    if Path(NGFS_filtered_path).exists():
-        NGFS = pd.read_csv(NGFS_filtered_path)
-    
-    else:
-        NGFS_total = pd.read_excel(
-            NGFS_path, sheet_name='data', header=0)
-        # filter world prices and regional net trade of energy
-        NGFS = NGFS_total[
-        (NGFS_total["Model"] == 'REMIND-MAgPIE 3.2-4.6') &
-        (NGFS_total["Region"].str.startswith('REMIND')) &
-        (
-            NGFS_total["Variable"].str.contains("Final Energy\\|", regex=True, na=False) |
-            NGFS_total["Variable"].str.contains("Primary Energy\\|", regex=True, na=False)
-        )]
-        NGFS.to_csv(NGFS_filtered_path, index=False)
-        del(NGFS_total)
+def filter_NGFS(NGFS_df, output_path):
+    # Drop trailing NaN-named column produced by the trailing ';' in .mif files
+    NGFS = NGFS_df.loc[:, NGFS_df.columns.notna()]
 
+    # Drop World aggregate rows
+    NGFS = NGFS[NGFS["Region"] != "World"]
+
+    # Drop year columns before 2020
+    year_cols_to_drop = [c for c in NGFS.columns if str(c).isdigit() and int(c) < 2020]
+    NGFS = NGFS.drop(columns=year_cols_to_drop)
+
+    NGFS.to_csv(output_path, index=False)
     return NGFS
 
 #################################################################
@@ -291,7 +285,41 @@ def convert_to_net_values(dfs_consumption: dict[str, pd.DataFrame],
 ############## AGGREGATE ENERGY USES ###############
 #####################################################
 
-def aggregate_energy_uses(ngfs, mapping):
+def get_NGFS_units(augmented_NGFS: pd.DataFrame, map_NGFS_energy_uses: pd.DataFrame) -> tuple:
+    """
+    Infer volume and price units from the NGFS data by looking up
+    the Unit column for each variable listed in the mapping.
+
+    Raises ValueError if variables within the same type have inconsistent units.
+
+    Returns
+    -------
+    tuple[str, str]
+        (volume_unit, price_unit)
+    """
+    var_unit = (
+        augmented_NGFS[["Variable", "Unit"]]
+        .drop_duplicates(subset=["Variable"])
+        .set_index("Variable")["Unit"]
+    )
+
+    def collect_units(variables, label):
+        units = set()
+        for var in variables.dropna().unique():
+            if var not in var_unit.index:
+                raise ValueError(f"Variable '{var}' ({label}) not found in augmented_NGFS")
+            units.add(var_unit[var])
+        if len(units) != 1:
+            raise ValueError(f"{label} variables have inconsistent units: {units}")
+        return units.pop()
+
+    volume_unit = collect_units(map_NGFS_energy_uses["NGFS_volume"], "NGFS_volume")
+    price_unit  = collect_units(map_NGFS_energy_uses["NGFS_price"],  "NGFS_price")
+
+    return volume_unit, price_unit
+
+
+def aggregate_energy_uses(ngfs, mapping, value_unit, price_unit):
 
     def create_energy_uses_volumes(ngfs, mapping):
         """
@@ -333,7 +361,7 @@ def aggregate_energy_uses(ngfs, mapping):
         return grouped_df
 
 
-    def create_energy_use_values(ngfs, mapping):
+    def create_energy_use_values(ngfs, mapping, value_unit):
         """
         Create the energy_use_values dataset in two steps:
         
@@ -391,11 +419,11 @@ def aggregate_energy_uses(ngfs, mapping):
         )
         # Add Unit
         col_index = grouped.columns.get_loc("energy_use") + 1  # posizione dopo "energy_use"
-        grouped.insert(col_index, "Unit", "Bn US$2010")
+        grouped.insert(col_index, "Unit", value_unit)
 
         return grouped
 
-    def create_energy_use_prices(values, volumes):
+    def create_energy_use_prices(values, volumes, price_unit):
         keys = ["Model", "Scenario", "Region", "energy_use"]
 
         values_ordered = values.set_index(keys)
@@ -408,14 +436,14 @@ def aggregate_energy_uses(ngfs, mapping):
         year_cols = [c for c in values_ordered.columns if str(c).isdigit()]
 
         ratio=pd.DataFrame(index=values_ordered.index, columns=(["Unit"] + year_cols))
-        ratio["Unit"] = "US$2010/GJ"
+        ratio["Unit"] = price_unit
         ratio[year_cols] = values_ordered[year_cols].astype(float) / volumes_ordered[year_cols].astype(float)
 
         return ratio.reset_index()
 
     volumes = create_energy_uses_volumes(ngfs, mapping)
-    values = create_energy_use_values(ngfs, mapping)
-    prices = create_energy_use_prices(values, volumes)
+    values = create_energy_use_values(ngfs, mapping, value_unit)
+    prices = create_energy_use_prices(values, volumes, price_unit)
 
     markets_dict={"prices":prices, "values":values, "volumes":volumes}
 
@@ -1370,7 +1398,7 @@ def project_variables(output: pd.DataFrame, reference: pd.DataFrame, variable_ty
 
 
 
-def aggregate_prices_volumes(df: pd.DataFrame):
+def aggregate_prices_volumes(df: pd.DataFrame, value_unit: str):
     
     """
     Orchestrates the pipeline:
@@ -1415,7 +1443,7 @@ def aggregate_prices_volumes(df: pd.DataFrame):
         return values_df
 
 
-    def aggregate_values(values_df, year_cols, value_unit="Bn US$2010"):
+    def aggregate_values(values_df, year_cols, value_unit):
         """
         Aggregate VALUES across Energy uses.
         Returns DF with Variable='Values'.
@@ -1475,7 +1503,7 @@ def aggregate_prices_volumes(df: pd.DataFrame):
     disaggregated_values = compute_values(vol_df, price_df, year_cols)
 
     # 3) Aggregate VALUES
-    values_agg = aggregate_values(disaggregated_values, year_cols)
+    values_agg = aggregate_values(disaggregated_values, year_cols, value_unit)
 
     # 4) Aggregate weighted average prices
     price_agg = aggregate_prices(vol_agg, disaggregated_values, year_cols, price_unit)
@@ -1573,7 +1601,7 @@ def compute_specific_margin_rates(df: pd.DataFrame):
     return smr_df
 
 
-def compute_delta_volumes(IOT_energy_consumption_dict, mean_price_df, delta_label):
+def compute_delta_volumes(IOT_energy_consumption_dict, mean_price_df, delta_label, volume_unit):
     """
     Compute the Volume of DELTA for each region using:
     
@@ -1630,7 +1658,7 @@ def compute_delta_volumes(IOT_energy_consumption_dict, mean_price_df, delta_labe
             "Region": region,
             "Variable": "Volume",
             "Energy consumers": delta_label,
-            "Unit": "EJ",
+            "Unit": volume_unit,
             **volumes.to_dict()
         })
 
