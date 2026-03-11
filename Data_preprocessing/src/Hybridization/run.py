@@ -14,10 +14,10 @@ warnings.filterwarnings("ignore")
 print("PYTHON:", sys.executable)
 print("CWD:", os.getcwd())
 
-from lib import (filter_NGFS,
+from lib import (filter_REMIND,
                  aggregate_IOT_energy_consumption,
                  aggregate_energy_uses,
-                 get_NGFS_units,
+                 get_REMIND_units,
                  generate_output_template,
                  Energy_Values_Allocation,
                  fill_calibration_year,
@@ -41,8 +41,8 @@ from lib import (filter_NGFS,
 this_folder = os.path.dirname(__file__)
 config = json.load(open(this_folder+"/config.json"))
 
-NGFS_path=config["NGFS"]
-NGFS_augmented_path=config["NGFS_augmented"]
+REMIND_path=config["REMIND"]
+REMIND_filtered_path=config["REMIND_filtered"]
 cache_path= config["cache_path"]
 
 IEA_mapping_path=config["IEA_mapping"]
@@ -52,7 +52,7 @@ energy_uses_path= config["energy_uses"]
 energy_consumers_path= config["energy_consumers"]
 
 map_IOT_path= config["IOT-energy_consumers"]
-map_NGFS_path= config["NGFS-energy_uses"]
+map_REMIND_path= config["REMIND-energy_uses"]
 
 priorities_path = config["priorities"]
 #keys_path = config["keys"]
@@ -63,36 +63,35 @@ energy_sales_taxes_mapping_path = config["energy_sales_taxes_mapping"]
 value_unit = config["value_unit"]
 
 regions_mapping= pd.read_csv(regions_mapping_path, header=0)
-#regions=regions_mapping["region_NGFS"]
-########### FILTER NGFS #############
+#regions=regions_mapping["region_REMIND"]
+########### FILTER REMIND #############
 
-NGFS_raw = pd.read_csv(NGFS_path, sep=';')
-augmented_NGFS = filter_NGFS(NGFS_raw, NGFS_augmented_path)
-############ AGGREGATE NGFS ENERGY TYPES ##############
+REMIND_raw = pd.read_csv(REMIND_path, sep=';')
+filtered_REMIND = filter_REMIND(REMIND_raw, REMIND_filtered_path)
+############ AGGREGATE REMIND ENERGY TYPES ##############
 #import mapping
-augmented_NGFS.to_csv(cache_path+"REMIND_augmented.csv", index=False)
-map_NGFS_energy_uses = pd.read_excel(map_NGFS_path, header=0)
-volume_unit, price_unit = get_NGFS_units(augmented_NGFS, map_NGFS_energy_uses)
+map_REMIND_energy_uses = pd.read_excel(map_REMIND_path, header=0)
+volume_unit, price_unit = get_REMIND_units(filtered_REMIND, map_REMIND_energy_uses)
 if "volume_unit" in config:
     volume_unit = config["volume_unit"]
 if "price_unit" in config:
     price_unit = config["price_unit"]
 
-# aggregate NGFS energy types
-markets_dict = aggregate_energy_uses(augmented_NGFS, map_NGFS_energy_uses, value_unit, price_unit)
+# aggregate REMIND energy types
+markets_dict = aggregate_energy_uses(filtered_REMIND, map_REMIND_energy_uses, value_unit, price_unit)
 
-NGFS_prices = markets_dict["prices"]
+REMIND_prices = markets_dict["prices"]
 
-NGFS_volumes = markets_dict["volumes"]
+REMIND_volumes = markets_dict["volumes"]
 
-NGFS_values = markets_dict["values"]
+REMIND_values = markets_dict["values"]
 
 
 #export dataframe
 
-#NGFS_prices.to_csv(cache_path+"prices.csv", index=False)
-#NGFS_volumes.to_csv(cache_path+"volumes.csv", index=False)
-#NGFS_values.to_csv(cache_path+"values.csv", index=False)
+#REMIND_prices.to_csv(cache_path+"prices.csv", index=False)
+#REMIND_volumes.to_csv(cache_path+"volumes.csv", index=False)
+#REMIND_values.to_csv(cache_path+"values.csv", index=False)
 
 #create regional dictionaries of IOT energy consumptions dataframes
 def import_IOT(IOT_path):
@@ -136,7 +135,7 @@ IOT_energy_consumption_dict = convert_to_net_values(IOT_gross_energy_consumption
 #### identify calibration year ####
 ###################################
 
-year_cols = [c for c in NGFS_values.columns if str(c).isdigit()]
+year_cols = [c for c in REMIND_values.columns if str(c).isdigit()]
 
 calibration_year = year_cols[0]
 
@@ -156,7 +155,7 @@ aggregated_IEA=aggregate_by_consumer_and_use(IEA_data,IEA_mapping)
 
 aggregated_IEA = rename_regions(regions_mapping, aggregated_IEA)
 
-energy_availability_per_consumer = build_availabilities_df(NGFS_volumes, aggregated_IEA, calibration_year)
+energy_availability_per_consumer = build_availabilities_df(REMIND_volumes, aggregated_IEA, calibration_year)
 
 priorities_dict = build_priorities_dict(energy_availability_per_consumer, priorities_df)
 
@@ -177,7 +176,7 @@ energy_consumers_opt = list(energy_consumers_df[mask_consumers]["energy_consumer
 energy_uses_opt = list(energy_uses_df[mask_uses]["energy_use"])
 
 
-consumers_X_uses_df = generate_output_template(augmented_NGFS, energy_consumers_opt, energy_uses_opt, price_unit, volume_unit)
+consumers_X_uses_df = generate_output_template(filtered_REMIND, energy_consumers_opt, energy_uses_opt, price_unit, volume_unit)
 consumers_X_uses_calibration_df = consumers_X_uses_df.copy()
 
 
@@ -195,14 +194,14 @@ else:
     for model in pd.unique(consumers_X_uses_df["Model"]):
         for scenario in pd.unique(consumers_X_uses_df["Scenario"]):
             for region in pd.unique(consumers_X_uses_df["Region"]):
-                mask = ((NGFS_values["Model"] == model) &
-                        (NGFS_values["Scenario"] == scenario) &
-                        (NGFS_values["Region"] == region))
+                mask = ((REMIND_values["Model"] == model) &
+                        (REMIND_values["Scenario"] == scenario) &
+                        (REMIND_values["Region"] == region))
                 
-                values_to_allocate_df=NGFS_values[mask][["energy_use", calibration_year]]
+                values_to_allocate_df=REMIND_values[mask][["energy_use", calibration_year]]
                 values_to_allocate = pd.Series(values_to_allocate_df[calibration_year].values, index=values_to_allocate_df["energy_use"])
 
-                prices_to_allocate_df=NGFS_prices[mask][["energy_use", calibration_year]]
+                prices_to_allocate_df=REMIND_prices[mask][["energy_use", calibration_year]]
                 prices_to_allocate = pd.Series(prices_to_allocate_df[calibration_year].values, index=prices_to_allocate_df["energy_use"])
 
                 IOT_energy_consumption_df=IOT_energy_consumption_dict[region]
@@ -220,20 +219,20 @@ else:
 
 
                 allocation = Energy_Values_Allocation(IOT_E_consumptions=IOT_enrgy_consumption,
-                NGFS_E_uses=values_to_allocate,
-                NGFS_E_prices= prices_to_allocate,
+                REMIND_E_uses=values_to_allocate,
+                REMIND_E_prices= prices_to_allocate,
                 priorities=priorities_dict[region],
                 key=key_VA)
 
 
-                rescaling_factor=allocation.rescale_NGFS_energy_values()
+                rescaling_factor=allocation.rescale_REMIND_energy_values()
 
                 allocation.allocate_forced_energy_values()
                 allocation.adjust_key_for_forced_values()
 
                 disaggregated_energy = allocation.compute_disaggregated_energy()
                 #check the constraint error
-                #print("In region ",region, "\n max vertical sum error: ",max(abs(-1 + disaggregated_energy.sum(axis=0) / allocation.NGFS_E_uses)))
+                #print("In region ",region, "\n max vertical sum error: ",max(abs(-1 + disaggregated_energy.sum(axis=0) / allocation.REMIND_E_uses)))
                 #print("\n max horizontal sum error: ",max(-1 + disaggregated_energy.sum(axis=1) / allocation.IOT_E_consumptions))
 
                 disaggregated_prices = allocation.compute_prices_matrix()
@@ -260,9 +259,9 @@ else:
     consumers_X_uses_calibration_df.to_csv(consumers_X_uses_calibration_df_path, index=False)
 
 
-projected_volumes_df = project_variables(output = consumers_X_uses_calibration_df, reference = NGFS_volumes, variable_type= "Volume")
+projected_volumes_df = project_variables(output = consumers_X_uses_calibration_df, reference = REMIND_volumes, variable_type= "Volume")
 
-projected_df = project_variables(output = projected_volumes_df, reference = NGFS_prices, variable_type= "Price")
+projected_df = project_variables(output = projected_volumes_df, reference = REMIND_prices, variable_type= "Price")
 
 projected_df.to_csv(cache_path+"projected_output.csv", index=False)
 
