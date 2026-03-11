@@ -1786,3 +1786,37 @@ def append_delta_volumes_and_smr(vol_df, delta_vol_df, smr_df, delta_label="DELT
     final_df = final_df.drop(columns=['Energy consumers'])
 
     return final_df
+
+
+def compute_delta_prices(mean_energy_prices_df: pd.DataFrame, delta_label: str):
+    """
+    Build a Price time series for the DELTA energy consumer.
+
+    The calibration year (first year column) is set to the region mean energy
+    price; all subsequent year columns are set to NaN.
+
+    Parameters
+    ----------
+    mean_energy_prices_df : pd.DataFrame
+        Output of compute_mean_energy_price(). Must contain columns:
+        Model, Scenario, Region, Variable, Unit, and year columns.
+    delta_label : str
+        Name of the DELTA energy consumer.
+
+    Returns
+    -------
+    pd.DataFrame
+        With columns:
+        Model, Scenario, Region, Variable='Price',
+        Energy consumers=delta_label, Unit, <years>
+    """
+    year_cols = [c for c in mean_energy_prices_df.columns if str(c).isdigit()]
+
+    delta_price = mean_energy_prices_df[["Model", "Scenario", "Region", "Unit"] + year_cols].copy()
+    delta_price["Variable"] = "Price"
+    delta_price["Energy consumers"] = delta_label
+
+    for y in year_cols[1:]:
+        delta_price[y] = float("nan")
+
+    return delta_price[["Model", "Scenario", "Region", "Variable", "Energy consumers", "Unit"] + year_cols]

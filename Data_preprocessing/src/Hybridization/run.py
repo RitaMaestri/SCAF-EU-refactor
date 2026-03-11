@@ -1,4 +1,5 @@
 import csv
+import sys
 import pandas as pd
 import numpy as np
 import os
@@ -10,6 +11,8 @@ from scipy.optimize import minimize
 import warnings
 warnings.filterwarnings("ignore")
 
+print("PYTHON:", sys.executable)
+print("CWD:", os.getcwd())
 
 from lib import (filter_NGFS,
                  aggregate_IOT_energy_consumption,
@@ -25,13 +28,12 @@ from lib import (filter_NGFS,
                  build_availabilities_df,
                  build_priorities_dict,
                  project_variables,
-                 aggregate_prices_volumes, 
-                 compute_specific_margin_rates,
+                 aggregate_prices_volumes,
                  extract_regional_energy_sales_taxes,
                  convert_to_net_values,
                  compute_mean_energy_price,
                  compute_delta_volumes,
-                 append_delta_volumes_and_smr
+                 compute_delta_prices,
                  )
 
 
@@ -268,11 +270,7 @@ aggregated_df = aggregate_prices_volumes(projected_df, value_unit)
 
 aggregated_df.to_csv(cache_path+"aggregated_output.csv", index=False)
 
-specific_margin_rates = compute_specific_margin_rates(aggregated_df)
-
-specific_margin_rates.to_csv(cache_path+"sm_rates.csv", index=False)
-
-#### COMPUTE DELTA VOLUMES #####
+#### COMPUTE DELTA VOLUMES AND PRICES #####
 
 mean_energy_prices_df = compute_mean_energy_price(aggregated_df)
 
@@ -282,13 +280,19 @@ delta_label = list(energy_consumers_df[delta_mask]["energy_consumer"])[0]
 
 delta_vol = compute_delta_volumes(IOT_energy_consumption_dict, mean_energy_prices_df, delta_label, volume_unit)
 
+delta_price = compute_delta_prices(mean_energy_prices_df, delta_label)
+
 #######################
 ### CONCATENATE DFs ###
 #######################
 
-vol_df = aggregated_df.loc[aggregated_df["Variable"]=="Volume"]
+vol_price_df = aggregated_df.loc[aggregated_df["Variable"].isin(["Volume", "Price"])].copy()
 
-final_df = append_delta_volumes_and_smr(vol_df,delta_vol,specific_margin_rates)
+final_df = pd.concat([vol_price_df, delta_vol, delta_price], ignore_index=True)
+
+final_df['Variable'] = final_df['Variable'].replace({'Volume': 'Energy consumption volume'})
+final_df['Variable'] = final_df['Variable'] + "|" + final_df['Energy consumers']
+final_df = final_df.drop(columns=['Energy consumers'])
 
 final_df.to_csv(out_path+"hybridization_df.csv", index=False)
 
