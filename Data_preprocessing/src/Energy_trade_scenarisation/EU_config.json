@@ -1,0 +1,7 @@
+{
+"REMIND":"Data_preprocessing/raw_data/REMIND/REMIND_generic_SSP2-NPi2025.mif",
+"mapping":"/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/src/Energy_trade_scenarisation/mapping/map_energy_trade.xlsx",
+"IOTs_path":"Data_preprocessing/data_calibration_evolution/regional_IOTs/",
+"out_path": "/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/data_calibration_evolution/Energy_trade/",
+"calibration_year": "2020"
+}

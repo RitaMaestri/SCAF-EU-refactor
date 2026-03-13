@@ -1,0 +1,115 @@
+import pandas as pd
+import numpy as np
+import os
+import json
+from lib import (
+    EXIOBASE_flow_extractor,
+    REMIND_time_series_extractor,
+    replace_unnamed_multiindex_labels,
+)
+
+
+import traceback
+
+# useful paths
+this_folder = os.path.dirname(__file__)
+config = json.load(open(this_folder+"/EU_config.json"))
+
+REMIND_path = config["REMIND"]
+mapping_path = config["mapping"]
+IOTs_path = config["IOTs_path"]
+out_path = config["out_path"]
+
+# Extract EUR import-volume time series from REMIND using the EU trade mapping.
+trade_mapping_path = os.path.join(this_folder, "mapping", "EU_energy_trade.csv")
+trade_mapping = pd.read_csv(trade_mapping_path)
+
+import_volume_variables = trade_mapping["import_volume"].tolist()
+export_volume_variables = trade_mapping["export_volume"].tolist()
+prices_variables= trade_mapping["price"].tolist()
+
+REMIND_raw = pd.read_csv(REMIND_path, sep=";")
+years_of_interest = [
+    int(col) for col in REMIND_raw.columns if str(col).isdigit() and int(col) >= int(config["calibration_year"])
+]
+
+REMIND_imports = REMIND_time_series_extractor(
+    REMIND_raw,
+    import_volume_variables,
+    years_of_interest,
+    "EUR",
+)
+
+REMIND_exports = REMIND_time_series_extractor(
+    REMIND_raw,
+    export_volume_variables,
+    years_of_interest,
+    "EUR",
+)
+
+REMIND_prices = REMIND_time_series_extractor(
+    REMIND_raw,
+    prices_variables,
+    years_of_interest,
+    "EUR",
+)
+
+year_cols = [str(year) for year in years_of_interest]
+
+imports_by_year = REMIND_imports[year_cols]
+exports_by_year = REMIND_exports[year_cols]
+prices_by_year = REMIND_prices[year_cols]
+
+
+### IMPORT ###
+
+aggregated_energy_import_volumes = imports_by_year.sum(axis=0)
+
+aggregated_energy_import_values = pd.Series(
+    (imports_by_year.to_numpy() * prices_by_year.to_numpy()).sum(axis=0),
+    index=year_cols,
+)
+## ffil propagates the last valid price forward in case the volume is 0
+energy_aggregated_import_price = (
+    aggregated_energy_import_values / aggregated_energy_import_volumes
+).ffill()
+
+### EXPORT ###
+
+aggregated_energy_export_volumes = exports_by_year.sum(axis=0)
+
+aggregated_energy_export_values = pd.Series(
+    (exports_by_year.to_numpy() * prices_by_year.to_numpy()).sum(axis=0),
+    index=year_cols,
+)
+## ffil propagates the last valid price forward in case the volume is 0
+energy_aggregated_export_price = (
+    aggregated_energy_export_values / aggregated_energy_export_volumes
+).ffill()
+
+
+
+
+IOT=pd.read_csv(
+    str(IOTs_path)+"EUR.csv",
+    header=[0, 1],
+    index_col=[0, 1],
+    keep_default_na=False,
+)
+IOT = replace_unnamed_multiindex_labels(IOT)
+
+M_E = EXIOBASE_flow_extractor(IOT,
+                            [("M","∑")],
+                            [ ("Imp","ENERGY")],
+                            new_row_indexes=["M"],
+                            new_col_indexes=["ENERGY"]
+                            )
+
+X_E = EXIOBASE_flow_extractor(IOT,
+                            [("CI_imp","ENERGY")],
+                            [("","EXP")],
+                            new_row_indexes=["ENERGY"],
+                            new_col_indexes=["X"]
+                            )
+
+

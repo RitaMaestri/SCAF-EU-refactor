@@ -1,7 +1,0 @@
-{
-"NGFS":"/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/raw_data/NGFS/IAM_data.xlsx",
-"NGFS_filtered":"/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/src/Energy_trade_scenarisation/cache/NGFS_energy_trade_filtered.csv",
-"mapping":"/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/src/Energy_trade_scenarisation/mapping/map_energy_trade.xlsx",
-"IOTs_path":"/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/src/reformat_EXIOBASE/output/reformat/4_energies/",
-"out_path": "/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/data_calibration_evolution/Energy_trade/"
-}
