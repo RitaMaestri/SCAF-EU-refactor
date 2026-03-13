@@ -11,7 +11,7 @@
 "REMIND-energy_uses":"Data_preprocessing/src/Hybridization/mappings/REMIND_energy_uses.xlsx",
 "priorities":"Data_preprocessing/src/Hybridization/mappings/priorities/priorities.csv",
 "keys":"Data_preprocessing/src/Hybridization/mappings/keys/key_matrix.csv",
-"IOTs_path":"Data_preprocessing/data_calibration_evolution/regional_IOTs/new/",
+"IOTs_path":"Data_preprocessing/data_calibration_evolution/regional_IOTs/",
 "out_path": "Data_preprocessing/data_calibration_evolution/Hybridization/",
 "energy_sales_taxes_mapping":"Data_preprocessing/src/Hybridization/mappings/energy_sales_tax.csv",
 "value_unit":"M EUR 2020",

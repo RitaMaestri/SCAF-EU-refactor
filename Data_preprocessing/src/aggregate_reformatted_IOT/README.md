@@ -1,1 +1,0 @@
-This program takes the reformatted version of EXIOBASE with 4 energies and sums the energy types to obtain a matrix with one energy type.

@@ -7,12 +7,14 @@ current_file = Path(__file__).resolve()
 current_path = current_file.parent
 
 
-#results path
-output_path = current_path / "output"
 
+# results path
+output_path = current_path / "output"
 download_path = output_path / "download"
 aggregation_path = output_path / "aggregation" / "one_energy"
-reformat_path = Path("/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/data_calibration_evolution/regional_IOTs")
+# Set reformat_path relative to repo root
+repo_root = current_path.parents[2]  # Adjust if repo root is at a different depth
+reformat_path = repo_root / "Data_preprocessing" / "data_calibration_evolution" / "regional_IOTs" 
 
 #create paths if not present
 for folder in [ output_path, download_path, aggregation_path, reformat_path]:
@@ -36,4 +38,4 @@ sectors_order= ["AGRICULTURE","MANUFACTURE","SERVICES","STEEL","CHEMICAL","ENERG
 
 #aggregate_EXIOBASE(reg_map_path=str(reg_map_file), sec_map_path=str(sec_map_file), output_path=str(aggregation_path), input_path=str(download_path), year=year, system=p_or_i)
 
-reformat_EXIOBASE(aggregation_folder=str(aggregation_path), reformat_folder=str(reformat_path),sectors_order=sectors_order)
+reformat_EXIOBASE(aggregation_folder=str(aggregation_path), reformat_folder=str(reformat_path),energy_sectors=["ENERGY"],sectors_order=sectors_order)
