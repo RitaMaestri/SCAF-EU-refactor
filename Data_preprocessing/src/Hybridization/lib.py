@@ -9,31 +9,31 @@ from scipy.optimize import minimize
 import itertools
 from math import isclose
 
-def filter_NGFS(NGFS_df, output_path):
+def filter_REMIND(REMIND_df, output_path):
     # Drop trailing NaN-named column produced by the trailing ';' in .mif files
-    NGFS = NGFS_df.loc[:, NGFS_df.columns.notna()]
+    REMIND = REMIND_df.loc[:, REMIND_df.columns.notna()]
 
     # Drop World aggregate rows
-    NGFS = NGFS[NGFS["Region"] != "World"]
+    REMIND = REMIND[REMIND["Region"] != "World"]
 
     # Drop year columns before 2020
-    year_cols_to_drop = [c for c in NGFS.columns if str(c).isdigit() and int(c) < 2020]
-    NGFS = NGFS.drop(columns=year_cols_to_drop)
+    year_cols_to_drop = [c for c in REMIND.columns if str(c).isdigit() and int(c) < 2020]
+    REMIND = REMIND.drop(columns=year_cols_to_drop)
 
-    NGFS.to_csv(output_path, index=False)
-    return NGFS
+    REMIND.to_csv(output_path, index=False)
+    return REMIND
 
 #################################################################
-####### AUGMENT THE NGFS DATAFRAME WITH SUPPLEMENTARY DATA ######
+####### AUGMENT THE REMIND DATAFRAME WITH SUPPLEMENTARY DATA ######
 #################################################################
 
-def augment_NGFS(NGFS_filtered, sup_data, disaggregation_data=None):
+def augment_REMIND(REMIND_filtered, sup_data, disaggregation_data=None):
 
-    def check_nomenclature_compatibility(NGFS_filtered,sup_data):
+    def check_nomenclature_compatibility(REMIND_filtered,sup_data):
             # --- Check unique values consistency ---
         key_cols = ["Model", "Region", "Scenario"]
         for col in key_cols:
-            filtered_unique = set(NGFS_filtered[col].unique())
+            filtered_unique = set(REMIND_filtered[col].unique())
             sup_unique = set(sup_data[col].unique())
 
             if filtered_unique != sup_unique:
@@ -42,15 +42,15 @@ def augment_NGFS(NGFS_filtered, sup_data, disaggregation_data=None):
 
                 print(f"⚠️ Warning: mismatch in column '{col}':")
                 if missing_in_sup:
-                    print(f"  Present in NGFS_filtered but missing in supplementary_data: {missing_in_sup}")
+                    print(f"  Present in REMIND_filtered but missing in supplementary_data: {missing_in_sup}")
                 if missing_in_filtered:
-                    print(f"  Present in supplementary_data but missing in NGFS_filtered: {missing_in_filtered}")
+                    print(f"  Present in supplementary_data but missing in REMIND_filtered: {missing_in_filtered}")
             else:
                 pass
 
-    def check_duplicate_rows(NGFS_filtered,sup_data):
+    def check_duplicate_rows(REMIND_filtered,sup_data):
         merge_keys = ["Model", "Scenario", "Region", "Variable"]
-        common_rows = NGFS_filtered.merge(
+        common_rows = REMIND_filtered.merge(
             sup_data[merge_keys], on=merge_keys, how="inner"
         )
 
@@ -65,26 +65,26 @@ def augment_NGFS(NGFS_filtered, sup_data, disaggregation_data=None):
             pass
 
 
-    def add_supplementary_data(NGFS_filtered, sup_data):
+    def add_supplementary_data(REMIND_filtered, sup_data):
 
         sup_data.columns = sup_data.columns.map(str)
         sup_data=sup_data[sup_data["Region"] != "World"]
 
         
-        check_nomenclature_compatibility(NGFS_filtered,sup_data)
-        check_duplicate_rows(NGFS_filtered,sup_data)
+        check_nomenclature_compatibility(REMIND_filtered,sup_data)
+        check_duplicate_rows(REMIND_filtered,sup_data)
 
-        NGFS_augmented = pd.concat([NGFS_filtered,sup_data], join="inner")
+        REMIND_augmented = pd.concat([REMIND_filtered,sup_data], join="inner")
 
-        return NGFS_augmented
+        return REMIND_augmented
     
-    def disaggregate_volumes(NGFS_augmented, disaggregation_data):
+    def disaggregate_volumes(REMIND_augmented, disaggregation_data):
         #to implement in case we get the composition of LDV energy
         pass
 
     #augment data
-    NGFS_augmented = add_supplementary_data(NGFS_filtered, sup_data)
-    return NGFS_augmented
+    REMIND_augmented = add_supplementary_data(REMIND_filtered, sup_data)
+    return REMIND_augmented
 
 #####################################################
 ####### GENERATE ENERGY CONSUMPTION DATAFRAMES ######
@@ -179,7 +179,7 @@ def aggregate_IOT_energy_consumption(iot_data, col_label_df, row_label_df):
     Parameters
     ----------
     iot_dataiot_data : dict[str, pd.DataFrame]
-        Dictionary where each key is a region name (e.g., "NGFS_AFR") 
+        Dictionary where each key is a region name (e.g., "REMIND_AFR") 
         and each value is the corresponding IOT DataFrame.
         Each DataFrame is expected to have a two-level MultiIndex 
         for both rows and columns (Category, Subcategory).
@@ -200,10 +200,10 @@ def aggregate_IOT_energy_consumption(iot_data, col_label_df, row_label_df):
         Rows where SCAF == "ENERGY" are used for aggregation.
 
     regions_mapping : pd.DataFrame
-        Mapping between SCAF and NGFS region names.
+        Mapping between SCAF and REMIND region names.
         Expected columns:
             - "region_SCAF"
-            - "region_NGFS"
+            - "region_REMIND"
 
     Returns
     -------
@@ -285,9 +285,9 @@ def convert_to_net_values(dfs_consumption: dict[str, pd.DataFrame],
 ############## AGGREGATE ENERGY USES ###############
 #####################################################
 
-def get_NGFS_units(augmented_NGFS: pd.DataFrame, map_NGFS_energy_uses: pd.DataFrame) -> tuple:
+def get_REMIND_units(augmented_REMIND: pd.DataFrame, map_REMIND_energy_uses: pd.DataFrame) -> tuple:
     """
-    Infer volume and price units from the NGFS data by looking up
+    Infer volume and price units from the REMIND data by looking up
     the Unit column for each variable listed in the mapping.
 
     Raises ValueError if variables within the same type have inconsistent units.
@@ -298,7 +298,7 @@ def get_NGFS_units(augmented_NGFS: pd.DataFrame, map_NGFS_energy_uses: pd.DataFr
         (volume_unit, price_unit)
     """
     var_unit = (
-        augmented_NGFS[["Variable", "Unit"]]
+        augmented_REMIND[["Variable", "Unit"]]
         .drop_duplicates(subset=["Variable"])
         .set_index("Variable")["Unit"]
     )
@@ -307,43 +307,43 @@ def get_NGFS_units(augmented_NGFS: pd.DataFrame, map_NGFS_energy_uses: pd.DataFr
         units = set()
         for var in variables.dropna().unique():
             if var not in var_unit.index:
-                raise ValueError(f"Variable '{var}' ({label}) not found in augmented_NGFS")
+                raise ValueError(f"Variable '{var}' ({label}) not found in augmented_REMIND")
             units.add(var_unit[var])
         if len(units) != 1:
             raise ValueError(f"{label} variables have inconsistent units: {units}")
         return units.pop()
 
-    volume_unit = collect_units(map_NGFS_energy_uses["NGFS_volume"], "NGFS_volume")
-    price_unit  = collect_units(map_NGFS_energy_uses["NGFS_price"],  "NGFS_price")
+    volume_unit = collect_units(map_REMIND_energy_uses["REMIND_volume"], "REMIND_volume")
+    price_unit  = collect_units(map_REMIND_energy_uses["REMIND_price"],  "REMIND_price")
 
     return volume_unit, price_unit
 
 
-def aggregate_energy_uses(ngfs, mapping, value_unit, price_unit):
+def aggregate_energy_uses(remind, mapping, value_unit, price_unit):
 
-    def create_energy_uses_volumes(ngfs, mapping):
+    def create_energy_uses_volumes(remind, mapping):
         """
         Create the Energy_uses_volumes dataset.
 
         Steps:
-        1. Keep only NGFS rows whose 'Variable' appears in mapping['NGFS_volume'].
+        1. Keep only REMIND rows whose 'Variable' appears in mapping['REMIND_volume'].
         2. Add the corresponding 'energy_use' column from mapping.
         3. Group by Model, Scenario, Region, energy_use, and Unit.
         4. Sum all year columns.
         5. Return a clean DataFrame with aggregated results.
         """
         # Identify year columns (4-digit strings like "2020", "2025", etc.)
-        year_cols = [c for c in ngfs.columns if str(c).isdigit()]
+        year_cols = [c for c in remind.columns if str(c).isdigit()]
         
-        # Filter NGFS to keep only rows mapped in NGFS_volume
-        filtered_ngfs = ngfs[ngfs['Variable'].isin(mapping['NGFS_volume'])].copy()
+        # Filter REMIND to keep only rows mapped in REMIND_volume
+        filtered_remind = remind[remind['Variable'].isin(mapping['REMIND_volume'])].copy()
         
         # Merge with mapping to bring in the corresponding energy_use
         merged_df = pd.merge(
-            filtered_ngfs,
-            mapping[['NGFS_volume', 'energy_use']],
+            filtered_remind,
+            mapping[['REMIND_volume', 'energy_use']],
             left_on='Variable',
-            right_on='NGFS_volume',
+            right_on='REMIND_volume',
             how='left'
         )
         
@@ -361,25 +361,25 @@ def aggregate_energy_uses(ngfs, mapping, value_unit, price_unit):
         return grouped_df
 
 
-    def create_energy_use_values(ngfs, mapping, value_unit):
+    def create_energy_use_values(remind, mapping, value_unit):
         """
         Create the energy_use_values dataset in two steps:
         
         1. Build a label matrix that contains every combination of:
-        (Model, Scenario, Region) × (NGFS_volume, NGFS_price, energy_use)
+        (Model, Scenario, Region) × (REMIND_volume, REMIND_price, energy_use)
         - No merges, only explicit cartesian product.
         - Preserves row order from both sources.
 
         2. Add yearly columns (e.g., 2020, 2025, ...) computed as:
-            NGFS[Variable == NGFS_volume] * NGFS[Variable == NGFS_price]
+            REMIND[Variable == REMIND_volume] * REMIND[Variable == REMIND_price]
         for matching Model, Scenario, Region.
         - Fully vectorized, no loops.
         """
         # Identify year columns (those that contain only digits)
-        year_cols = [c for c in ngfs.columns if str(c).isdigit()]
+        year_cols = [c for c in remind.columns if str(c).isdigit()]
 
         # 1. Build the label dataset (explicit cartesian product)
-        unique_combos = ngfs[['Model', 'Scenario', 'Region']].drop_duplicates().reset_index(drop=True)
+        unique_combos = remind[['Model', 'Scenario', 'Region']].drop_duplicates().reset_index(drop=True)
         unique_combos = unique_combos[unique_combos["Region"] != "World"]
 
         n_unique = len(unique_combos)
@@ -395,16 +395,16 @@ def aggregate_energy_uses(ngfs, mapping, value_unit, price_unit):
             axis=1
         )
         
-        volume_labels = labels_df.drop(['NGFS_price', 'energy_use'], axis=1).rename(columns={'NGFS_volume': 'Variable'})
-        price_labels = labels_df.drop(['NGFS_volume', 'energy_use'], axis=1).rename(columns={'NGFS_price': 'Variable'})
+        volume_labels = labels_df.drop(['REMIND_price', 'energy_use'], axis=1).rename(columns={'REMIND_volume': 'Variable'})
+        price_labels = labels_df.drop(['REMIND_volume', 'energy_use'], axis=1).rename(columns={'REMIND_price': 'Variable'})
 
-        multi_index_ngfs = ngfs.set_index(['Model', 'Scenario', 'Region', 'Variable'])
+        multi_index_remind = remind.set_index(['Model', 'Scenario', 'Region', 'Variable'])
 
         keys_vol = list(zip(volume_labels['Model'], volume_labels['Scenario'], volume_labels['Region'], volume_labels['Variable']))
         keys_price = list(zip(price_labels['Model'], price_labels['Scenario'], price_labels['Region'], price_labels['Variable']))
 
-        vol_values = multi_index_ngfs.loc[keys_vol, year_cols]
-        price_values = multi_index_ngfs.reindex(keys_price)[year_cols].to_numpy()
+        vol_values = multi_index_remind.loc[keys_vol, year_cols]
+        price_values = multi_index_remind.reindex(keys_price)[year_cols].to_numpy()
 
         year_matrix = np.nan_to_num(vol_values) * np.nan_to_num(price_values)
 
@@ -431,7 +431,7 @@ def aggregate_energy_uses(ngfs, mapping, value_unit, price_unit):
         volumes_ordered = volumes.loc[values_ordered.index]
 
         if not values_ordered.index.equals(volumes_ordered.index):
-            raise ValueError("❌ The labels in the volumes dataframe do not equal the labels in the values dataframe. Impossible to compute NGFS prices")
+            raise ValueError("❌ The labels in the volumes dataframe do not equal the labels in the values dataframe. Impossible to compute REMIND prices")
 
         year_cols = [c for c in values_ordered.columns if str(c).isdigit()]
 
@@ -441,8 +441,8 @@ def aggregate_energy_uses(ngfs, mapping, value_unit, price_unit):
 
         return ratio.reset_index()
 
-    volumes = create_energy_uses_volumes(ngfs, mapping)
-    values = create_energy_use_values(ngfs, mapping, value_unit)
+    volumes = create_energy_uses_volumes(remind, mapping)
+    values = create_energy_use_values(remind, mapping, value_unit)
     prices = create_energy_use_prices(values, volumes, price_unit)
 
     markets_dict={"prices":prices, "values":values, "volumes":volumes}
@@ -453,15 +453,15 @@ def aggregate_energy_uses(ngfs, mapping, value_unit, price_unit):
 ############ CREATE ENERGY ALLOCATION OUTPUT DATABASE #############
 ###################################################################
 
-def generate_output_template(NGFS,energy_consumers,energy_uses, price_unit, volume_unit):
+def generate_output_template(REMIND,energy_consumers,energy_uses, price_unit, volume_unit):
 
-    models=np.unique(NGFS["Model"])
-    scenarios=np.unique(NGFS["Scenario"])
-    regions=np.unique(NGFS["Region"])
+    models=np.unique(REMIND["Model"])
+    scenarios=np.unique(REMIND["Scenario"])
+    regions=np.unique(REMIND["Region"])
     variable_type=["Volume", "Price"]
     combinations = list(itertools.product(models, scenarios, regions, variable_type, energy_consumers,energy_uses))
 
-    year_cols = [c for c in NGFS.columns if str(c).isdigit()]
+    year_cols = [c for c in REMIND.columns if str(c).isdigit()]
 
     # Creazione DataFrame
     df_output = pd.DataFrame(combinations, columns=['Model', 'Scenario', 'Region', "Variable","Energy consumers", "Energy uses"])
@@ -552,8 +552,8 @@ class Energy_Values_Allocation:
 
     def __init__(self,
         IOT_E_consumptions,
-        NGFS_E_uses,
-        NGFS_E_prices,
+        REMIND_E_uses,
+        REMIND_E_prices,
         priorities,
         key):
         """
@@ -564,12 +564,12 @@ class Energy_Values_Allocation:
                 Series containing total energy consumption by consumer. 
                 The index must represent consumer names.
                 
-            NGFS_E_uses (pd.Series): 
-                Series containing the energy uses in value from NGFS data. 
+            REMIND_E_uses (pd.Series): 
+                Series containing the energy uses in value from REMIND data. 
                 The index must represent energy use categories.
 
-            NGFS_E_prices (pd.Series):
-                Series containing the price per energy use from NGFS data. 
+            REMIND_E_prices (pd.Series):
+                Series containing the price per energy use from REMIND data. 
                 The index must represent energy use categories.
 
             priorities (pd.DataFrame): 
@@ -592,7 +592,7 @@ class Energy_Values_Allocation:
                 Disaggregation key used to allocate energy uses to consumers.
                 - If a Series: its index must match consumer names.
                 - If a DataFrame: its index must match consumer names and its columns 
-                must match energy use categories (same as `NGFS_E_uses.index`).
+                must match energy use categories (same as `REMIND_E_uses.index`).
                 
                 This key determines the relative weight of each consumer (or consumer–energy pair)
                 in the allocation process.
@@ -602,12 +602,12 @@ class Energy_Values_Allocation:
         """
            
         self.IOT_E_consumptions =IOT_E_consumptions.copy()
-        self.NGFS_E_uses =NGFS_E_uses.copy()
-        self.NGFS_E_prices=NGFS_E_prices.copy()
+        self.REMIND_E_uses =REMIND_E_uses.copy()
+        self.REMIND_E_prices=REMIND_E_prices.copy()
         self.priorities = priorities.copy()
 
         self.consumers = list(self.IOT_E_consumptions.index).copy()
-        self.energy_uses = list(self.NGFS_E_uses.index).copy()
+        self.energy_uses = list(self.REMIND_E_uses.index).copy()
 
         empty_consumerXuses_matrix = pd.DataFrame(index=self.consumers, columns=self.energy_uses)
         
@@ -623,7 +623,7 @@ class Energy_Values_Allocation:
 
         self.forced_energy_values = empty_consumerXuses_matrix.copy()
 
-        self.E_to_allocate = NGFS_E_uses.copy()
+        self.E_to_allocate = REMIND_E_uses.copy()
 
 
         if isinstance(key, pd.DataFrame) or isinstance(key, pd.Series):
@@ -721,16 +721,16 @@ class Energy_Values_Allocation:
         self.E_to_allocate[energy_use] -= value
 
     def __check_energy_balance(self, energy_use):
-        """Verify that the total allocated energy for a given type matches the expected NGFS_E_uses value.
+        """Verify that the total allocated energy for a given type matches the expected REMIND_E_uses value.
         Returns True if consistent, False otherwise.
         """
         allocated_sum = self.forced_energy_values[energy_use].sum()
-        expected = self.NGFS_E_uses[energy_use]
+        expected = self.REMIND_E_uses[energy_use]
         if not np.isclose(allocated_sum, expected, rtol=1e-6):
             raise ValueError("For"+ energy_use +", allocated sum ≠ expected ")
     
     def __set_forced_energy_percentages(self):
-        self.forced_energy_percentages = self.forced_energy_values.div(self.NGFS_E_uses)
+        self.forced_energy_percentages = self.forced_energy_values.div(self.REMIND_E_uses)
     
     def adjust_rows_to_target(self):
         """
@@ -772,14 +772,14 @@ class Energy_Values_Allocation:
     #####################################
 
 
-    def rescale_NGFS_energy_values(self):
+    def rescale_REMIND_energy_values(self):
 
-        """Rescales the NGFS energy uses values in order for the total energy value (for one region)
+        """Rescales the REMIND energy uses values in order for the total energy value (for one region)
         to match with the total IOT energy consumption
         """        
-        self.scaling_factor = self.IOT_E_consumptions.sum()/self.NGFS_E_uses.sum()
+        self.scaling_factor = self.IOT_E_consumptions.sum()/self.REMIND_E_uses.sum()
 
-        self.NGFS_E_uses *= self.scaling_factor
+        self.REMIND_E_uses *= self.scaling_factor
         self.E_to_allocate*= self.scaling_factor
 
         return self.scaling_factor
@@ -802,7 +802,7 @@ class Energy_Values_Allocation:
                                                           (self.priorities['consumer'] == consumer),
                                                           "availability"].item()
                 
-                availability_target= availability_for_consumer * self.NGFS_E_uses[energy_use]
+                availability_target= availability_for_consumer * self.REMIND_E_uses[energy_use]
 
                 energy_availability = min(self.E_to_allocate[energy_use],availability_target)
                 
@@ -922,7 +922,7 @@ class Energy_Values_Allocation:
         def active_consumer_balance_constraints(x):
             D = reconstruct_D(x)
             balance_error = (
-                D.dot(self.NGFS_E_uses.values)[active_row_mask]
+                D.dot(self.REMIND_E_uses.values)[active_row_mask]
                 - self.IOT_E_consumptions.values[active_row_mask]
             )
             return balance_error / self.IOT_E_consumptions.values[active_row_mask]
@@ -952,7 +952,7 @@ class Energy_Values_Allocation:
             raise RuntimeError(f"Optimization failed: {result.message}")
 
         # Reconstruct final matrix
-        self.values_matrix = (pd.DataFrame(reconstruct_D(result.x), index=key_df.index, columns=key_df.columns))*self.NGFS_E_uses
+        self.values_matrix = (pd.DataFrame(reconstruct_D(result.x), index=key_df.index, columns=key_df.columns))*self.REMIND_E_uses
 
         self.values_matrix=self.adjust_rows_to_target()
 
@@ -962,7 +962,7 @@ class Energy_Values_Allocation:
 
     def compute_prices_matrix(self):
 
-        self.prices_matrix[:] = self.NGFS_E_prices[self.prices_matrix.columns].values
+        self.prices_matrix[:] = self.REMIND_E_prices[self.prices_matrix.columns].values
         self.prices_matrix*=self.scaling_factor
         return self.prices_matrix
     
@@ -1054,7 +1054,7 @@ def rename_regions(regions_mapping, regions_obj):
     Parameters
     ----------
     regions_mapping : pd.DataFrame
-        DataFrame with columns ["region_SCAF", "region_NGFS"].
+        DataFrame with columns ["region_SCAF", "region_REMIND"].
     regions_obj : dict | pd.DataFrame
         Object to rename:
             - dict[str, Any]: keys are region names
@@ -1067,7 +1067,7 @@ def rename_regions(regions_mapping, regions_obj):
     """
 
     # Create mapping dictionary
-    mapping = dict(zip(regions_mapping["region_SCAF"], regions_mapping["region_NGFS"]))
+    mapping = dict(zip(regions_mapping["region_SCAF"], regions_mapping["region_REMIND"]))
 
     # Case 1: dictionary
     if isinstance(regions_obj, dict):

@@ -1,25 +1,33 @@
 import pandas as pd
 import os
-import json
+import sys
+from pathlib import Path
 
-from lib import create_population_template,fill_population_template
+from lib import create_population_template,fill_population_template, filter_REMIND
 
-this_folder = os.path.dirname(__file__)
-config = json.load(open(this_folder+"/config.json"))
+SRC_ROOT = Path(__file__).resolve().parents[1]
+if str(SRC_ROOT) not in sys.path:
+	sys.path.append(str(SRC_ROOT))
 
-NGFS_filtered_path=config["filtered_NGFS"]
+from common.path_loader import load_config
+
+module_dir = Path(__file__).resolve().parent
+config = load_config(module_dir)
+
+REMIND_path = os.path.join(config["raw_data_root"], config["remind_file"])
 mapping_regions_path=config["mapping_regions"]
-out_path=config["out_path"]
-population_raw_path=config["Population"]
+out_path = os.path.join(config["calibration_output_root"], config["out_file"])
+population_raw_path = os.path.join(config["raw_data_root"], config["population_file"])
 
 
-NGFS_filtered_df = pd.read_csv(NGFS_filtered_path, header=0)
+REMIND_raw = pd.read_csv(REMIND_path, header=0, sep=";")
+REMIND = filter_REMIND(REMIND_raw)
 
 mapping_regions_df = pd.read_csv(mapping_regions_path, header=0)
 
 population_raw_df = pd.read_csv(population_raw_path, header=0)
 
-template_df = create_population_template(NGFS_filtered_df)
+template_df = create_population_template(REMIND)
 filled_population_df = fill_population_template(template_df, population_raw_df, mapping_regions_df, ssp_column="pop_SSP2")
 
 

@@ -1,0 +1,5 @@
+"energy_type","import_volume","export_volume","price"
+"Biomass","Trade|Imports|Biomass","Trade|Exports|Biomass","Price|Biomass|World Market"
+"Coal","Trade|Imports|Coal","Trade|Exports|Coal","Price|Coal|World Market"
+"Gas","Trade|Imports|Gas","Trade|Exports|Gas","Price|Gas|World Market"
+"Oil","Trade|Imports|Oil","Trade|Exports|Oil","Price|Oil|World Market"

@@ -2,6 +2,21 @@ import pandas as pd
 import itertools
 import numpy as np
 
+def filter_REMIND(REMIND_df):
+    # Drop trailing NaN-named column produced by the trailing ';' in .mif files
+    REMIND = REMIND_df.loc[:, REMIND_df.columns.notna()]
+
+    # Drop World aggregate rows
+    REMIND = REMIND[REMIND["Region"] == "EUR"]
+
+    # Drop year columns before 2020
+    year_cols_to_drop = [c for c in REMIND.columns if str(c).isdigit() and int(c) < 2020]
+    REMIND = REMIND.drop(columns=year_cols_to_drop)
+
+    return REMIND
+
+
+
 def create_sector_template(template_df, sectors_df):
     """
     Create a template DataFrame similar to population template, 
@@ -83,7 +98,7 @@ def fill_sector_productivity(template_df, productivities_df, map_df, mapping_reg
     - map_df : DataFrame
         Mapping of sector_SCAF -> sector_prod (agr/man/ser)
     - mapping_regions_df : DataFrame
-        Mapping of region codes to NGFS names
+        Mapping of region codes to REMIND names
     - calibration_year : int, optional
         If None, takes the minimum year in template columns
 
@@ -98,15 +113,15 @@ def fill_sector_productivity(template_df, productivities_df, map_df, mapping_reg
     calibration_year = year_cols[0]
 
     
-    # Build reverse mapping: NGFS region -> SCAF region
-    reverse_region_map = {v: k for k, v in zip(mapping_regions_df["region_SCAF"], mapping_regions_df["region_NGFS"])}
+    # Build reverse mapping: REMIND region -> SCAF region
+    reverse_region_map = {v: k for k, v in zip(mapping_regions_df["region_SCAF"], mapping_regions_df["region_REMIND"])}
     
         # Fill productivity
     for idx, row in filled_df.iterrows():
         ngfs_region = row["Region"]
         sector_name = row["Sector"]
 
-        # Map NGFS region to SCAF
+        # Map REMIND region to SCAF
         scaf_region = reverse_region_map.get(ngfs_region)
 
 

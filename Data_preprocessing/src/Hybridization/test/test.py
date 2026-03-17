@@ -7,14 +7,14 @@ import math
 # Aggiunge la cartella Hybridization (parent di test/) al path
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from lib import Energy_Values_Allocation, aggregate_energy_uses, aggregate_IOT_energy_consumption, aggregate_by_consumer_and_use, rename_regions, build_availabilities_df, filter_NGFS
+from lib import Energy_Values_Allocation, aggregate_energy_uses, aggregate_IOT_energy_consumption, aggregate_by_consumer_and_use, rename_regions, build_availabilities_df, filter_REMIND
 
 #####################################
 ### TEST Energy_Values_Allocation ###
 #####################################
 IOT_E_dict = {"AGRICULTURE": 12.449, "MANUFACTURE": 125.362, "SERVICES": 444.915, "STEEL": 5.231, "CHEMICAL": 56.424, "ENERGY": 389.904, "TRANSPORTATION":23.441, "HOUSEHOLDS":295.832}
 
-NGFS_E_dict = {"LDV": 392.324940090403, 
+REMIND_E_dict = {"LDV": 392.324940090403, 
             "PAS": 80.782406009737,
                 "FRG": 212.209853448321,
                 "STE": 17.9798067109948,
@@ -24,7 +24,7 @@ NGFS_E_dict = {"LDV": 392.324940090403,
                 "R&C": 470.592, 
                 "PRIM":441.026078920331
 }
-NGFS_E_prices ={"LDV": 28.4900345280386, 
+REMIND_E_prices ={"LDV": 28.4900345280386, 
             "PAS": 28.8146514024431,
                 "FRG": 28.289858973512,
                 "STE": 16.188147835388,
@@ -38,9 +38,9 @@ NGFS_E_prices ={"LDV": 28.4900345280386,
 
 IOT_E = pd.Series(IOT_E_dict)
 
-NGFS_E = pd.Series(NGFS_E_dict)
+REMIND_E = pd.Series(REMIND_E_dict)
 
-NGFS_E_prices = pd.Series(NGFS_E_prices)
+REMIND_E_prices = pd.Series(REMIND_E_prices)
 
 priorities_path = os.path.join(os.path.dirname(__file__), "priorities_test.csv")
 key_path = os.path.join(os.path.dirname(__file__), "key_1D.csv")
@@ -57,15 +57,15 @@ key = pd.Series(key_csv['value'].values, index=key_csv['sector'])
 def test_energy_allocation():
 
     allocation = Energy_Values_Allocation(IOT_E_consumptions=IOT_E,
-            NGFS_E_uses=NGFS_E,
-            NGFS_E_prices= NGFS_E_prices,
+            REMIND_E_uses=REMIND_E,
+            REMIND_E_prices= REMIND_E_prices,
             priorities=priorities,
             key=key_df)
 
-    rescaling_factor=allocation.rescale_NGFS_energy_values()
+    rescaling_factor=allocation.rescale_REMIND_energy_values()
 
-    if allocation.NGFS_E_uses.sum()== allocation.IOT_E_consumptions.sum():
-        print("Test passed: NGFS energy values correctly rescaled ✅")
+    if allocation.REMIND_E_uses.sum()== allocation.IOT_E_consumptions.sum():
+        print("Test passed: REMIND energy values correctly rescaled ✅")
 
     allocation.allocate_forced_energy_values()
     allocation.adjust_key_for_forced_values()
@@ -81,7 +81,7 @@ def test_energy_allocation():
     disaggregated_volumes = allocation.compute_volumes_matrix()
 
     #check the constraint error
-    print("max vertical sum error: ",max(abs(-1 + disaggregated_energy.sum(axis=0) / allocation.NGFS_E_uses)))
+    print("max vertical sum error: ",max(abs(-1 + disaggregated_energy.sum(axis=0) / allocation.REMIND_E_uses)))
     print("max horizontal sum error: ",max(-1 + disaggregated_energy.sum(axis=1) / allocation.IOT_E_consumptions))
     return disaggregated_energy, disaggregated_prices, disaggregated_volumes
 
@@ -131,15 +131,15 @@ test_path = os.path.join(os.path.dirname(__file__), "test_IOT_mapping_CAZ.xlsx")
 ##### TEST aggregate_energy_types ################
 ##################################################
 
-NGFS_augmented_path = "/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/src/Hybridization/cache/NGFS_hybridization_augmented.csv"
-map_NGFS_energy_uses_path = "/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/src/Hybridization/mappings/NGFS_energy_uses.xlsx"
+REMIND_augmented_path = "/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/src/Hybridization/cache/NGFS_hybridization_augmented.csv"
+map_REMIND_energy_uses_path = "/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/src/Hybridization/mappings/NGFS_energy_uses.xlsx"
 test_path = os.path.join(os.path.dirname(__file__), "test_aggregation_energies.xlsx")
 
 
-def test_aggregate_energy_types(NGFS_augmented_path, map_NGFS_energy_uses_path, test_path):
+def test_aggregate_energy_types(REMIND_augmented_path, map_REMIND_energy_uses_path, test_path):
 
     test=pd.read_excel(test_path,sheet_name="Sheet1",header=0)
-    result = aggregate_energy_types(NGFS_augmented_path, map_NGFS_energy_uses_path)["values"]
+    result = aggregate_energy_types(REMIND_augmented_path, map_REMIND_energy_uses_path)["values"]
 
     selected_row =result[
         (result["Model"] == test.loc[0, "Model"]) &
@@ -162,38 +162,38 @@ def test_aggregate_energy_types(NGFS_augmented_path, map_NGFS_energy_uses_path, 
         print(f"❌ Test FAILED — Some values differ beyond tolerance {tolerance}.")
 
 
-#test_aggregate_energy_types(NGFS_augmented_path, map_NGFS_energy_uses_path, test_path)
+#test_aggregate_energy_types(REMIND_augmented_path, map_REMIND_energy_uses_path, test_path)
 
 ##################################################################
 ####################### TEST MAPPING #############################
 ##################################################################
 
-map_NGFS_energy_uses=pd.read_excel(map_NGFS_energy_uses_path,header=0)
-NGFS_augmented = pd.read_csv(NGFS_augmented_path,header=0)
+map_REMIND_energy_uses=pd.read_excel(map_REMIND_energy_uses_path,header=0)
+REMIND_augmented = pd.read_csv(REMIND_augmented_path,header=0)
 
-def check_variables_presence_in_mapping(map_NGFS_energy_uses,NGFS_augmented):
-    prices_mapping=pd.unique(map_NGFS_energy_uses["NGFS_price"])
-    volumes_mapping=pd.unique(map_NGFS_energy_uses["NGFS_volume"])
+def check_variables_presence_in_mapping(map_REMIND_energy_uses,REMIND_augmented):
+    prices_mapping=pd.unique(map_REMIND_energy_uses["REMIND_price"])
+    volumes_mapping=pd.unique(map_REMIND_energy_uses["REMIND_volume"])
 
     all_mapping_variables=set(np.concatenate([prices_mapping,volumes_mapping]))
 
-    all_NGFS_augmented_variables=set(pd.unique(NGFS_augmented["Variable"]))
+    all_REMIND_augmented_variables=set(pd.unique(REMIND_augmented["Variable"]))
 
 
-    print("in mapping but not NGFS \n",
-    sorted(all_mapping_variables.difference(all_NGFS_augmented_variables)))
+    print("in mapping but not REMIND \n",
+    sorted(all_mapping_variables.difference(all_REMIND_augmented_variables)))
 
-    print("in NGFS but not mapping \n",
-    sorted(all_NGFS_augmented_variables.difference(all_mapping_variables)))
+    print("in REMIND but not mapping \n",
+    sorted(all_REMIND_augmented_variables.difference(all_mapping_variables)))
 
-#check_variables_presence_in_mapping(map_NGFS_energy_uses,NGFS_augmented)
+#check_variables_presence_in_mapping(map_REMIND_energy_uses,REMIND_augmented)
 
 ##################################################################
 ####################### TEST MAPPING #############################
 ##################################################################
 
 IEA_mapping_path = "src/Hybridization/mappings/mapping_IEA.csv"
-IEA_data_path ="src/IEA/result/aggregate_residential_agriculture_2020.csv"
+IEA_data_path ="src/Hybridization/IEA/result/aggregate_residential_agriculture_2020.csv"
 priorities_path="src/Hybridization/mappings/priorities/priorities.csv"
 volumes_path = "src/Hybridization/cache/volumes.csv"
 region_mapping_path = "src/Hybridization/mappings/region_mapping.csv"
@@ -321,12 +321,12 @@ test_specific_margin_rates_lower_bound(smr_df)
 
 
 ##################################################
-##### TEST filter_NGFS ###########################
+##### TEST filter_REMIND ###########################
 ##################################################
 
-def test_filter_NGFS():
+def test_filter_REMIND():
     """
-    Test that filter_NGFS:
+    Test that filter_REMIND:
     - drops year columns before 2020
     - drops rows where Region == 'World'
     - saves the result to the specified output path
@@ -351,7 +351,7 @@ def test_filter_NGFS():
         tmp_path = f.name
 
     try:
-        result = filter_NGFS(df, tmp_path)
+        result = filter_REMIND(df, tmp_path)
 
         # No pre-2020 year columns
         year_cols = [c for c in result.columns if str(c).isdigit()]
@@ -368,9 +368,9 @@ def test_filter_NGFS():
         # Output CSV was created
         assert os.path.exists(tmp_path), "Output CSV was not created"
 
-        print("test_filter_NGFS passed ✅")
+        print("test_filter_REMIND passed ✅")
     finally:
         os.remove(tmp_path)
 
 
-test_filter_NGFS()
+test_filter_REMIND()

@@ -1,8 +1,6 @@
 {
-"productivities":"/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/raw_data/Productivities/productivities.csv",
-"out_path":"/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/data_calibration_evolution/Productivities/productivities.csv",
-"regions_mapping":"/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/src/Productivities/mappings/mapping_regions",
-"sectors_prod_mapping":"/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/src/Productivities/mappings/sectors.csv",
-"filtered_NGFS":"/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/src/Filter_NGFS/cache/filtered_NGFS.csv"
+"productivities_file":"Productivities/productivities.csv",
+"out_file":"Productivities/productivities.csv",
+"sectors_prod_mapping":"Data_preprocessing/src/Productivities/mappings/sectors.csv"
 
 }
