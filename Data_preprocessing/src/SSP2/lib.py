@@ -2,6 +2,20 @@ import pandas as pd
 import itertools
 import numpy as np
 
+
+def filter_REMIND(REMIND_df):
+    # Drop trailing NaN-named column produced by the trailing ';' in .mif files
+    REMIND = REMIND_df.loc[:, REMIND_df.columns.notna()]
+
+    # Drop World aggregate rows
+    REMIND = REMIND[REMIND["Region"] != "World"]
+
+    # Drop year columns before 2020
+    year_cols_to_drop = [c for c in REMIND.columns if str(c).isdigit() and int(c) < 2020]
+    REMIND = REMIND.drop(columns=year_cols_to_drop)
+
+    return REMIND
+
 def create_population_template(df):
     # 1. Identify the columns that represent years
     year_cols = [col for col in df.columns if str(col).isdigit()]
@@ -48,15 +62,15 @@ def fill_population_template(template_df, population_df, mapping_df, ssp_column=
     Parameters:
     - template_df: template DataFrame (Model x Scenario x Region)
     - population_df: DataFrame with population data (dummy,dummy,pop_SSP1,...)
-    - mapping_df: DataFrame with columns ['region_SCAF','region_NGFS'] for mapping
+    - mapping_df: DataFrame with columns ['region_SCAF','region_REMIND'] for mapping
     - ssp_column: column in population_df to use (default 'pop_SSP2')
     
     Returns:
     - template_df_filled: DataFrame with populations filled
     """
     
-    # 1. Create mapping dictionary: SCAF region -> NGFS region
-    region_map = dict(zip(mapping_df["region_SCAF"], mapping_df["region_NGFS"]))
+    # 1. Create mapping dictionary: SCAF region -> REMIND region
+    region_map = dict(zip(mapping_df["region_SCAF"], mapping_df["region_REMIND"]))
     
     # 2. Identify year columns in template (numeric)
     year_cols = [col for col in template_df.columns if str(col).isdigit()]
@@ -65,8 +79,8 @@ def fill_population_template(template_df, population_df, mapping_df, ssp_column=
     filled_df = template_df.copy()
     
     # 4. Fill population
-    # First, map NGFS region to SCAF region in population_df
-    # Reverse mapping: NGFS region -> SCAF region
+    # First, map REMIND region to SCAF region in population_df
+    # Reverse mapping: REMIND region -> SCAF region
     reverse_map = {v: k for k, v in region_map.items()}
     
     for idx, row in filled_df.iterrows():

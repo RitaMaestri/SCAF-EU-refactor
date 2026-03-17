@@ -1,15 +1,21 @@
 import pandas as pd
 from pathlib import Path
-import json
+import sys
 
-# --- Load configuration ---
-config_path = Path(__file__).parent / "config.json"
-with open(config_path, "r") as f:
-    config = json.load(f)
+SRC_ROOT = Path(__file__).resolve().parents[2]
+if str(SRC_ROOT) not in sys.path:
+    sys.path.append(str(SRC_ROOT))
 
-IEA_input_path = Path(config["IEA_input_csv"])
-output_folder = Path(config["output_folder"])
-mapping_folder = Path(config["mapping_folder"])
+from common.path_loader import load_config
+
+module_dir = Path(__file__).resolve().parent.parent
+config = load_config(module_dir)
+
+
+IEA_input_path = Path(config["raw_data_root"]) / config["iea_input_file"]
+output_folder = Path(config["IEA_output_folder"])
+output_filename = config["IEA_output_filename"]
+mapping_folder = Path(config["IEA_mapping_folder"])
 
 # Create folders if they don't exist
 output_folder.mkdir(parents=True, exist_ok=True)
@@ -42,5 +48,6 @@ result[numeric_cols] = result[numeric_cols] / 1e6
 
 
 # --- Save final CSV ---
-output_csv_path = output_folder / "aggregate_residential_agriculture_2020.csv"
+output_csv_path = output_folder / output_filename
 result.to_csv(output_csv_path, index=True)
+print("Reformatted IEA data saved to:", output_csv_path)

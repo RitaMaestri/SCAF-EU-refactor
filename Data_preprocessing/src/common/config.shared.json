@@ -1,0 +1,7 @@
+{
+  "raw_data_root": "Data_preprocessing/raw_data",
+  "calibration_output_root": "Data_preprocessing/data_calibration_evolution",
+  "mapping_regions": "Data_preprocessing/src/common/mappings/mapping_regions.csv",
+  "remind_file": "REMIND/REMIND_generic_SSP2-NPi2025.mif",
+  "iots_folder": "regional_IOTs/"
+}

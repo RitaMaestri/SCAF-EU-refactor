@@ -1,0 +1,5 @@
+{
+"out_folder": "Energy_trade/",
+"calibration_year": "2020",
+"conversion_mapping_path": "Data_preprocessing/src/Energy_trade_scenarisation/mapping/conversion_values.csv"
+}

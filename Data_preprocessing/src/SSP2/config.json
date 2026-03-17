@@ -1,6 +1,4 @@
 {
-    "Population":"/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/raw_data/SSP2/f_lab.csv",
-    "out_path":"/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/data_calibration_evolution/SSP2/population.csv",
-    "filtered_NGFS":"/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/src/Filter_NGFS/cache/filtered_NGFS.csv",
-    "mapping_regions":"/home/rita/Documents/Tesi/Projects/SCAF-IAMAX Original/Data_preprocessing/src/SSP2/mappings/mapping_regions.csv"
+    "population_file": "SSP2/f_lab.csv",
+    "out_file": "SSP2/population.csv"
 }
