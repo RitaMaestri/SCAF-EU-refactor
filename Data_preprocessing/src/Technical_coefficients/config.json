@@ -1,0 +1,7 @@
+{ "energy_trade_volumes": "Data_preprocessing/data_calibration_evolution/Energy_trade/energy_trade_projection.csv",
+  "energy_domestic_volumes": "Data_preprocessing/src/Hybridization/cache/volumes_by_energy_use.csv",
+  "REMIND":"Data_preprocessing/raw_data/REMIND/REMIND_generic_SSP2-NPi2025.mif",
+  "mapping": "Data_preprocessing/src/Technical_coefficients/mappings/technical_coefficients_output.csv",
+  "out_path": "Technical_coefficients/technical_coefficients.csv",
+  "calibration_yer": "2020"
+}

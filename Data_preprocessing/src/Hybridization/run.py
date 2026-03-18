@@ -115,9 +115,9 @@ REMIND_values = markets_dict["values"]
 
 #export dataframe
 
-#REMIND_prices.to_csv(cache_path+"prices.csv", index=False)
-#REMIND_volumes.to_csv(cache_path+"volumes.csv", index=False)
-#REMIND_values.to_csv(cache_path+"values.csv", index=False)
+REMIND_prices.to_csv(str(cache_path)+"/prices_by_energy_use.csv", index=False)
+REMIND_volumes.to_csv(str(cache_path)+"/volumes_by_energy_use.csv", index=False)
+REMIND_values.to_csv(str(cache_path)+"/values_by_energy_use.csv", index=False)
 
 #create regional dictionaries of IOT energy consumptions dataframes
 def import_IOT(IOT_path):
@@ -244,7 +244,8 @@ else:
                 key_VA["HOUSEHOLDS"] = 0
 
 
-                allocation = Energy_Values_Allocation(IOT_E_consumptions=IOT_enrgy_consumption,
+                allocation = Energy_Values_Allocation(
+                IOT_E_consumptions=IOT_enrgy_consumption,
                 REMIND_E_uses=values_to_allocate,
                 REMIND_E_prices= prices_to_allocate,
                 priorities=priorities_dict[region],
@@ -321,4 +322,3 @@ final_df = final_df.drop(columns=['Energy consumers'])
 
 out_path.mkdir(parents=True, exist_ok=True)
 final_df.to_csv(out_path / "hybridization_df.csv", index=False)
-

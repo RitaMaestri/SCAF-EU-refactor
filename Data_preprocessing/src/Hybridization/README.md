@@ -2,7 +2,7 @@
 
 ## **Overview**
 
-This project perform the hybridization of NGFS-REMIND-MAgPIE 3.2-4.6 scenario data about regional energy consumption by energy use with the energy consumption data of Input–Output Tables in the [GTAP*Agg*](https://www.centre-cired.fr/wp-content/uploads/2021/07/cired_wp_2012_39_hamdicherif_ghersi.pdf) format at the calibration year. The program produces a dataset of energy volumes and prices disaggregated both by REMIND's energy use and IOT's energy consumers through an optimization algorithm. It then projects the calibration dataset according to the REMIND trajectories and saves the resulting energy volumes and specific margin rates by consumer in a csv file of the REMIND format.
+This project perform the hybridization of REMIND-MAgPIE 3.2-4.6 scenario data about regional energy consumption by energy use with the energy consumption data of Input–Output Tables in the [GTAP*Agg*](https://www.centre-cired.fr/wp-content/uploads/2021/07/cired_wp_2012_39_hamdicherif_ghersi.pdf) format at the calibration year. The program produces a dataset of energy volumes and prices disaggregated both by REMIND's energy use and IOT's energy consumers through an optimization algorithm. It then projects the calibration dataset according to the REMIND trajectories and saves the resulting energy volumes and prices by consumer in a csv file of the REMIND format.
 
 ## **Pipeline Summary**
 
@@ -11,9 +11,8 @@ This project perform the hybridization of NGFS-REMIND-MAgPIE 3.2-4.6 scenario da
     - the output path and filename are both declared in `config.json`.
 1. Load configuration and input datasets
     - expected inputs below
-1. Filter and augment REMIND data
+1. Filter
     - I filter the REMIND dataset to retain only domestic energy-consumption variables and save the resulting subset. This reduces memory usage and significantly speeds up data loading and processing, as the full dataset is very large.
-    - I augment the dataset with supplementary data from PIK.
 1. Import and map IOT tables
 1. Compute net energy consumption
     - I identify the energy sales tax by consumer in the IOT throug the energy_sales_tax.csv mapping. I subtract it from the gross value.
@@ -27,8 +26,8 @@ This project perform the hybridization of NGFS-REMIND-MAgPIE 3.2-4.6 scenario da
     - see [Energy Allocation Algorithm](#energy-allocation-algorithm).
 1. Compute volumes disaggregated by energy consumer and use from disaggregated values and REMIND energy prices.
 1. Create a database adapted to host energy volumes and prices time series disaggregated by use and consumer.
-1. Project energy volumes and price variables over time according to REMIND data.
-1. Aggregate results by consumer and compute specific margin rates.
+1. Project energy volumes and prices variables over time according to REMIND data.
+1. Aggregate results by consumer.
 1. Generate final hybridized dataset as csv file.
 
 ---
