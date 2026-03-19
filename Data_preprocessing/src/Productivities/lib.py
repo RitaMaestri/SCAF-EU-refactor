@@ -52,7 +52,7 @@ def create_sector_template(template_df, sectors_df):
                 "Model": row["Model"],
                 "Scenario": row["Scenario"],
                 "Region": row["Region"],
-                "Variable": "Productivity growth rate",
+                "Variable": "Productivity growth factors",
                 "Unit": "",
                 "Sector": sector
             }
@@ -67,9 +67,9 @@ def create_sector_template(template_df, sectors_df):
     
     return new_df
 
-def cumulative_growth_rate(annual_growth_factor, delta_years):
+def cumulative_growth_factor(annual_growth_factor, delta_years):
     """
-    Calculate cumulative growth rate given an annual growth factor.
+    Calculate cumulative growth factor given an annual growth factor.
 
     Parameters:
     - annual_growth_factor : float or array-like
@@ -79,10 +79,10 @@ def cumulative_growth_rate(annual_growth_factor, delta_years):
 
     Returns:
     - cumulative_growth : float or array-like
-        Cumulative growth rate relative to the calibration year
-        (as fraction, e.g., 0.10 = +10%)
+        Cumulative growth factor relative to the calibration year
+        (e.g., 1.0 at calibration year, 1.02^5 after 5 years)
     """
-    return (annual_growth_factor ** delta_years) - 1
+    return annual_growth_factor ** delta_years
 
 
 
@@ -128,9 +128,9 @@ def fill_sector_productivity(template_df, productivities_df, map_df, mapping_reg
         # Map sector to sector_prod
         sector_prod_col = map_df.loc[map_df["sector_SCAF"] == sector_name, "sector_prod"].values[0]
         if pd.isna(sector_prod_col):
-            # No productivity mapping → fill zeros
+            # No productivity mapping → fill ones (neutral growth factor)
             for year in year_cols:
-                filled_df.at[idx, year] = 0.0
+                filled_df.at[idx, year] = 1.0
         else:
             # Filter productivity data for this region and year 2015 to 2050
             region_prod = productivities_df[(productivities_df["r"] == scaf_region) & (productivities_df["t"] == 2015)]
@@ -140,7 +140,7 @@ def fill_sector_productivity(template_df, productivities_df, map_df, mapping_reg
             # Compute cumulative growth for each template year
             for year in year_cols:
                 delta_years = int(year) - int(calibration_year)
-                filled_df.at[idx, year] = cumulative_growth_rate(growth_factor, delta_years)
+                filled_df.at[idx, year] = cumulative_growth_factor(growth_factor, delta_years)
 
     return filled_df
 
