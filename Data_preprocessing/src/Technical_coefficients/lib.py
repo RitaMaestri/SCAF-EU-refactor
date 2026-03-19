@@ -30,11 +30,14 @@ def create_technical_coefficients_template(
     mapping_df: pd.DataFrame,
     remind_df: pd.DataFrame,
     year_cols: list,
+    sectors_df: pd.DataFrame,
     region: str = "EUR",
 ) -> pd.DataFrame:
     eur_remind = remind_df[remind_df["Region"] == region]
     model = eur_remind["Model"].iloc[0]
     scenario = eur_remind["Scenario"].iloc[0]
+
+    energy_consumers = sectors_df["SCAF sector"].unique().tolist()
 
     rows = []
     for _, map_row in mapping_df.iterrows():
@@ -42,15 +45,20 @@ def create_technical_coefficients_template(
         unit = map_row["unit"]
 
         unit_str = "" if pd.isna(unit) else str(unit).strip()
-        meta = {
-            "Model": model,
-            "Scenario": scenario,
-            "Region": region,
-            "Variable": energy_use,
-            "Unit": f"EJ/{unit_str}" if unit_str else "EJ",
-        }
-        year_values = {y: float("nan") for y in year_cols}
-        rows.append({**meta, **year_values})
+        unit_value = f"EJ/{unit_str}" if unit_str else "EJ"
+
+        for energy_consumer in energy_consumers:
+            meta = {
+                "Model": model,
+                "Scenario": scenario,
+                "Region": region,
+                "Variable": "Technical coefficients",
+                "Energy consumers": energy_consumer,
+                "Energy uses": energy_use,
+                "Unit": unit_value,
+            }
+            year_values = {y: float("nan") for y in year_cols}
+            rows.append({**meta, **year_values})
 
     return pd.DataFrame(rows)
 
@@ -94,7 +102,7 @@ def fill_technical_coefficients(
             )
         volume_ts = volumes_rows.iloc[0]
 
-        row_mask = result["Variable"] == energy_use
+        row_mask = result["Energy uses"] == energy_use
         result.loc[row_mask, year_cols] = (volume_ts / denominator_ts).values
 
     return result
@@ -105,12 +113,14 @@ def compute_technical_coefficients(
     remind_df: pd.DataFrame,
     energy_volumes_df: pd.DataFrame,
     year_cols: list,
+    sectors_df: pd.DataFrame,
     region: str = "EUR",
 ) -> pd.DataFrame:
     template = create_technical_coefficients_template(
         mapping_df=mapping_df,
         remind_df=remind_df,
         year_cols=year_cols,
+        sectors_df=sectors_df,
         region=region,
     )
     return fill_technical_coefficients(

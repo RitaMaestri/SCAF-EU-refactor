@@ -22,6 +22,7 @@ energy_domestic_volumes_path = repo_root / config["energy_domestic_volumes"]
 energy_trade_volumes_path    = repo_root / config["energy_trade_volumes"]
 remind_path                  = repo_root / config["raw_data_root"] / config["remind_file"]
 mapping_path                 = repo_root / config["mapping"]
+sectors_mapping_path         = repo_root / config["map_sectors"]
 out_path                     = repo_root / config["calibration_output_root"] / config["out_path"]
 
 # --- Load data ---
@@ -29,6 +30,7 @@ energy_domestic_df = pd.read_csv(energy_domestic_volumes_path)
 energy_trade_df    = pd.read_csv(energy_trade_volumes_path)
 remind_df          = load_remind(remind_path)
 mapping_df         = pd.read_csv(mapping_path)
+sectors_df         = pd.read_csv(sectors_mapping_path)
 
 ################################################
 ### Compute standard technical coefficients ####
@@ -40,7 +42,8 @@ technical_coefficients_df = compute_technical_coefficients(
     mapping_df=mapping_df,
     remind_df=remind_df,
     energy_volumes_df=energy_domestic_df,
-    year_cols= year_cols
+    year_cols= year_cols,
+    sectors_df=sectors_df,
 )
 technical_coefficients_df
 
@@ -68,7 +71,7 @@ pe_volumes_ts = energy_domestic_df.loc[
 
 pe_coeff_ts = pe_volumes_ts / energy_domestic_output
 
-pe_mask = technical_coefficients_df["Variable"] == "PE"
+pe_mask = technical_coefficients_df["Energy uses"] == "PE"
 
 technical_coefficients_df.loc[pe_mask, year_cols] = pe_coeff_ts.values
 technical_coefficients_df.loc[pe_mask, "Unit"] = "-"
@@ -78,7 +81,7 @@ technical_coefficients_df.loc[pe_mask, "Unit"] = "-"
 ##############################################
 
 
-ind_mask = technical_coefficients_df["Variable"] == "IND"
+ind_mask = technical_coefficients_df["Energy uses"] == "IND"
 technical_coefficients_df.loc[ind_mask, year_cols] = 1
 technical_coefficients_df.loc[ind_mask, "Unit"] = "-"
 

@@ -29,6 +29,6 @@ population_raw_df = pd.read_csv(population_raw_path, header=0)
 
 template_df = create_population_template(REMIND)
 filled_population_df = fill_population_template(template_df, population_raw_df, mapping_regions_df, ssp_column="pop_SSP2")
+population_df_EU = filled_population_df[filled_population_df["Region"]=="EUR"]
 
-
-filled_population_df.to_csv(out_path, index=False)
+population_df_EU.to_csv(out_path, index=False)

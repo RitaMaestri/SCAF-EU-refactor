@@ -290,18 +290,7 @@ projected_volumes_df = project_variables(output = consumers_X_uses_calibration_d
 
 projected_df = project_variables(output = projected_volumes_df, reference = REMIND_prices, variable_type= "Price")
 
-projected_df.to_csv(cache_path / "projected_output.csv", index=False)
-
-aggregated_df = aggregate_prices_volumes(projected_df, value_unit)
-
-aggregated_df.to_csv(cache_path / "aggregated_output.csv", index=False)
-
-
-
-final_df = aggregated_df.loc[aggregated_df["Variable"].isin(["Volume", "Price"])].copy()
-final_df['Variable'] = final_df['Variable'].replace({'Volume': 'Energy consumption volume'})
-final_df['Variable'] = final_df['Variable'] + "|" + final_df['Energy consumers']
-final_df = final_df.drop(columns=['Energy consumers'])
+projected_df_EU=projected_df[projected_df["Region"]=="EUR"]
 
 out_path.mkdir(parents=True, exist_ok=True)
-final_df.to_csv(out_path / "hybridization_df.csv", index=False)
+projected_df_EU.to_csv(out_path / "hybridization_df.csv", index=False)
