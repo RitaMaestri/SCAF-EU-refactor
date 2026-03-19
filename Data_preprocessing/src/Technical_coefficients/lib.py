@@ -26,14 +26,12 @@ def load_remind(path) -> pd.DataFrame:
     return df.loc[:, df.columns.notna()]
 
 
-def compute_technical_coefficients(
+def create_technical_coefficients_template(
     mapping_df: pd.DataFrame,
     remind_df: pd.DataFrame,
-    domestic_df: pd.DataFrame,
+    year_cols: list,
     region: str = "EUR",
 ) -> pd.DataFrame:
-    year_cols = _year_columns(domestic_df)
-
     eur_remind = remind_df[remind_df["Region"] == region]
     model = eur_remind["Model"].iloc[0]
     scenario = eur_remind["Scenario"].iloc[0]
@@ -41,7 +39,6 @@ def compute_technical_coefficients(
     rows = []
     for _, map_row in mapping_df.iterrows():
         energy_use = map_row["energy_use"]
-        remind_variable = map_row["output_volume_REMIND"]
         unit = map_row["unit"]
 
         unit_str = "" if pd.isna(unit) else str(unit).strip()
@@ -52,34 +49,75 @@ def compute_technical_coefficients(
             "Variable": energy_use,
             "Unit": f"EJ/{unit_str}" if unit_str else "EJ",
         }
-
-        if pd.isna(remind_variable) or str(remind_variable).strip() == "":
-            year_values = {y: float("nan") for y in year_cols}
-        else:
-            remind_mask = (
-                (remind_df["Region"] == region)
-                & (remind_df["Variable"] == remind_variable)
-            )
-            remind_rows = remind_df.loc[remind_mask, year_cols]
-            if remind_rows.empty:
-                raise ValueError(
-                    f"No REMIND row for Region={region!r}, Variable={remind_variable!r}"
-                )
-            numerator_ts = remind_rows.iloc[0]
-
-            domestic_mask = (
-                (domestic_df["Region"] == region)
-                & (domestic_df["energy_use"] == energy_use)
-            )
-            domestic_rows = domestic_df.loc[domestic_mask, year_cols]
-            if domestic_rows.empty:
-                raise ValueError(
-                    f"No domestic row for Region={region!r}, energy_use={energy_use!r}"
-                )
-            domestic_ts = domestic_rows.iloc[0]
-
-            year_values = (numerator_ts / domestic_ts).to_dict()
-
+        year_values = {y: float("nan") for y in year_cols}
         rows.append({**meta, **year_values})
 
     return pd.DataFrame(rows)
+
+
+def fill_technical_coefficients(
+    template_df: pd.DataFrame,
+    mapping_df: pd.DataFrame,
+    remind_df: pd.DataFrame,
+    energy_volumes_df: pd.DataFrame,
+    year_cols: list,
+    region: str = "EUR",
+) -> pd.DataFrame:
+    result = template_df.copy()
+
+    for _, map_row in mapping_df.iterrows():
+        energy_use = map_row["energy_use"]
+        remind_output = map_row["output_volume_REMIND"]
+
+        if pd.isna(remind_output) or str(remind_output).strip() == "":
+            continue
+
+        remind_mask = (
+            (remind_df["Region"] == region)
+            & (remind_df["Variable"] == remind_output)
+        )
+        remind_rows = remind_df.loc[remind_mask, year_cols]
+        if remind_rows.empty:
+            raise ValueError(
+                f"No REMIND row for Region={region!r}, Variable={remind_output!r}"
+            )
+        denominator_ts = remind_rows.iloc[0]
+
+        volumes_mask = (
+            (energy_volumes_df["Region"] == region)
+            & (energy_volumes_df["energy_use"] == energy_use)
+        )
+        volumes_rows = energy_volumes_df.loc[volumes_mask, year_cols]
+        if volumes_rows.empty:
+            raise ValueError(
+                f"No energy volume row for Region={region!r}, energy_use={energy_use!r}"
+            )
+        volume_ts = volumes_rows.iloc[0]
+
+        row_mask = result["Variable"] == energy_use
+        result.loc[row_mask, year_cols] = (volume_ts / denominator_ts).values
+
+    return result
+
+
+def compute_technical_coefficients(
+    mapping_df: pd.DataFrame,
+    remind_df: pd.DataFrame,
+    energy_volumes_df: pd.DataFrame,
+    year_cols: list,
+    region: str = "EUR",
+) -> pd.DataFrame:
+    template = create_technical_coefficients_template(
+        mapping_df=mapping_df,
+        remind_df=remind_df,
+        year_cols=year_cols,
+        region=region,
+    )
+    return fill_technical_coefficients(
+        template_df=template,
+        mapping_df=mapping_df,
+        remind_df=remind_df,
+        energy_volumes_df=energy_volumes_df,
+        year_cols=year_cols,
+        region=region,
+    )
