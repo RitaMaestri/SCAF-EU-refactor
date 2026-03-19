@@ -296,26 +296,9 @@ aggregated_df = aggregate_prices_volumes(projected_df, value_unit)
 
 aggregated_df.to_csv(cache_path / "aggregated_output.csv", index=False)
 
-#### COMPUTE DELTA VOLUMES AND PRICES #####
 
-mean_energy_prices_df = compute_mean_energy_price(aggregated_df)
 
-delta_mask = energy_consumers_df["allocation_exception"]
-
-delta_label = list(energy_consumers_df[delta_mask]["energy_consumer"])[0]
-
-delta_vol = compute_delta_volumes(IOT_energy_consumption_dict, mean_energy_prices_df, delta_label, volume_unit)
-
-delta_price = compute_delta_prices(mean_energy_prices_df, delta_label)
-
-#######################
-### CONCATENATE DFs ###
-#######################
-
-vol_price_df = aggregated_df.loc[aggregated_df["Variable"].isin(["Volume", "Price"])].copy()
-
-final_df = pd.concat([vol_price_df, delta_vol, delta_price], ignore_index=True)
-
+final_df = aggregated_df.loc[aggregated_df["Variable"].isin(["Volume", "Price"])].copy()
 final_df['Variable'] = final_df['Variable'].replace({'Volume': 'Energy consumption volume'})
 final_df['Variable'] = final_df['Variable'] + "|" + final_df['Energy consumers']
 final_df = final_df.drop(columns=['Energy consumers'])
