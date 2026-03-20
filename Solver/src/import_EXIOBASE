@@ -16,30 +16,110 @@ N=1
 sectors=1
 
 
+
 production_taxes = EXIOBASE_flow_extractor(
     IOT,
     row_indexes=[("Tax", "Prod")],
     col_indexes=[("Imp", "AGRICULTURE"), ("Imp", "MANUFACTURE"), ("Imp", "SERVICES"), ("Imp", "STEEL"), ("Imp", "CHEMICAL"), ("Imp", "ENERGY"), ("Imp", "TRANSPORTATION")],
-    new_row_indexes=["production_taxes"],
-    new_col_indexes=["EUR"],
-).values[0]
+).to_numpy()
 
 
-sales_taxes = 1
+
+
+
+sales_taxes = EXIOBASE_flow_extractor(
+    IOT,
+    row_indexes=[("Tax", "Total_TLSP")],
+    col_indexes=[("Imp", "AGRICULTURE"), ("Imp", "MANUFACTURE"), ("Imp", "SERVICES"), ("Imp", "STEEL"), ("Imp", "CHEMICAL"), ("Imp", "ENERGY"), ("Imp", "TRANSPORTATION")],
+).to_numpy()
                
 
-wLj =1
-labor_taxes =1
-K = 1
-R = 1
-pMjMj = 1
-pCiYij = 1
-pCjCj = 1
-pCjGj = 1
-pCjIj = 1
-pXjXj= 1
-pLLj= wLj + labor_taxes
-pKKj = K + R
+
+
+
+pMjMj = EXIOBASE_flow_extractor(
+    IOT,
+    row_indexes=[("M", "IMP")],	
+    col_indexes=[("Imp", "AGRICULTURE"), ("Imp", "MANUFACTURE"), ("Imp", "SERVICES"), ("Imp", "STEEL"), ("Imp", "CHEMICAL"), ("Imp", "ENERGY"), ("Imp", "TRANSPORTATION")],
+).to_numpy()
+
+
+
+pCiYij = EXIOBASE_flow_extractor(
+    IOT,
+    row_indexes=[("CI_imp", "AGRICULTURE"), ("CI_imp", "MANUFACTURE"), ("CI_imp", "SERVICES"), ("CI_imp", "STEEL"), ("CI_imp", "CHEMICAL"), ("CI_imp", "ENERGY"), ("CI_imp", "TRANSPORTATION")],	
+    col_indexes=[("Imp", "AGRICULTURE"), ("Imp", "MANUFACTURE"), ("Imp", "SERVICES"), ("Imp", "STEEL"), ("Imp", "CHEMICAL"), ("Imp", "ENERGY"), ("Imp", "TRANSPORTATION")],
+).to_numpy() + EXIOBASE_flow_extractor(
+    IOT,
+    row_indexes=[("CI_dom", "AGRICULTURE"), ("CI_dom", "MANUFACTURE"), ("CI_dom", "SERVICES"), ("CI_dom", "STEEL"), ("CI_dom", "CHEMICAL"), ("CI_dom", "ENERGY"), ("CI_dom", "TRANSPORTATION")],	
+    col_indexes=[("Imp", "AGRICULTURE"), ("Imp", "MANUFACTURE"), ("Imp", "SERVICES"), ("Imp", "STEEL"), ("Imp", "CHEMICAL"), ("Imp", "ENERGY"), ("Imp", "TRANSPORTATION")],
+).to_numpy()
+
+
+
+pCjCj = EXIOBASE_flow_extractor(
+    IOT,
+    row_indexes=[("CI_imp", "AGRICULTURE"), ("CI_imp", "MANUFACTURE"), ("CI_imp", "SERVICES"), ("CI_imp", "STEEL"), ("CI_imp", "CHEMICAL"), ("CI_imp", "ENERGY"), ("CI_imp", "TRANSPORTATION")],	
+    col_indexes=[("Imp","C_HSLD")],
+).to_numpy() + EXIOBASE_flow_extractor(
+    IOT,
+    row_indexes=[("CI_imp", "AGRICULTURE"), ("CI_imp", "MANUFACTURE"), ("CI_imp", "SERVICES"), ("CI_imp", "STEEL"), ("CI_imp", "CHEMICAL"), ("CI_imp", "ENERGY"), ("CI_imp", "TRANSPORTATION")],	
+    col_indexes=[("Dom","C_HSLD")],
+).to_numpy()
+
+
+
+
+
+pCjGj = EXIOBASE_flow_extractor(
+    IOT,
+    row_indexes=[("CI_imp", "AGRICULTURE"), ("CI_imp", "MANUFACTURE"), ("CI_imp", "SERVICES"), ("CI_imp", "STEEL"), ("CI_imp", "CHEMICAL"), ("CI_imp", "ENERGY"), ("CI_imp", "TRANSPORTATION")],	
+    col_indexes=[("Imp","C_Ap")],
+).to_numpy() + EXIOBASE_flow_extractor(
+    IOT,
+    row_indexes=[("CI_imp", "AGRICULTURE"), ("CI_imp", "MANUFACTURE"), ("CI_imp", "SERVICES"), ("CI_imp", "STEEL"), ("CI_imp", "CHEMICAL"), ("CI_imp", "ENERGY"), ("CI_imp", "TRANSPORTATION")],	
+    col_indexes=[("Dom","C_Ap")],
+).to_numpy()
+
+
+
+
+pCjIj = EXIOBASE_flow_extractor(
+    IOT,
+    row_indexes=[("CI_imp", "AGRICULTURE"), ("CI_imp", "MANUFACTURE"), ("CI_imp", "SERVICES"), ("CI_imp", "STEEL"), ("CI_imp", "CHEMICAL"), ("CI_imp", "ENERGY"), ("CI_imp", "TRANSPORTATION")],	
+    col_indexes=[("Imp","FBCF")],
+).to_numpy() + EXIOBASE_flow_extractor(
+    IOT,
+    row_indexes=[("CI_imp", "AGRICULTURE"), ("CI_imp", "MANUFACTURE"), ("CI_imp", "SERVICES"), ("CI_imp", "STEEL"), ("CI_imp", "CHEMICAL"), ("CI_imp", "ENERGY"), ("CI_imp", "TRANSPORTATION")],	
+    col_indexes=[("Dom","FBCF")],
+).to_numpy()
+
+
+
+
+pXjXj= EXIOBASE_flow_extractor(
+    IOT,
+    row_indexes=[("CI_imp", "AGRICULTURE"), ("CI_imp", "MANUFACTURE"), ("CI_imp", "SERVICES"), ("CI_imp", "STEEL"), ("CI_imp", "CHEMICAL"), ("CI_imp", "ENERGY"), ("CI_imp", "TRANSPORTATION")],	
+    col_indexes=[("","EXP")],
+).to_numpy()
+
+
+
+
+pLLj= EXIOBASE_flow_extractor(
+    IOT,
+    row_indexes=[("VA", "Labor")],	
+    col_indexes=[("Imp", "AGRICULTURE"), ("Imp", "MANUFACTURE"), ("Imp", "SERVICES"), ("Imp", "STEEL"), ("Imp", "CHEMICAL"), ("Imp", "ENERGY"), ("Imp", "TRANSPORTATION")],
+).to_numpy()
+
+
+
+pKKj = EXIOBASE_flow_extractor(
+    IOT,
+    row_indexes=[("VA", "Capital")],	
+    col_indexes=[("Imp", "AGRICULTURE"), ("Imp", "MANUFACTURE"), ("Imp", "SERVICES"), ("Imp", "STEEL"), ("Imp", "CHEMICAL"), ("Imp", "ENERGY"), ("Imp", "TRANSPORTATION")],
+).to_numpy()
+
 
 #check for equilibrium
 

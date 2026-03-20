@@ -156,7 +156,7 @@ def EXIOBASE_flow_extractor(
     row_labels = _check_tuples(row_indexes, "row_indexes")
     col_labels = _check_tuples(col_indexes, "col_indexes")
 
-    submatrix = dataframe.loc[row_labels, col_labels]
+    submatrix = dataframe.loc[row_labels, col_labels].astype(float)
 
     if new_row_indexes is not None:
         new_row_indexes = list(new_row_indexes)
