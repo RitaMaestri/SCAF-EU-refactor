@@ -80,8 +80,10 @@ def build_growth_factors(
         if filtered.empty:
             print(
                 f"WARNING: no match for ({var_name}, row='{row_label}', col='{col_label}') "
-                f"in {file_name} — skipping."
+                f"in {file_name} — filling with empty values."
             )
+            rows.append({"variable_name": var_name, "row_label": row_label, "col_label": col_label,
+                         **{yr: "" for yr in year_cols}})
             continue
         if len(filtered) > 1:
             print(
@@ -109,3 +111,20 @@ def build_growth_factors(
         rows.append({"variable_name": var_name, "row_label": row_label, "col_label": col_label, **normalised})
 
     return pd.DataFrame(rows, columns=["variable_name", "row_label", "col_label"] + year_cols)
+
+
+def fill_row_with_ones(
+    df: pd.DataFrame,
+    variable_name: str,
+    row_label: str,
+    col_label: str,
+) -> pd.DataFrame:
+    """Fill the year columns of the row identified by the 3 labels with ones."""
+    year_cols = [c for c in df.columns if str(c).isdigit()]
+    mask = (
+        (df["variable_name"] == variable_name) &
+        (df["row_label"] == row_label) &
+        (df["col_label"] == col_label)
+    )
+    df.loc[mask, year_cols] = 1
+    return df
