@@ -1,0 +1,6 @@
+{
+    "growth_factors_template": "Solver/data/growth_factors_template.csv",
+    "mapping_file": "Data_preprocessing/src/to_Solver_format/mapping/mapping_preprocessing_solver.csv",
+    "end_year": null,
+    "out_file": "Solver/data/growth_factors.csv"
+}

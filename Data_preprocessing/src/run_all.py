@@ -14,6 +14,7 @@ PIPELINE = [
     {"name": "energy_trade", "script": "Data_preprocessing/src/Energy_trade_scenarisation/run.py"},
     {"name": "technical_coefficients", "script": "Data_preprocessing/src/Technical_coefficients/run.py"},
     {"name": "macro_indicators", "script": "Data_preprocessing/src/macro_indicators/run.py"},
+    {"name": "to_solver_format", "script": "Data_preprocessing/src/to_Solver_format/run.py"},
 ]
 if __name__ == "__main__":
     for step in PIPELINE:

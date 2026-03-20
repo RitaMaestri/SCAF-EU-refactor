@@ -33,6 +33,7 @@ from lib import (filter_REMIND,
                  compute_mean_energy_price,
                  compute_delta_volumes,
                  compute_delta_prices,
+                 compute_rhos,
                  )
 
 SRC_ROOT = Path(__file__).resolve().parents[1]
@@ -290,7 +291,12 @@ projected_volumes_df = project_variables(output = consumers_X_uses_calibration_d
 
 projected_df = project_variables(output = projected_volumes_df, reference = REMIND_prices, variable_type= "Price")
 
+rhos = compute_rhos(projected_df)
+
 projected_df_EU=projected_df[projected_df["Region"]=="EUR"]
+rhos_EU = rhos[rhos["Region"]=="EUR"]
 
 out_path.mkdir(parents=True, exist_ok=True)
+
 projected_df_EU.to_csv(out_path / "hybridization_df.csv", index=False)
+rhos_EU.to_csv(out_path / "rhos.csv", index=False)

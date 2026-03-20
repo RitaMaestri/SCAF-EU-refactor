@@ -40,6 +40,7 @@ def vol_prices_timeseries_to_df(
                 "Import|Energy Price",
                 "Export|Energy Price",
             ],
+            "Sector": ["ENERGY"] * 4,
             "Unit": [volume_unit, volume_unit, price_unit, price_unit],
         }
     )

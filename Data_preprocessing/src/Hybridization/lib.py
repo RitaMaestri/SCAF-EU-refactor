@@ -453,26 +453,87 @@ def aggregate_energy_uses(remind, mapping, value_unit, price_unit):
 ############ CREATE ENERGY ALLOCATION OUTPUT DATABASE #############
 ###################################################################
 
-def generate_output_template(REMIND,energy_consumers,energy_uses, price_unit, volume_unit):
+def _make_empty_combinations_template(models, scenarios, regions, variable_types, energy_consumers, energy_uses, year_cols):
+    combinations = list(itertools.product(models, scenarios, regions, variable_types, energy_consumers, energy_uses))
+    df = pd.DataFrame(combinations, columns=['Model', 'Scenario', 'Region', 'Variable', 'Energy consumers', 'Energy uses'])
+    df['Unit'] = np.nan
+    df[year_cols] = np.nan
+    return df
 
-    models=np.unique(REMIND["Model"])
-    scenarios=np.unique(REMIND["Scenario"])
-    regions=np.unique(REMIND["Region"])
-    variable_type=["Volume", "Price"]
-    combinations = list(itertools.product(models, scenarios, regions, variable_type, energy_consumers,energy_uses))
 
+def generate_output_template(REMIND, energy_consumers, energy_uses, price_unit, volume_unit):
+
+    models = np.unique(REMIND["Model"])
+    scenarios = np.unique(REMIND["Scenario"])
+    regions = np.unique(REMIND["Region"])
     year_cols = [c for c in REMIND.columns if str(c).isdigit()]
 
-    # Creazione DataFrame
-    df_output = pd.DataFrame(combinations, columns=['Model', 'Scenario', 'Region', "Variable","Energy consumers", "Energy uses"])
-    df_output["Unit"] = np.nan
+    df_output = _make_empty_combinations_template(
+        models, scenarios, regions, ["Volume", "Price"], energy_consumers, energy_uses, year_cols
+    )
     df_output.loc[df_output["Variable"] == "Volume", "Unit"] = volume_unit
     df_output.loc[df_output["Variable"] == "Price", "Unit"] = price_unit
 
-    df_output[year_cols] = np.nan
-    
-
     return df_output
+
+
+def compute_rhos(projected_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Build a rhos DataFrame from projected_df.
+
+    For each (model, scenario, region, energy_consumer, energy_use) combination,
+    computes rho(energy_use, consumer, year) = price(energy_use, consumer, year) / price("PE", consumer, year).
+    "PE" is the reference energy use and is excluded from the output.
+    """
+    year_cols = [c for c in projected_df.columns if str(c).isdigit()]
+
+    price_df = projected_df[projected_df["Variable"] == "Price"].copy()
+
+    models = price_df["Model"].unique()
+    scenarios = price_df["Scenario"].unique()
+    regions = price_df["Region"].unique()
+    energy_consumers = price_df["Energy consumers"].unique()
+    energy_uses_rho = [u for u in price_df["Energy uses"].unique() if u != "PE"]
+
+    rhos = _make_empty_combinations_template(
+        models, scenarios, regions, ["Rho"], energy_consumers, energy_uses_rho, year_cols
+    )
+
+    for (model, scenario, region, consumer) in (
+        rhos[["Model", "Scenario", "Region", "Energy consumers"]].drop_duplicates().itertuples(index=False)
+    ):
+        pe_rows = price_df[
+            (price_df["Model"] == model) &
+            (price_df["Scenario"] == scenario) &
+            (price_df["Region"] == region) &
+            (price_df["Energy consumers"] == consumer) &
+            (price_df["Energy uses"] == "PE")
+        ]
+        if pe_rows.empty:
+            continue
+        pe_vals = pe_rows.iloc[0][year_cols].values
+
+        for energy_use in energy_uses_rho:
+            use_rows = price_df[
+                (price_df["Model"] == model) &
+                (price_df["Scenario"] == scenario) &
+                (price_df["Region"] == region) &
+                (price_df["Energy consumers"] == consumer) &
+                (price_df["Energy uses"] == energy_use)
+            ]
+            if use_rows.empty:
+                continue
+
+            rho_sel = (
+                (rhos["Model"] == model) &
+                (rhos["Scenario"] == scenario) &
+                (rhos["Region"] == region) &
+                (rhos["Energy consumers"] == consumer) &
+                (rhos["Energy uses"] == energy_use)
+            )
+            rhos.loc[rho_sel, year_cols] = use_rows.iloc[0][year_cols].values / pe_vals
+
+    return rhos
 
 
 def fill_calibration_year(
