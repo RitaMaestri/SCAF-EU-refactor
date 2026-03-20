@@ -1,0 +1,98 @@
+import pandas as pd
+import numpy as np
+from collections.abc import Iterable
+from helpers.import_EXIOBASE_helpers import EXIOBASE_flow_extractor, replace_unnamed_multiindex_labels
+
+IOT=pd.read_csv(
+    "Solver/preprocessed_data/regional_IOTs/EUR.csv",
+    header=[0, 1],
+    index_col=[0, 1],
+    keep_default_na=False,
+)
+
+IOT = replace_unnamed_multiindex_labels(IOT)
+
+N=1
+sectors=1
+
+
+production_taxes = EXIOBASE_flow_extractor(
+    IOT,
+    row_indexes=[("Tax", "Prod")],
+    col_indexes=[("Imp", "AGRICULTURE"), ("Imp", "MANUFACTURE"), ("Imp", "SERVICES"), ("Imp", "STEEL"), ("Imp", "CHEMICAL"), ("Imp", "ENERGY"), ("Imp", "TRANSPORTATION")],
+    new_row_indexes=["production_taxes"],
+    new_col_indexes=["EUR"],
+).values[0]
+
+
+sales_taxes = 1
+               
+
+wLj =1
+labor_taxes =1
+K = 1
+R = 1
+pMjMj = 1
+pCiYij = 1
+pCjCj = 1
+pCjGj = 1
+pCjIj = 1
+pXjXj= 1
+pLLj= wLj + labor_taxes
+pKKj = K + R
+
+#check for equilibrium
+
+equilibrium = ( pLLj + pKKj + production_taxes + sales_taxes + pMjMj + pCiYij.sum(axis=0) - 
+               (pCjCj + pCjGj + pCjIj + pXjXj + pCiYij.sum(axis=1))
+               )
+
+print("equilibrium:", sum(equilibrium**2))
+if sum(equilibrium**2)>2:
+    raise RuntimeError("the system is not at the equilibrium")
+
+
+
+#CORRECTION FOR SMALL DISEQUILIBRIUM 
+
+cons_cost_diff= (pLLj + pKKj + production_taxes + sales_taxes + pMjMj + pCiYij.sum(axis=0) - 
+                 (pCjCj + pCjGj + pCjIj + pXjXj + pCiYij.sum(axis=1)))
+
+
+
+total_domestic_production=pCjCj+pCjGj+pCjIj
+pCjCj=pCjCj+(cons_cost_diff)*(pCjCj/total_domestic_production)
+pCjGj=pCjGj+(cons_cost_diff)*(pCjGj/total_domestic_production)
+pCjIj=pCjIj+(cons_cost_diff)*(pCjIj/total_domestic_production)
+
+diff_final= (
+    pCiYij.sum(axis=0)+pLLj+pKKj+production_taxes+sales_taxes-(
+    pCiYij.sum(axis=1)+pCjCj+pCjGj+pCjIj-pMjMj+pXjXj
+    )
+    )
+
+
+#### DERIVED QUANTITIES #######
+
+#gross domestic output
+pYjYj = pCiYij.sum(axis=0) + pLLj + pKKj + production_taxes
+
+#KL good
+pKLjKLj = pKKj + pLLj 
+
+#Armington good
+pSjSj = pCjCj + pCjGj + pCjIj + pCiYij.sum(axis=1) - sales_taxes
+
+#domestic good
+pDjDj = pSjSj - pMjMj
+(pSjSj - pMjMj) / (pYjYj-pXjXj)
+
+non_zero_index_G=np.array(np.where(pCjGj != 0)).flatten()
+non_zero_index_I=np.array(np.where(pCjIj != 0)).flatten()
+non_zero_index_X=np.array(np.where(pXjXj != 0)).flatten()
+non_zero_index_M=np.array(np.where(pMjMj != 0)).flatten()
+non_zero_index_C=np.array(np.where(pCjCj != 0)).flatten()
+non_zero_index_K=np.array(np.where(pKKj != 0)).flatten()
+non_zero_index_L=np.array(np.where(pLLj != 0)).flatten()
+non_zero_index_Yij=np.array(np.where(pCiYij != 0))
+len(pCiYij[pCiYij != 0])
