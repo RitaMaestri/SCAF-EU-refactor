@@ -19,7 +19,7 @@ growth_ratios_df = pd.read_csv("Solver/data/"+input_file+".csv")
 
 #energy calibration data
 energy_calibration_data = pd.read_csv("Solver/data/calibration/REMIND_energy_data.csv")
-population_calibration_data = pd.read_csv("Solver/data/calibration/SSP2_population.csv")
+population_calibration_data = pd.read_csv("Solver/preprocessed_data/population.csv")
 
 #assumed variables
 assumed_variables_df = pd.read_csv("Solver/data/calibration/assumed_variables.csv", index_col="variable_name")

@@ -1,3 +1,4 @@
+import shutil
 import pandas as pd
 import sys
 from pathlib import Path
@@ -17,6 +18,7 @@ config = load_config(module_dir)
 template_path = repo_root / config["growth_factors_template"]
 mapping_path = repo_root / config["mapping_file"]
 calibration_root = repo_root / config["calibration_output_root"]
+preprocessed_data_root = repo_root / config["preprocessed_data_root"]
 out_path = repo_root / config["out_file"]
 end_year = int(config["end_year"]) if config.get("end_year") else None
 
@@ -29,3 +31,14 @@ growth_factors_df = fill_row_with_ones(growth_factors_df, "pXj", "SERVICES", "")
 out_path.parent.mkdir(parents=True, exist_ok=True)
 growth_factors_df.to_csv(out_path, index=False)
 print(f"Written {len(growth_factors_df)} rows to {out_path}")
+
+# Copy ready-to-use files into preprocessed_data
+copies = [
+    (calibration_root / "SSP2/population.csv",             preprocessed_data_root / "population.csv"),
+    (calibration_root / "Hybridization/hybridization_df.csv", preprocessed_data_root / "hybridization_df.csv"),
+    (calibration_root / "regional_IOTs/EUR.csv",           preprocessed_data_root / "regional_IOTs/EUR.csv"),
+]
+for src, dst in copies:
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(src, dst)
+    print(f"Copied {src.relative_to(repo_root)} → {dst.relative_to(repo_root)}")
