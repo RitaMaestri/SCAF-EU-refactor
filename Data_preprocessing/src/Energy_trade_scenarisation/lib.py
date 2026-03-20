@@ -27,6 +27,37 @@ def vol_prices_timeseries_to_df(
     import_price_conversion_factor,
     export_price_conversion_factor,
 ):
+    """Combine import/export volume and price time series into a labelled DataFrame.
+
+    Stacks four time series (import volume, export volume, import price, export
+    price) into a single DataFrame with IAMC-style label columns prepended.
+    Prices are rescaled by the provided conversion factors before stacking.
+
+    Parameters
+    ----------
+    import_volume_ts : pd.Series
+        Import energy volume time series indexed by year.
+    export_volume_ts : pd.Series
+        Export energy volume time series indexed by year.
+    import_price_ts : pd.Series
+        Import energy price time series indexed by year (before conversion).
+    export_price_ts : pd.Series
+        Export energy price time series indexed by year (before conversion).
+    volume_unit : str
+        Unit string for the volume rows (e.g. ``'EJ/yr'``).
+    price_unit : str
+        Unit string for the price rows (e.g. ``'M EUR/EJ'``).
+    import_price_conversion_factor : float
+        Multiplicative factor applied to ``import_price_ts``.
+    export_price_conversion_factor : float
+        Multiplicative factor applied to ``export_price_ts``.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with label columns (Model, Scenario, Region, Variable, Sector,
+        Unit) followed by one numeric column per year.
+    """
     years = list(import_volume_ts.index)
 
     labels_df = pd.DataFrame(
@@ -67,7 +98,42 @@ def EXIOBASE_flow_extractor(
     new_row_indexes=None,
     new_col_indexes=None,
 ):
+    """Extract a sub-matrix from an EXIOBASE MultiIndex DataFrame.
 
+    Selects rows and columns identified by (category, subcategory) tuples from a
+    DataFrame with a 2-level MultiIndex on both axes. When only a single row or
+    column is selected the result is squeezed to a 1-D Series. The caller may
+    optionally supply replacement index/column labels for the extracted slice.
+
+    Parameters
+    ----------
+    dataframe : pd.DataFrame
+        Source DataFrame with 2-tuple MultiIndex on both rows and columns.
+    row_indexes : iterable of (str, str)
+        Sequence of (category, subcategory) tuples identifying the rows to extract.
+    col_indexes : iterable of (str, str)
+        Sequence of (category, subcategory) tuples identifying the columns to extract.
+    new_row_indexes : iterable, optional
+        Replacement labels for the extracted rows. Must match the length of
+        ``row_indexes``.
+    new_col_indexes : iterable, optional
+        Replacement labels for the extracted columns. Must match the length of
+        ``col_indexes``.
+
+    Returns
+    -------
+    pd.Series or pd.DataFrame
+        A Series when exactly one row or one column is selected; a DataFrame
+        otherwise.
+
+    Raises
+    ------
+    TypeError
+        If ``row_indexes`` or ``col_indexes`` is not an iterable of 2-tuples.
+    ValueError
+        If a tuple does not have length 2, or if a replacement index sequence
+        has the wrong length.
+    """
 
     def _check_tuples(indexes, arg_name):
         if isinstance(indexes, (str, bytes)) or not isinstance(indexes, Iterable):
@@ -131,6 +197,26 @@ def EXIOBASE_flow_extractor(
 
 
 def REMIND_time_series_extractor(dataframe, variables_names, years, region):
+    """Filter a REMIND results DataFrame to the requested variables, years, and region.
+
+    Parameters
+    ----------
+    dataframe : pd.DataFrame
+        REMIND output table with at least the columns Model, Scenario, Region,
+        Variable, Unit, and one column per year.
+    variables_names : iterable
+        Variable names to keep. ``NaN`` entries are silently ignored.
+    years : iterable of int or float
+        Years to include. Values are cast to ``int`` for column matching.
+    region : str
+        REMIND region code to filter on (e.g. ``'EUR'``).
+
+    Returns
+    -------
+    pd.DataFrame
+        Subset of ``dataframe`` containing only the matching rows and the
+        requested year columns, with the index reset.
+    """
 
     variables_list = [v for v in variables_names if pd.notna(v)]
     index_columns = ["Model", "Scenario", "Region", "Variable", "Unit"]
@@ -145,6 +231,23 @@ def REMIND_time_series_extractor(dataframe, variables_names, years, region):
 
 
 def replace_unnamed_multiindex_labels(dataframe):
+    """Replace auto-generated ``'Unnamed: …'`` level labels in a MultiIndex DataFrame.
+
+    Pandas sometimes assigns ``'Unnamed: <n>'`` strings when reading files whose
+    MultiIndex levels lack explicit names. This function replaces every such
+    label with an empty string on both the row and column axes.
+
+    Parameters
+    ----------
+    dataframe : pd.DataFrame
+        DataFrame whose MultiIndex labels should be cleaned.
+
+    Returns
+    -------
+    pd.DataFrame
+        A copy of ``dataframe`` with ``'Unnamed: …'`` labels replaced by ``''``.
+        Non-MultiIndex axes are left unchanged.
+    """
 
     def _clean_multiindex(multiindex):
         return pd.MultiIndex.from_tuples(
