@@ -1,7 +1,8 @@
 import pandas as pd
 import numpy as np
 
-def create_calibration_csv(calibration_obj, output_file="Solver/data/calibration_2020.csv"):
+def create_calibration_csv(calibration_obj, output_file="Solver/data/calibration_2020.csv",
+                           energy_consumers_csv="Solver/preprocessed_data/energy_consumers.csv"):
     """
     Create a CSV file with the same format as data/input_format.csv,
     but with calibration data for the year 2020 only, with other years left blank.
@@ -20,6 +21,8 @@ def create_calibration_csv(calibration_obj, output_file="Solver/data/calibration
         An instance of calibrationVariables containing the calibration results
     output_file : str
         Path to the output CSV file
+    energy_consumers_csv : str
+        Path to the energy_consumers CSV (column ``"energy_consumer"``).
     """
     
     # Read the template file to get the structure
@@ -46,17 +49,7 @@ def create_calibration_csv(calibration_obj, output_file="Solver/data/calibration
         T: "TRANSPORTATION",
     }
     
-    # Include HOUSEHOLDS with HOUSEHOLDS-specific mapping
-    all_sector_names = [
-        "AGRICULTURE",
-        "MANUFACTURE", 
-        "SERVICES",
-        "ENERGY",
-        "STEEL",
-        "CHEMICAL",
-        "TRANSPORTATION",
-        "HOUSEHOLDS"
-    ]
+    all_sector_names = pd.read_csv(energy_consumers_csv)["energy_consumer"].tolist()
     
     # Get model, scenario, and region from template
     model = template_df["Model"].iloc[0]

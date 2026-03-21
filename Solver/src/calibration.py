@@ -1,11 +1,12 @@
 import numpy as np 
 import import_GTAP_data as imp
-from import_GTAP_data import N,sectors
 from copy import deepcopy as cp
 import pandas as pd
 from helpers.calibration_solvers import _compute_solI_params, _compute_CDES_params, load_expensive_params, save_expensive_params
 
-#import pandas as pd
+sectors         = pd.read_csv("Solver/preprocessed_data/sectors.csv")["sector"].tolist()
+energy_consumers = pd.read_csv("Solver/preprocessed_data/energy_consumers.csv")["energy_consumer"].tolist()
+N = len(sectors)
 
 A = sectors.index("AGRICULTURE")
 M = sectors.index("MANUFACTURE")
@@ -128,11 +129,18 @@ class calibrationVariables:
         #### ENERGY MATRICES ####
 
 
-        _row_labels = sectors + ["HOUSEHOLDS"]
+        _row_labels = energy_consumers
 
-        # column order: T=0, B=1, P=2, PE=3
-        _col_map = {"T": 0, "B": 1, "P": 2, "PE": 3}
-        _rhos_col_map = {"T": 0, "B": 1, "P": 2}  # Rho has no PE column in CSV
+        _col_map = {eu: i for i, eu in enumerate(dict.fromkeys(
+            energy_calibration_data.loc[
+                energy_calibration_data["Variable"] == "Volume", "Energy uses"
+            ].dropna()
+        ))}
+        _rhos_col_map = {eu: i for i, eu in enumerate(dict.fromkeys(
+            energy_calibration_data.loc[
+                energy_calibration_data["Variable"] == "Rho", "Energy uses"
+            ].dropna()
+        ))}
 
         self.E_vol = _load_energy_matrix_from_csv(
             energy_calibration_data, "Volume", _row_labels, _col_map, default_fill=0.0, calibration_year=calibration_year)
@@ -170,12 +178,10 @@ class calibrationVariables:
         self.pY_Ej = imp.pCiYij[E,:]/cp(self.Yij0[E,:])
 
         # Technical_coefficient: computed from intermediate variables (same as aYE_*j / Yj0).
-        # Columns: T=0, B=1, P=2, PE=3.  Last row (HOUSEHOLDS) = 0 by construction.
-        self.a_Ej = np.zeros((len(_row_labels), 4))
-        self.a_Ej[:N, 0] = cp(self.E_vol[_non_household_rows, _col_map["T"]]) / cp(self.Yj0)   # T
-        self.a_Ej[:N, 1] = cp(self.E_vol[_non_household_rows, _col_map["B"]]) / cp(self.Yj0)   # B
-        self.a_Ej[:N, 2] = cp(self.E_vol[_non_household_rows, _col_map["P"]]) / cp(self.Yj0)   # P
-        self.a_Ej[:N, 3] = cp(self.E_vol[_non_household_rows, _col_map["PE"]]) / cp(self.Yj0)   # PE
+        # Last row (HOUSEHOLDS) = 0 by construction.
+        self.a_Ej = np.zeros((len(_row_labels), len(_col_map)))
+        for eu, c in _col_map.items():
+            self.a_Ej[:N, c] = cp(self.E_vol[_non_household_rows, c]) / cp(self.Yj0)
 
 
         
@@ -245,7 +251,7 @@ class calibrationVariables:
         solI_param_names = ['I0', 'pI0', 'alphaIj']
         _pCjIj_mask = imp.pCjIj != 0
 
-        cached_solI = load_expensive_params(db_name, solI_param_names,
+        cached_solI = load_expensive_params(db_name, solI_param_names, N,
                                             mask_sig=_pCjIj_mask)
         if cached_solI is not None:
             self.I0      = cached_solI['I0']
@@ -258,7 +264,7 @@ class calibrationVariables:
             self.I0      = computed_solI['I0']
             self.pI0     = computed_solI['pI0']
             self.alphaIj = computed_solI['alphaIj']
-            save_expensive_params(db_name, computed_solI, mask_sig=_pCjIj_mask)
+            save_expensive_params(db_name, computed_solI, N, mask_sig=_pCjIj_mask)
 
 
 
@@ -305,7 +311,7 @@ class calibrationVariables:
         CDES_params_names = ['betaCj_nE', 'computed_ni_j_nE', 'computed_etaCj_nE', 
                                    'gammaCj_nE', 'u_C', 'A_Cj_nE', 'normalisation_factor']
         
-        cached_params = load_expensive_params(db_name, CDES_params_names)
+        cached_params = load_expensive_params(db_name, CDES_params_names, N)
         
         if cached_params is not None:
             # Load from cache
@@ -331,7 +337,7 @@ class calibrationVariables:
             self.normalisation_factor = computed_params['normalisation_factor']
             
             # Save to cache
-            save_expensive_params(db_name, computed_params)
+            save_expensive_params(db_name, computed_params, N)
         
 
 

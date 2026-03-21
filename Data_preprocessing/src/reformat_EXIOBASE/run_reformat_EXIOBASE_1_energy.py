@@ -3,6 +3,7 @@ from reformat_exiobase.aggregate_EXIOBASE import aggregate_EXIOBASE
 from reformat_exiobase.download_EXIOBASE import download_EXIOBASE
 from pathlib import Path
 import sys
+import pandas as pd
 
 SRC_ROOT = Path(__file__).resolve().parents[1]
 if str(SRC_ROOT) not in sys.path:
@@ -46,3 +47,5 @@ sectors_order= ["AGRICULTURE","MANUFACTURE","SERVICES","STEEL","CHEMICAL","ENERG
 #aggregate_EXIOBASE(reg_map_path=str(reg_map_file), sec_map_path=str(sec_map_file), output_path=str(aggregation_path), input_path=str(download_path), year=year, system=p_or_i)
 
 reformat_EXIOBASE(aggregation_folder=str(aggregation_path), reformat_folder=str(reformat_path),energy_sectors=["ENERGY"],sectors_order=sectors_order, add_inventories=False)
+
+pd.DataFrame({"sector": sectors_order}).to_csv(reformat_path / "sectors.csv", index=False)

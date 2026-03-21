@@ -12,8 +12,8 @@ IOT=pd.read_csv(
 
 IOT = replace_unnamed_multiindex_labels(IOT)
 
-N=1
-sectors=1
+N=7
+sectors=["AGRICULTURE", "MANUFACTURE", "SERVICES", "STEEL", "CHEMICAL", "ENERGY", "TRANSPORTATION"]
 
 
 

@@ -1,7 +1,12 @@
 #equations cge
 import numpy as np
+import pandas as pd
 from math import sqrt
 from calibration import A,M,SE,E,ST,CH,T
+
+_energy_types = pd.read_csv("Solver/preprocessed_data/energy_uses.csv")["energy_use"].tolist()
+_PE_col       = _energy_types.index("PE")
+_non_PE_cols  = [i for i, e in enumerate(_energy_types) if e != "PE"]
 #import data_calibration_from_matrix as dt
 
 #EQUATIONS
@@ -665,18 +670,18 @@ def eqEnergyPrices(E_matrix, Y_Ej, C_E, pE_matrix, pY_Ej, p_CE, _index=None):
 
 def eqRhos(pE, rhos):
     
-    computed_rhos = pE[:,:-1] / pE[:, [-1]]
+    computed_rhos = pE[:, _non_PE_cols] / pE[:, [_PE_col]]
     zero = 1 - rhos / computed_rhos
     zero = zero.flatten()
 
     return zero
 
 def eqPricePrimaryEnergy(pE, energy_index):
-    Primary_Energy_col = pE[:, -1]                 # ultima colonna (N,)
+    Primary_Energy_col = pE[:, _PE_col]            # PE column
     mask = np.arange(pE.shape[0]) != E
     
     PE_prices_nonE_sectors =Primary_Energy_col[mask]
-    PE_price_E = pE[energy_index, -1]  
+    PE_price_E = pE[energy_index, _PE_col]  
 
     zero = 1 - PE_prices_nonE_sectors/ PE_price_E
 

@@ -295,8 +295,9 @@ rhos = compute_rhos(projected_df)
 
 projected_df_EU=projected_df[projected_df["Region"]=="EUR"]
 rhos_EU = rhos[rhos["Region"]=="EUR"]
+projected_df_EU = pd.concat([projected_df_EU, rhos_EU], axis=0)
 
 out_path.mkdir(parents=True, exist_ok=True)
-
 projected_df_EU.to_csv(out_path / "hybridization_df.csv", index=False)
-rhos_EU.to_csv(out_path / "rhos.csv", index=False)
+energy_consumers_df["energy_consumer"].to_csv(out_path / "energy_consumers.csv", index=False)
+energy_uses_df["energy_use"].to_csv(out_path / "energy_uses.csv", index=False)

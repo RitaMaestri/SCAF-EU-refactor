@@ -6,7 +6,7 @@ from lib import compare_results
 
 
 compare_results(
-        file_a="Solver/results/test(06-03-2026_17:19).csv",
-        file_b="Solver/results/benchmark_1.csv",
-        value_col="2020"
+        file_a="Solver/results/test(21-03-2026_11:44).csv",
+        file_b="Solver/results/benchmark3.csv",
+        value_col="2025"
     )

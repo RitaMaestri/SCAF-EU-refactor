@@ -2,8 +2,8 @@
 
 from scipy import optimize
 import numpy as np
-from math import sqrt
-import sys
+
+
 
 # TYPE CONVERTERS 
 

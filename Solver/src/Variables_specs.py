@@ -1,5 +1,5 @@
-import numpy as np 
-from import_GTAP_data import sectors
+import numpy as np
+import pandas as pd
 from helpers.Variable_class import Variable
 
 # This module defines the master dictionary of model variable specifications.
@@ -11,10 +11,13 @@ from helpers.Variable_class import Variable
 # 	This is used to automatically populate the first year of the time-series DataFrame with the calibration value of the indicated variable, 
 # 	and to set up the correct lag relationships for dynamic updating in the model solution process.
 
-sectors_nE     = [x for x in sectors if x != "ENERGY"]
-sectors_plus_hh = sectors + ["HOUSEHOLDS"]
-energy_types    = ["T", "B", "P", "PE"]
-energy_types_wo_PE = ["T", "B", "P"]
+sectors         = pd.read_csv("Solver/preprocessed_data/sectors.csv")["sector"].tolist()
+energy_types    = pd.read_csv("Solver/preprocessed_data/energy_uses.csv")["energy_use"].tolist()
+energy_consumers = pd.read_csv("Solver/preprocessed_data/energy_consumers.csv")["energy_consumer"].tolist()
+
+sectors_nE         = [x for x in sectors if x != "ENERGY"]
+sectors_plus_hh    = energy_consumers
+energy_types_wo_PE = [x for x in energy_types if x != "PE"]
 
 endo_aYij_indexes = [("ENERGY",x) for x in sectors]
 endo_aYij_indexes.extend([(x,"ENERGY") for x in sectors_nE])

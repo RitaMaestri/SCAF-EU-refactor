@@ -1,7 +1,5 @@
 
 import numpy as np 
-import import_GTAP_data as imp
-from import_GTAP_data import N,sectors
 from helpers.solvers import dict_least_squares, dict_minimize
 from Variables_specs import VARIABLES_SPECS
 import scipy
@@ -22,7 +20,7 @@ def get_cache_metadata_filename(db_name):
     """Generate cache metadata filename to track source database."""
     return os.path.join(CACHE_DIR, f"{db_name}_metadata.json")
 
-def save_expensive_params(db_name, params_dict, mask_sig=None):
+def save_expensive_params(db_name, params_dict, N, mask_sig=None):
     """
     Save expensive calibration parameters to files.
 
@@ -32,9 +30,11 @@ def save_expensive_params(db_name, params_dict, mask_sig=None):
         Database name (e.g., 'GTAP') to include in filename
     params_dict : dict
         Dictionary of parameter_name: parameter_value pairs
+    N : int
+        Number of sectors, stored in cache metadata for invalidation.
     mask_sig : array-like of bool, optional
         Boolean mask whose nonzero-index signature is stored in the metadata
-        for cache-invalidation purposes (e.g. ``imp.pCjIj != 0``).  When
+        for cache-invalidation purposes (e.g. ``pCjIj != 0``).  When
         provided on load, the stored signature is validated against the
         current mask before accepting cached values.
     """
@@ -79,7 +79,7 @@ def save_expensive_params(db_name, params_dict, mask_sig=None):
 
 
 
-def load_expensive_params(db_name, param_names, mask_sig=None):
+def load_expensive_params(db_name, param_names, N, mask_sig=None):
     """
     Load expensive calibration parameters from cache files.
 
@@ -89,6 +89,8 @@ def load_expensive_params(db_name, param_names, mask_sig=None):
         Database name (e.g., 'GTAP')
     param_names : list
         List of parameter names to load
+    N : int
+        Number of sectors; compared against cached value for invalidation.
     mask_sig : array-like of bool, optional
         If provided, the nonzero-index signature of this mask is compared
         against the value stored in the cache metadata.  A mismatch forces

@@ -68,28 +68,20 @@ class Variable():
         
         if (not exo_names == None) and endo_names==None:
             indexes_list = [(self.idx_labels[0].index(row), self.idx_labels[1].index(col)) for row, col in exo_names]
-            # Sort the indexes_list based on the first element (index_a) and then the second element (index_b)
             sorted_indexes_list = sorted(indexes_list, key=lambda x: (x[0], x[1]))
-            rows,cols=zip(*sorted_indexes_list)
 
         elif (not endo_names==None) and exo_names == None:
             indexes_list = [(self.idx_labels[0].index(row), self.idx_labels[1].index(col)) for row, col in endo_names]
-            #matrix_size = (len(self.idx_labels[0]), len(self.idx_labels[1]))
             all_indexes_set = set(product(range(len(self.idx_labels[0])), range(len(self.idx_labels[1]))))
-            # Create a set of present indexes (row_index, column_index) pairs
             present_indexes_set = set(indexes_list)
-            # Find the complementary set of indexes (not present in the matrix)
             complementary_indexes_set = all_indexes_set.difference(present_indexes_set)
-            # Sort the complementary indexes to maintain order
             sorted_indexes_list = sorted(list(complementary_indexes_set))
         else:
             raise ValueError("wrong arguments for idx_2D")
-        
-        rows,cols=zip(*sorted_indexes_list)
-        idx_positions= [list(rows), list(cols)]
 
-        msk = np.zeros((len(self.idx_labels[0]),len(self.idx_labels[1])), dtype=bool)
-        msk[idx_positions] = True
+        msk = np.zeros((len(self.idx_labels[0]), len(self.idx_labels[1])), dtype=bool)
+        for r, c in sorted_indexes_list:
+            msk[r, c] = True
 
         return msk
 

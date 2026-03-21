@@ -37,6 +37,10 @@ copies = [
     (calibration_root / "SSP2/population.csv",             preprocessed_data_root / "population.csv"),
     (calibration_root / "Hybridization/hybridization_df.csv", preprocessed_data_root / "hybridization_df.csv"),
     (calibration_root / "regional_IOTs/EUR.csv",           preprocessed_data_root / "regional_IOTs/EUR.csv"),
+    (calibration_root / "regional_IOTs/sectors.csv",           preprocessed_data_root / "sectors.csv"),
+    (calibration_root / "Hybridization/energy_uses.csv",           preprocessed_data_root / "energy_uses.csv"),
+    (calibration_root / "Hybridization/energy_consumers.csv",           preprocessed_data_root / "energy_consumers.csv"),
+
 ]
 for src, dst in copies:
     dst.parent.mkdir(parents=True, exist_ok=True)
