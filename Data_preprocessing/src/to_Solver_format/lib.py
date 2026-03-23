@@ -4,6 +4,23 @@ import pandas as pd
 from pathlib import Path
 
 
+def reformat_elasticities(
+    src_path: Path,
+    region: str = "EUR",
+    sector_order: list[str] | None = None,
+) -> pd.DataFrame:
+    """Extract one region row from an aggregated elasticities CSV and reshape
+    it to the ``commodity,elasticity`` format expected by the Solver.
+
+    If *sector_order* is provided the rows are returned in that order.
+    """
+    df = pd.read_csv(src_path, index_col=0)
+    row = df.loc[region]
+    if sector_order is not None:
+        row = row.reindex(sector_order)
+    return row.rename_axis("commodity").reset_index(name="elasticity")
+
+
 def collect_year_columns(
     calibration_root: Path,
     mapping_df: pd.DataFrame,

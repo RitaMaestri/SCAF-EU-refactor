@@ -3,7 +3,7 @@ import pandas as pd
 import sys
 from pathlib import Path
 
-from lib import build_growth_factors, fill_row_with_ones, build_hybridization
+from lib import build_growth_factors, fill_row_with_ones, build_hybridization, reformat_elasticities
 
 SRC_ROOT = Path(__file__).resolve().parents[1]
 if str(SRC_ROOT) not in sys.path:
@@ -44,6 +44,20 @@ for src, destination in copies:
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(src, destination)
     print(f"Copied {src.relative_to(repo_root)} → {destination.relative_to(repo_root)}")
+
+# Reformat and copy elasticities from consumption_elasticities module
+elasticities_src = calibration_root / "consumption_elasticities"
+sector_order = pd.read_csv(preprocessed_data_root / "sectors.csv")["sector"].tolist()
+for src_name, dst_name in [
+    ("aggregated_income_elasticities.csv",     "income_elasticities.csv"),
+    ("aggregated_own_price_elasticities.csv",  "own_price_elasticities.csv"),
+    ("compensated_own_price_elasticities.csv", "compensated_own_price_elasticities.csv"),
+]:
+    df = reformat_elasticities(elasticities_src / src_name, sector_order=sector_order)
+    destination = preprocessed_data_root / dst_name
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(destination, index=False)
+    print(f"Written {src_name} → {destination.relative_to(repo_root)}")
 
 # Build hybridization_df by appending energy_trade_projection rows
 combined_hybridization_df = build_hybridization(calibration_root)

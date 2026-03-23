@@ -1,0 +1,11 @@
+{
+    "C_hsld_tot": "consumption_elasticities/C_hsld_tot.csv",
+    "income_elasticities_file": "consumption_elasticities/Income elasticities.csv",
+    "price_elasticities_file": "consumption_elasticities/Uncompensated Own-Price Elasticities.csv",
+    "mapping_sectors": "Data_preprocessing/src/consumption_elasticities/mappings/mapping sectors.csv",
+    "mapping_eur_regions": "Data_preprocessing/src/consumption_elasticities/mappings/mapping EUR regions.csv",
+    "out_income_elasticities": "consumption_elasticities/aggregated_income_elasticities.csv",
+    "out_price_elasticities": "consumption_elasticities/aggregated_own_price_elasticities.csv",
+    "out_consumptions": "consumption_elasticities/aggregated_consumptions.csv",
+    "out_compensated_price_elasticities": "consumption_elasticities/compensated_own_price_elasticities.csv"
+}

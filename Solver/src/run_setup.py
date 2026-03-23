@@ -27,8 +27,8 @@ assumed_variables_df = pd.read_csv("Solver/data/calibration/assumed_variables.cs
 armington_elasticities_df = pd.read_csv("Solver/data/calibration/GTAP_Armington_elasticities7.csv", index_col="commodity")
 export_elasticities_df = pd.read_csv("Solver/data/calibration/GTAP_export_elasticities7.csv", index_col="code")
 kl_elasticities_df = pd.read_csv("Solver/data/calibration/KL_elasticities7.csv", index_col="commodity")
-income_elasticities_df = pd.read_csv("Solver/data/calibration/income_elasticities7.csv", index_col="commodity")
-compensated_price_elasticities_df = pd.read_csv("Solver/data/calibration/compensated_own_price_elasticities7.csv", index_col="commodity")
+income_elasticities_df = pd.read_csv("Solver/preprocessed_data/income_elasticities.csv", index_col="commodity")
+compensated_price_elasticities_df = pd.read_csv("Solver/preprocessed_data/compensated_own_price_elasticities.csv", index_col="commodity")
 
 #years
 years_int = np.array([eval(i) for i in growth_ratios_df.columns[3:]])

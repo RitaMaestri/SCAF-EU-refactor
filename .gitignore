@@ -7,8 +7,8 @@ Solver/__pycache__
 Solver/.vscode
 Solver/data/old
 Data_preprocessing/raw_data/IEA/*
-Data_preprocessing/raw_data/ΔNGFS/*
 Data_preprocessing/raw_data/REMIND/*
+Data_preprocessing/raw_data/consumption_elasticities/C_hsld_tot.csv
 Data_preprocessing/src/Energy_trade_scenarisation/cache
 Data_preprocessing/src/Energy_trade_scenarisation/output
 Data_preprocessing/data_calibration_evolution
