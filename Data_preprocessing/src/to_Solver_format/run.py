@@ -3,7 +3,7 @@ import pandas as pd
 import sys
 from pathlib import Path
 
-from lib import build_growth_factors, fill_row_with_ones
+from lib import build_growth_factors, fill_row_with_ones, build_hybridization
 
 SRC_ROOT = Path(__file__).resolve().parents[1]
 if str(SRC_ROOT) not in sys.path:
@@ -35,14 +35,19 @@ print(f"Written {len(growth_factors_df)} rows to {out_path}")
 # Copy ready-to-use files into preprocessed_data
 copies = [
     (calibration_root / "SSP2/population.csv",             preprocessed_data_root / "population.csv"),
-    (calibration_root / "Hybridization/hybridization_df.csv", preprocessed_data_root / "hybridization_df.csv"),
     (calibration_root / "regional_IOTs/EUR.csv",           preprocessed_data_root / "regional_IOTs/EUR.csv"),
     (calibration_root / "regional_IOTs/sectors.csv",           preprocessed_data_root / "sectors.csv"),
     (calibration_root / "Hybridization/energy_uses.csv",           preprocessed_data_root / "energy_uses.csv"),
     (calibration_root / "Hybridization/energy_consumers.csv",           preprocessed_data_root / "energy_consumers.csv"),
-
 ]
-for src, dst in copies:
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy(src, dst)
-    print(f"Copied {src.relative_to(repo_root)} → {dst.relative_to(repo_root)}")
+for src, destination in copies:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(src, destination)
+    print(f"Copied {src.relative_to(repo_root)} → {destination.relative_to(repo_root)}")
+
+# Build hybridization_df by appending energy_trade_projection rows
+combined_hybridization_df = build_hybridization(calibration_root)
+destination = preprocessed_data_root / "hybridization_df.csv"
+destination.parent.mkdir(parents=True, exist_ok=True)
+combined_hybridization_df.to_csv(destination, index=False)
+print(f"Written {len(combined_hybridization_df)} rows to {destination.relative_to(repo_root)}")

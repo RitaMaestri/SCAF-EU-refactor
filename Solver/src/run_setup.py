@@ -14,11 +14,10 @@ add_string = "test"
 output_file_name = str().join(["Solver/results/", add_string, "(", dt_string, ")", ".csv"])
 
 #growth ratios df
-input_file =  "REMIND_exogenous_data_reformatted" 
-growth_ratios_df = pd.read_csv("Solver/data/"+input_file+".csv") 
+growth_ratios_df = pd.read_csv("Solver/preprocessed_data/growth_factors.csv")
 
 #energy calibration data
-energy_calibration_data = pd.read_csv("Solver/data/calibration/REMIND_energy_data.csv")
+energy_calibration_data = pd.read_csv("Solver/preprocessed_data/hybridization_df.csv")
 population_calibration_data = pd.read_csv("Solver/preprocessed_data/population.csv")
 
 #assumed variables

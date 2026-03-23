@@ -1,6 +1,6 @@
 import numpy as np
 import helpers.model_equations as eq
-from import_GTAP_data import non_zero_index_G, non_zero_index_I, non_zero_index_X, non_zero_index_M, non_zero_index_Yij
+from import_EXIOBASE import non_zero_index_G, non_zero_index_I, non_zero_index_X, non_zero_index_M, non_zero_index_Yij
 from calibration import SE, E, N
 
 def fill_nans(par_value, var_value, key):

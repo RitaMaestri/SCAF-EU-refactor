@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pandas as pd
 from pathlib import Path
 
@@ -111,6 +113,21 @@ def build_growth_factors(
         rows.append({"variable_name": var_name, "row_label": row_label, "col_label": col_label, **normalised})
 
     return pd.DataFrame(rows, columns=["variable_name", "row_label", "col_label"] + year_cols)
+
+
+def build_hybridization(calibration_root: Path) -> pd.DataFrame:
+    """Load hybridization_df and append energy_trade_projection rows.
+
+    Schema alignment:
+    - ``Sector`` in energy_trade_projection → ``Energy consumers``
+    - ``Energy uses`` (absent in energy_trade_projection) is filled with empty strings.
+    """
+    hybridization_df = pd.read_csv(calibration_root / "Hybridization/hybridization_df.csv")
+    energy_trade_df = pd.read_csv(calibration_root / "Energy_trade/energy_trade_projection.csv")
+    energy_trade_df = energy_trade_df.rename(columns={"Sector": "Energy consumers"})
+    energy_trade_df["Energy uses"] = ""
+    energy_trade_df = energy_trade_df.reindex(columns=hybridization_df.columns)
+    return pd.concat([hybridization_df, energy_trade_df], ignore_index=True)
 
 
 def fill_row_with_ones(

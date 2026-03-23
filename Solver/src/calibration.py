@@ -1,5 +1,5 @@
 import numpy as np 
-import import_GTAP_data as imp
+import import_EXIOBASE as imp
 from copy import deepcopy as cp
 import pandas as pd
 from helpers.calibration_solvers import _compute_solI_params, _compute_CDES_params, load_expensive_params, save_expensive_params
@@ -59,6 +59,38 @@ def _load_energy_matrix_from_csv(df, variable_type, row_labels, col_map, default
     return mat
 
 
+def _load_trade_energy_from_csv(df, calibration_year):
+    """Extract scalar trade-energy values from a hybridization CSV DataFrame.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Full calibration DataFrame (e.g. ``hybridization_df.csv``).
+    calibration_year : int or str
+        Year to extract; matched against column names via ``str()`` comparison.
+
+    Returns
+    -------
+    dict with keys ``'Xj0_E'``, ``'Mj0_E'``, ``'pXj0_E'``, ``'pMj0_E'``
+    """
+    year_col = next((c for c in df.columns if str(c) == str(calibration_year)), None)
+    if year_col is None:
+        raise ValueError(f"Column '{calibration_year}' not found in calibration CSV.")
+    _var_map = {
+        "Export|Energy":       "Xj0_E",
+        "Import|Energy":       "Mj0_E",
+        "Export|Energy Price": "pXj0_E",
+        "Import|Energy Price": "pMj0_E",
+    }
+    result = {}
+    for var_name, key in _var_map.items():
+        rows = df[df["Variable"] == var_name]
+        if rows.empty:
+            raise ValueError(f"Variable '{var_name}' not found in calibration CSV.")
+        result[key] = float(rows.iloc[0][year_col])
+    return result
+
+
 def compute_alphas_CES(Q1j,Q2j,p1j,p2j,etaj):
     alphaj = 1 / (
         1 + np.float_power( Q2j , (1 - etaj) ) * p2j / ( np.float_power( Q1j , 1-etaj ) * p1j )
@@ -77,7 +109,16 @@ def compute_theta_CES(Zj,alpha1j,alpha2j,Q1j,Q2j,etaj):
 
 class calibrationVariables:
     
-    def __init__(self, calibration_year, energy_calibration_data, population_calibration_data, armington_elasticities_df, export_elasticities_df, kl_elasticities_df, income_elasticities_df, compensated_price_elasticities_df, assumed_variables_df):
+    def __init__(self, 
+                 calibration_year, 
+                 energy_calibration_data, 
+                 population_calibration_data, 
+                 armington_elasticities_df, 
+                 export_elasticities_df, 
+                 kl_elasticities_df, 
+                 income_elasticities_df, 
+                 compensated_price_elasticities_df, 
+                 assumed_variables_df):
         
         _av = assumed_variables_df["value"]
 
@@ -98,7 +139,6 @@ class calibrationVariables:
         self.pKLj0=np.full(N, float(_av["pKLj0"]))
         self.pXj0=np.full(N, float(_av["pXj0"]))
         self.pDj0=np.full(N, float(_av["pDj0"]))
-        self.pXj=cp(self.pXj0)
         self.pMj0=cp(self.pXj0)
 
         #taxes
@@ -146,8 +186,9 @@ class calibrationVariables:
             energy_calibration_data, "Volume", _row_labels, _col_map, default_fill=0.0, calibration_year=calibration_year)
 
         self.pE    = _load_energy_matrix_from_csv(
-            energy_calibration_data, "Price", _row_labels, _col_map, default_fill=0.0, calibration_year=calibration_year)
-
+            energy_calibration_data, "Price", _row_labels, _col_map, default_fill=0.0, calibration_year=calibration_year
+            )*(1 + self.tauSj0[E]) #prezzo pieno di tasse per il settore energia
+ 
         # Rho has no PE rows in CSV; PE column defaults to 1.0
         self.rhoE  = _load_energy_matrix_from_csv(
             energy_calibration_data, "Rho", _row_labels, _rhos_col_map, default_fill=0.0, calibration_year=calibration_year)
@@ -160,6 +201,12 @@ class calibrationVariables:
             if idx != _households_idx
         ]
 
+        _trade_energy = _load_trade_energy_from_csv(energy_calibration_data, calibration_year)
+        self.Xj0[E]  = _trade_energy["Xj0_E"]
+        self.Mj0[E]  = _trade_energy["Mj0_E"]
+        self.pXj0[E] = _trade_energy["pXj0_E"]
+        self.pMj0[E] = _trade_energy["pMj0_E"]
+
         #adjusting energy quantity and price
 
         self.Sj0[E]=self.E_vol.sum()
@@ -167,7 +214,7 @@ class calibrationVariables:
 
         self.Dj0[E]=cp(self.Sj0[E])-cp(self.Mj0[E])
         self.pDj0[E]=imp.pDjDj[E] / cp(self.Dj0[E])
-        
+
         self.Yj0[E]=cp(self.Xj0[E])+cp(self.Dj0[E])
         self.pYj0[E]=imp.pYjYj[E] / cp(self.Yj0[E])
 
@@ -179,6 +226,7 @@ class calibrationVariables:
 
         # Technical_coefficient: computed from intermediate variables (same as aYE_*j / Yj0).
         # Last row (HOUSEHOLDS) = 0 by construction.
+        self.a_Ej = np.zeros((len(_row_labels), len(_col_map)))
         self.a_Ej = np.zeros((len(_row_labels), len(_col_map)))
         for eu, c in _col_map.items():
             self.a_Ej[:N, c] = cp(self.E_vol[_non_household_rows, c]) / cp(self.Yj0)
@@ -238,16 +286,16 @@ class calibrationVariables:
         self.wG = cp(self.Rg0)/ cp(self.GDP0)
         self.wI = cp(self.Ri0)/ cp(self.GDP0)
         self.GDPreal= cp(self.GDP0)
-        self.pXtp= cp(self.pXj)
+        self.pXtp= cp(self.pXj0)
         self.Gtp= cp(self.Gj0)
         self.Itp= cp(self.Ij0)
-        self.pXtp= cp(self.pXj)
+        self.pXtp= cp(self.pXj0)
         self.Xtp= cp(self.Xj0)
         self.Mtp = cp(self.Mj0)
         
         #calibrate alphaIj, I and pI
 
-        db_name = "GTAP"
+        db_name = "EXIOBASE"
         solI_param_names = ['I0', 'pI0', 'alphaIj']
         _pCjIj_mask = imp.pCjIj != 0
 
@@ -307,7 +355,7 @@ class calibrationVariables:
         #########################
         
         # Database identifier for cache files
-        db_name = "GTAP"
+        db_name = "EXIOBASE"
         CDES_params_names = ['betaCj_nE', 'computed_ni_j_nE', 'computed_etaCj_nE', 
                                    'gammaCj_nE', 'u_C', 'A_Cj_nE', 'normalisation_factor']
         
