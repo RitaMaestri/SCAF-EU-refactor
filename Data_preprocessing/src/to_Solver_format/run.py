@@ -59,6 +59,18 @@ for src_name, dst_name in [
     df.to_csv(destination, index=False)
     print(f"Written {src_name} → {destination.relative_to(repo_root)}")
 
+# Reformat and copy elasticities from other_elasticities module
+other_elasticities_src = calibration_root / "other_elasticities"
+for src_name, dst_name in [
+    ("aggregated_armington_elasticities.csv", "armington_elasticities.csv"),
+    ("aggregated_kl_elasticities.csv",        "kl_elasticities.csv"),
+]:
+    df = reformat_elasticities(other_elasticities_src / src_name, sector_order=sector_order)
+    destination = preprocessed_data_root / dst_name
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(destination, index=False)
+    print(f"Written {src_name} → {destination.relative_to(repo_root)}")
+
 # Build hybridization_df by appending energy_trade_projection rows
 combined_hybridization_df = build_hybridization(calibration_root)
 destination = preprocessed_data_root / "hybridization_df.csv"

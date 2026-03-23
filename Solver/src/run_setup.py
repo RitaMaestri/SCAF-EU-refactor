@@ -24,9 +24,9 @@ population_calibration_data = pd.read_csv("Solver/preprocessed_data/population.c
 assumed_variables_df = pd.read_csv("Solver/data/calibration/assumed_variables.csv", index_col="variable_name")
 
 #elasticity data
-armington_elasticities_df = pd.read_csv("Solver/data/calibration/GTAP_Armington_elasticities7.csv", index_col="commodity")
+armington_elasticities_df = pd.read_csv("Solver/preprocessed_data/armington_elasticities.csv", index_col="commodity")
 export_elasticities_df = pd.read_csv("Solver/data/calibration/GTAP_export_elasticities7.csv", index_col="code")
-kl_elasticities_df = pd.read_csv("Solver/data/calibration/KL_elasticities7.csv", index_col="commodity")
+kl_elasticities_df = pd.read_csv("Solver/preprocessed_data/kl_elasticities.csv", index_col="commodity")
 income_elasticities_df = pd.read_csv("Solver/preprocessed_data/income_elasticities.csv", index_col="commodity")
 compensated_price_elasticities_df = pd.read_csv("Solver/preprocessed_data/compensated_own_price_elasticities.csv", index_col="commodity")
 

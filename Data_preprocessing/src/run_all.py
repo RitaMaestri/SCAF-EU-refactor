@@ -8,6 +8,7 @@ REPO_ROOT = SRC_ROOT.parents[1]
 
 PIPELINE = [
     {"name": "consumption_elasticities", "script": "Data_preprocessing/src/consumption_elasticities/run.py"},
+    {"name": "other_elasticities", "script": "Data_preprocessing/src/other_elasticities/run.py"},
     {"name": "reformat_exiobase", "script": "Data_preprocessing/src/reformat_EXIOBASE/run_reformat_EXIOBASE_1_energy.py"},
     {"name": "ssp2", "script": "Data_preprocessing/src/SSP2/run.py"},
     {"name": "productivities", "script": "Data_preprocessing/src/Productivities/run.py"},

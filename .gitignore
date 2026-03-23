@@ -8,6 +8,7 @@ Solver/.vscode
 Solver/data/old
 Data_preprocessing/raw_data/IEA/*
 Data_preprocessing/raw_data/REMIND/*
+Data_preprocessing/raw_data/other_elasticities/GTAP/*
 Data_preprocessing/raw_data/consumption_elasticities/C_hsld_tot.csv
 Data_preprocessing/src/Energy_trade_scenarisation/cache
 Data_preprocessing/src/Energy_trade_scenarisation/output

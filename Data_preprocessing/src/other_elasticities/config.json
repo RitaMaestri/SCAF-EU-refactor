@@ -1,0 +1,11 @@
+{
+    "elasticities_file": "other_elasticities/GTAP_10_elasticities.csv",
+    "armington_weights_file": "other_elasticities/GTAP/M/Imp_cor.csv",
+    "kl_weights_folder": "other_elasticities/GTAP/KL",
+    "mapping_sectors": "Data_preprocessing/src/consumption_elasticities/mappings/mapping sectors.csv",
+    "mapping_eur_regions": "Data_preprocessing/src/consumption_elasticities/mappings/mapping EUR regions.csv",
+    "out_armington_elasticities": "other_elasticities/aggregated_armington_elasticities.csv",
+    "out_kl_elasticities": "other_elasticities/aggregated_kl_elasticities.csv",
+    "out_armington_weights": "other_elasticities/aggregated_import_weights.csv",
+    "out_kl_weights": "other_elasticities/aggregated_kl_weights.csv"
+}
