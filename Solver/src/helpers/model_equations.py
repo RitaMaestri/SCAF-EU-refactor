@@ -4,7 +4,7 @@ import pandas as pd
 from math import sqrt
 from calibration import A,M,SE,E,ST,CH,T
 
-_energy_types = pd.read_csv("Solver/preprocessed_data/energy_uses.csv")["energy_use"].tolist()
+_energy_types = pd.read_csv("Solver/preprocessed_data/indexes/energy_uses.csv")["energy_use"].tolist()
 _PE_col       = _energy_types.index("PE")
 _non_PE_cols  = [i for i, e in enumerate(_energy_types) if e != "PE"]
 #import data_calibration_from_matrix as dt

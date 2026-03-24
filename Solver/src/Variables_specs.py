@@ -11,9 +11,9 @@ from helpers.Variable_class import Variable
 # 	This is used to automatically populate the first year of the time-series DataFrame with the calibration value of the indicated variable, 
 # 	and to set up the correct lag relationships for dynamic updating in the model solution process.
 
-sectors         = pd.read_csv("Solver/preprocessed_data/sectors.csv")["sector"].tolist()
-energy_types    = pd.read_csv("Solver/preprocessed_data/energy_uses.csv")["energy_use"].tolist()
-energy_consumers = pd.read_csv("Solver/preprocessed_data/energy_consumers.csv")["energy_consumer"].tolist()
+sectors         = pd.read_csv("Solver/preprocessed_data/indexes/sectors.csv")["sector"].tolist()
+energy_types    = pd.read_csv("Solver/preprocessed_data/indexes/energy_uses.csv")["energy_use"].tolist()
+energy_consumers = pd.read_csv("Solver/preprocessed_data/indexes/energy_consumers.csv")["energy_consumer"].tolist()
 
 sectors_nE         = [x for x in sectors if x != "ENERGY"]
 sectors_plus_hh    = energy_consumers

@@ -8,7 +8,7 @@ import os
 import json
 
 # Cache directory for CDES calibration parameters
-CACHE_DIR = "Solver/data/calibration/calibration_cache"
+CACHE_DIR = "Solver/preprocessed_data/calibration/calibration_cache"
 if not os.path.exists(CACHE_DIR):
     os.makedirs(CACHE_DIR)
 

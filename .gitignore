@@ -1,11 +1,8 @@
-Solver/data/SAMfiles/*
-Solver/data/elasticities_N=3,30,65_and_other
-Solver/data/excel data computation
 Solver/results/*
 Solver/src/transport_calibration.csv
 Solver/__pycache__
 Solver/.vscode
-Solver/data/old
+Solver/preprocessed_data/calibration/calibration_cache/*
 Data_preprocessing/raw_data/IEA/*
 Data_preprocessing/raw_data/REMIND/*
 Data_preprocessing/raw_data/other_elasticities/GTAP/*

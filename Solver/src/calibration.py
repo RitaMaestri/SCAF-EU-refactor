@@ -4,8 +4,8 @@ from copy import deepcopy as cp
 import pandas as pd
 from helpers.calibration_solvers import _compute_solI_params, _compute_CDES_params, load_expensive_params, save_expensive_params
 
-sectors         = pd.read_csv("Solver/preprocessed_data/sectors.csv")["sector"].tolist()
-energy_consumers = pd.read_csv("Solver/preprocessed_data/energy_consumers.csv")["energy_consumer"].tolist()
+sectors         = pd.read_csv("Solver/preprocessed_data/indexes/sectors.csv")["sector"].tolist()
+energy_consumers = pd.read_csv("Solver/preprocessed_data/indexes/energy_consumers.csv")["energy_consumer"].tolist()
 N = len(sectors)
 
 A = sectors.index("AGRICULTURE")

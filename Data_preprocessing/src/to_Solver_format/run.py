@@ -34,11 +34,11 @@ print(f"Written {len(growth_factors_df)} rows to {out_path}")
 
 # Copy ready-to-use files into preprocessed_data
 copies = [
-    (calibration_root / "SSP2/population.csv",             preprocessed_data_root / "population.csv"),
+    (calibration_root / "SSP2/population.csv",             preprocessed_data_root / "calibration/population.csv"),
     (calibration_root / "regional_IOTs/EUR.csv",           preprocessed_data_root / "regional_IOTs/EUR.csv"),
-    (calibration_root / "regional_IOTs/sectors.csv",           preprocessed_data_root / "sectors.csv"),
-    (calibration_root / "Hybridization/energy_uses.csv",           preprocessed_data_root / "energy_uses.csv"),
-    (calibration_root / "Hybridization/energy_consumers.csv",           preprocessed_data_root / "energy_consumers.csv"),
+    (calibration_root / "regional_IOTs/sectors.csv",           preprocessed_data_root / "indexes/sectors.csv"),
+    (calibration_root / "Hybridization/energy_uses.csv",           preprocessed_data_root / "indexes/energy_uses.csv"),
+    (calibration_root / "Hybridization/energy_consumers.csv",           preprocessed_data_root / "indexes/energy_consumers.csv"),
 ]
 for src, destination in copies:
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -47,11 +47,11 @@ for src, destination in copies:
 
 # Reformat and copy elasticities from consumption_elasticities module
 elasticities_src = calibration_root / "consumption_elasticities"
-sector_order = pd.read_csv(preprocessed_data_root / "sectors.csv")["sector"].tolist()
+sector_order = pd.read_csv(preprocessed_data_root / "indexes/sectors.csv")["sector"].tolist()
 for src_name, dst_name in [
-    ("aggregated_income_elasticities.csv",     "income_elasticities.csv"),
-    ("aggregated_own_price_elasticities.csv",  "own_price_elasticities.csv"),
-    ("compensated_own_price_elasticities.csv", "compensated_own_price_elasticities.csv"),
+    ("aggregated_income_elasticities.csv",     "elasticities/income_elasticities.csv"),
+    ("aggregated_own_price_elasticities.csv",  "elasticities/own_price_elasticities.csv"),
+    ("compensated_own_price_elasticities.csv", "elasticities/compensated_own_price_elasticities.csv"),
 ]:
     df = reformat_elasticities(elasticities_src / src_name, sector_order=sector_order)
     destination = preprocessed_data_root / dst_name
@@ -62,8 +62,8 @@ for src_name, dst_name in [
 # Reformat and copy elasticities from other_elasticities module
 other_elasticities_src = calibration_root / "other_elasticities"
 for src_name, dst_name in [
-    ("aggregated_armington_elasticities.csv", "armington_elasticities.csv"),
-    ("aggregated_kl_elasticities.csv",        "kl_elasticities.csv"),
+    ("aggregated_armington_elasticities.csv", "elasticities/armington_elasticities.csv"),
+    ("aggregated_kl_elasticities.csv",        "elasticities/kl_elasticities.csv"),
 ]:
     df = reformat_elasticities(other_elasticities_src / src_name, sector_order=sector_order)
     destination = preprocessed_data_root / dst_name
@@ -73,7 +73,7 @@ for src_name, dst_name in [
 
 # Build hybridization_df by appending energy_trade_projection rows
 combined_hybridization_df = build_hybridization(calibration_root)
-destination = preprocessed_data_root / "hybridization_df.csv"
+destination = preprocessed_data_root / "calibration/hybridization_df.csv"
 destination.parent.mkdir(parents=True, exist_ok=True)
 combined_hybridization_df.to_csv(destination, index=False)
 print(f"Written {len(combined_hybridization_df)} rows to {destination.relative_to(repo_root)}")

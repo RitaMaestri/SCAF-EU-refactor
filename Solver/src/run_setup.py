@@ -10,25 +10,25 @@ import pandas as pd
 #outoutput file name
 now = datetime.now()
 dt_string = now.strftime("%d-%m-%Y_%H:%M")
-add_string = "test"
+add_string = "results"
 output_file_name = str().join(["Solver/results/", add_string, "(", dt_string, ")", ".csv"])
 
 #growth ratios df
 growth_ratios_df = pd.read_csv("Solver/preprocessed_data/growth_factors.csv")
 
 #energy calibration data
-energy_calibration_data = pd.read_csv("Solver/preprocessed_data/hybridization_df.csv")
-population_calibration_data = pd.read_csv("Solver/preprocessed_data/population.csv")
+energy_calibration_data = pd.read_csv("Solver/preprocessed_data/calibration/hybridization_df.csv")
+population_calibration_data = pd.read_csv("Solver/preprocessed_data/calibration/population.csv")
 
 #assumed variables
-assumed_variables_df = pd.read_csv("Solver/data/calibration/assumed_variables.csv", index_col="variable_name")
+assumed_variables_df = pd.read_csv("Solver/assumed_data/assumed_variables.csv", index_col="variable_name")
 
 #elasticity data
-armington_elasticities_df = pd.read_csv("Solver/preprocessed_data/armington_elasticities.csv", index_col="commodity")
-export_elasticities_df = pd.read_csv("Solver/data/calibration/GTAP_export_elasticities7.csv", index_col="code")
-kl_elasticities_df = pd.read_csv("Solver/preprocessed_data/kl_elasticities.csv", index_col="commodity")
-income_elasticities_df = pd.read_csv("Solver/preprocessed_data/income_elasticities.csv", index_col="commodity")
-compensated_price_elasticities_df = pd.read_csv("Solver/preprocessed_data/compensated_own_price_elasticities.csv", index_col="commodity")
+armington_elasticities_df = pd.read_csv("Solver/preprocessed_data/elasticities/armington_elasticities.csv", index_col="commodity")
+export_elasticities_df = pd.read_csv("Solver/assumed_data/GTAP_export_elasticities7.csv", index_col="code")
+kl_elasticities_df = pd.read_csv("Solver/preprocessed_data/elasticities/kl_elasticities.csv", index_col="commodity")
+income_elasticities_df = pd.read_csv("Solver/preprocessed_data/elasticities/income_elasticities.csv", index_col="commodity")
+compensated_price_elasticities_df = pd.read_csv("Solver/preprocessed_data/elasticities/compensated_own_price_elasticities.csv", index_col="commodity")
 
 #years
 years_int = np.array([eval(i) for i in growth_ratios_df.columns[3:]])
