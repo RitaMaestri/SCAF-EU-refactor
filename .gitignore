@@ -17,5 +17,6 @@ Data_preprocessing/src/reformat_EXIOBASE/output
 Data_preprocessing/src/Hybridization/cache
 Data_preprocessing/src/IEA/result/aggregate_residential_agriculture_2020.csv
 Data_preprocessing/src/Filter_NGFS/cache
+Data_postprocessing/plots/*
 .~lock.*
 *.pyc
