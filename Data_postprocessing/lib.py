@@ -241,3 +241,40 @@ def plot_1D(var_df, title, diff=False, output_dir=None):
 def plot_variable_1D(df, var_name, pq, diff=False, output_dir=None):
     var_df= extract_var_df(var_name, pq, df)
     plot_1D(var_df, var_name, diff=diff, output_dir=output_dir)
+
+
+def plot_KL_GDP_evolution(df, year_cols, output_dir=None):
+    L=df.loc[df['variable_name'] == "L", year_cols].values[0].astype("float")
+    bKL=df.loc[df['variable_name'] == "bKL", year_cols].values[0].astype("float")
+    LbKL=L*bKL
+    K=df.loc[df['variable_name'] == "K", year_cols].values[0].astype("float")
+    GDPreal=df.loc[df['variable_name'] == "GDPreal", year_cols].values[0].astype("float")
+    pL=df.loc[df['variable_name'] == "pL", year_cols].values[0].astype("float")
+    pK=df.loc[df['variable_name'] == "pK", year_cols].values[0].astype("float")
+
+    fig = plt.figure(figsize=(13,7))
+    ax = fig.add_subplot(111)
+    x=np.array(year_cols).astype('int')
+    y=  pL/pL[0]
+    plt.plot(x,y,label = "$Labour \ price$", linestyle='dashed')
+    y=  K/K[0]
+    plt.plot(x,y,label = "$Capital$")
+    y=  GDPreal/GDPreal[0]
+    plt.plot(x,y,label = "$GDP$")
+    y=  LbKL/LbKL[0]
+    plt.plot(x,y,label = "$Labour$")
+    y=  pK/pK[0]
+    plt.plot(x,y,label = "$Capital \ price$", linestyle='dashed')
+
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': 13})
+    plt.title("Evolution of the parameters from the coupled IAM", fontsize = 20)
+    plt.xlabel("Year",fontsize = 17)
+    plt.ylabel("Relative change with respect to year 2020", fontsize = 17)
+
+    if output_dir is not None:
+        plt.savefig(os.path.join(output_dir, "IAM_parameters_evolution.png"), bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
