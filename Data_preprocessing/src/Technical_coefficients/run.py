@@ -18,7 +18,7 @@ this_folder = Path(__file__).resolve().parent
 repo_root = this_folder.parents[2]
 config = load_config(this_folder)
 
-energy_domestic_volumes_path = repo_root / config["energy_domestic_volumes"]
+energy_domestic_volumes_path = repo_root / config["remind_volumes_by_energy_use"]
 energy_trade_volumes_path    = repo_root / config["energy_trade_volumes"]
 remind_path                  = repo_root / config["raw_data_root"] / config["remind_file"]
 mapping_path                 = repo_root / config["mapping"]

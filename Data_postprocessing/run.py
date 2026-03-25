@@ -61,7 +61,7 @@ meta_cols = ['variable_name', 'row_label', 'col_label', 'status']
 year_cols = [c for c in df.columns if c not in meta_cols and int(c) <= 2050]
 df = df[meta_cols + year_cols]
 
-    
+
 
 plot_varj_evol(df=df, var="KLj", pq="pq", diff=False,display_top_names=7, mytitle="Normalised evolution of the value added per sector (value)", output_dir=output_dir)
 plot_varj_evol(df=df, var="KLj", pq="q", diff=False,display_top_names=7, mytitle="Normalised evolution of the value added per sector (volume)", output_dir=output_dir)

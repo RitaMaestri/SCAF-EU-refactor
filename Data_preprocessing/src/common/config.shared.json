@@ -3,5 +3,8 @@
   "calibration_output_root": "Data_preprocessing/data_calibration_evolution",
   "mapping_regions": "Data_preprocessing/src/common/mappings/mapping_regions.csv",
   "remind_file": "REMIND/REMIND_generic_SSP2-NPi2025.mif",
-  "iots_folder": "regional_IOTs/"
+  "iots_folder": "regional_IOTs/",
+  "remind_prices_by_energy_use": "Data_preprocessing/src/Hybridization/cache/REMIND_prices_by_energy_use.csv",
+  "remind_volumes_by_energy_use": "Data_preprocessing/src/Hybridization/cache/REMIND_volumes_by_energy_use.csv",
+  "remind_values_by_energy_use": "Data_preprocessing/src/Hybridization/cache/REMIND_values_by_energy_use.csv"
 }

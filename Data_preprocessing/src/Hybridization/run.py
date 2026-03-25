@@ -98,14 +98,20 @@ filtered_REMIND = filter_REMIND(REMIND_raw, REMIND_filtered_path)
 ############ AGGREGATE REMIND ENERGY TYPES ##############
 #import mapping
 map_REMIND_energy_uses = pd.read_excel(map_REMIND_path, header=0)
-volume_unit, price_unit = get_REMIND_units(filtered_REMIND, map_REMIND_energy_uses)
+REMIND_volume_unit, REMIND_price_unit, REMIND_value_unit = get_REMIND_units(filtered_REMIND, map_REMIND_energy_uses)
 if "volume_unit" in config:
     volume_unit = config["volume_unit"]
+else:
+    volume_unit = REMIND_volume_unit
 if "price_unit" in config:
-    price_unit = config["price_unit"]
+    EXIOBASE_price_unit = config["price_unit"]
+else:
+    EXIOBASE_price_unit = REMIND_price_unit
+if "value_unit" not in config:
+    value_unit = REMIND_value_unit
 
 # aggregate REMIND energy types
-markets_dict = aggregate_energy_uses(filtered_REMIND, map_REMIND_energy_uses, value_unit, price_unit)
+markets_dict = aggregate_energy_uses(filtered_REMIND, map_REMIND_energy_uses, REMIND_value_unit, REMIND_price_unit)
 
 REMIND_prices = markets_dict["prices"]
 
@@ -116,9 +122,9 @@ REMIND_values = markets_dict["values"]
 
 #export dataframe
 
-REMIND_prices.to_csv(str(cache_path)+"/prices_by_energy_use.csv", index=False)
-REMIND_volumes.to_csv(str(cache_path)+"/volumes_by_energy_use.csv", index=False)
-REMIND_values.to_csv(str(cache_path)+"/values_by_energy_use.csv", index=False)
+REMIND_prices.to_csv(config["remind_prices_by_energy_use"], index=False)
+REMIND_volumes.to_csv(config["remind_volumes_by_energy_use"], index=False)
+REMIND_values.to_csv(config["remind_values_by_energy_use"], index=False)
 
 #create regional dictionaries of IOT energy consumptions dataframes
 def import_IOT(IOT_path):
@@ -203,7 +209,7 @@ energy_consumers_opt = list(energy_consumers_df[mask_consumers]["energy_consumer
 energy_uses_opt = list(energy_uses_df[mask_uses]["energy_use"])
 
 
-consumers_X_uses_df = generate_output_template(filtered_REMIND, energy_consumers_opt, energy_uses_opt, price_unit, volume_unit)
+consumers_X_uses_df = generate_output_template(filtered_REMIND, energy_consumers_opt, energy_uses_opt, EXIOBASE_price_unit, volume_unit)
 consumers_X_uses_calibration_df = consumers_X_uses_df.copy()
 
 

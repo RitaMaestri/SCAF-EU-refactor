@@ -36,7 +36,7 @@ print(f"Written {len(growth_factors_df)} rows to {out_path}")
 copies = [
     (calibration_root / "SSP2/population.csv",             preprocessed_data_root / "calibration/population.csv"),
     (calibration_root / "regional_IOTs/EUR.csv",           preprocessed_data_root / "regional_IOTs/EUR.csv"),
-    (calibration_root / "regional_IOTs/sectors.csv",           preprocessed_data_root / "indexes/sectors.csv"),
+    (calibration_root / "regional_IOTs/sectors/sectors.csv",           preprocessed_data_root / "indexes/sectors.csv"),
     (calibration_root / "Hybridization/energy_uses.csv",           preprocessed_data_root / "indexes/energy_uses.csv"),
     (calibration_root / "Hybridization/energy_consumers.csv",           preprocessed_data_root / "indexes/energy_consumers.csv"),
 ]

@@ -285,17 +285,69 @@ def convert_to_net_values(dfs_consumption: dict[str, pd.DataFrame],
 ############## AGGREGATE ENERGY USES ###############
 #####################################################
 
+_SI_ENERGY_PREFIXES = {
+    "": 1e0, "k": 1e3, "M": 1e6, "G": 1e9, "T": 1e12, "P": 1e15, "E": 1e18,
+}
+_MONETARY_PREFIXES = {
+    1e3: "k", 1e6: "M", 1e9: "bn", 1e12: "tn",
+}
+_ENERGY_BASES = ("Wh", "toe", "tce", "J")  # longer bases first
+
+
+def _split_energy_prefix_base(s: str):
+    """Split e.g. 'GJ' -> ('G', 'J') or 'EJ/yr' -> ('E', 'J'), stripping any '/time' suffix."""
+    # strip optional per-time suffix (e.g. '/yr', '/year', '/a')
+    s = s.split("/")[0].strip()
+    for base in _ENERGY_BASES:
+        if s.endswith(base):
+            prefix = s[: -len(base)]
+            if prefix not in _SI_ENERGY_PREFIXES:
+                raise ValueError(f"Unknown SI prefix '{prefix}' in '{s}'")
+            return prefix, base
+    raise ValueError(f"Cannot identify energy base in '{s}'")
+
+
+def _compute_value_unit(price_unit: str, volume_unit: str) -> str:
+    """
+    Derive the value unit as price_unit × volume_unit.
+
+    Example: 'US$/GJ' × 'EJ'  →  EJ/GJ = 1e9  →  'bn US$'
+    """
+    if "/" not in price_unit:
+        raise ValueError(f"Cannot parse price_unit '{price_unit}': expected 'currency/energy'")
+    currency, price_energy = price_unit.split("/", 1)
+
+    price_prefix, price_base = _split_energy_prefix_base(price_energy)
+    vol_prefix,   vol_base   = _split_energy_prefix_base(volume_unit)
+
+    if price_base != vol_base:
+        raise ValueError(
+            f"Energy base mismatch: price uses '{price_base}', volume uses '{vol_base}'"
+        )
+
+    scale = _SI_ENERGY_PREFIXES[vol_prefix] / _SI_ENERGY_PREFIXES[price_prefix]
+    if scale not in _MONETARY_PREFIXES:
+        raise ValueError(
+            f"No monetary prefix defined for scaling factor {scale:.0e} "
+            f"(from '{volume_unit}' / '{price_energy}')"
+        )
+    return f"{_MONETARY_PREFIXES[scale]} {currency}"
+
+
 def get_REMIND_units(augmented_REMIND: pd.DataFrame, map_REMIND_energy_uses: pd.DataFrame) -> tuple:
     """
-    Infer volume and price units from the REMIND data by looking up
+    Infer volume, price, and value units from the REMIND data by looking up
     the Unit column for each variable listed in the mapping.
+
+    The value unit is derived as price_unit × volume_unit
+    (e.g. 'US$/GJ' × 'EJ' → 'bn US$').
 
     Raises ValueError if variables within the same type have inconsistent units.
 
     Returns
     -------
-    tuple[str, str]
-        (volume_unit, price_unit)
+    tuple[str, str, str]
+        (volume_unit, price_unit, value_unit)
     """
     var_unit = (
         augmented_REMIND[["Variable", "Unit"]]
@@ -315,8 +367,9 @@ def get_REMIND_units(augmented_REMIND: pd.DataFrame, map_REMIND_energy_uses: pd.
 
     volume_unit = collect_units(map_REMIND_energy_uses["REMIND_volume"], "REMIND_volume")
     price_unit  = collect_units(map_REMIND_energy_uses["REMIND_price"],  "REMIND_price")
+    value_unit  = _compute_value_unit(price_unit, volume_unit)
 
-    return volume_unit, price_unit
+    return volume_unit, price_unit, value_unit
 
 
 def aggregate_energy_uses(remind, mapping, value_unit, price_unit):

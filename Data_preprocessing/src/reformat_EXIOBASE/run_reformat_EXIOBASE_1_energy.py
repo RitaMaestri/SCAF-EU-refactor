@@ -25,7 +25,7 @@ shared_config = load_config(current_path)
 reformat_path = Path(shared_config["calibration_output_root"]) / "regional_IOTs"
 
 #create paths if not present
-for folder in [ output_path, download_path, aggregation_path, reformat_path]:
+for folder in [ output_path, download_path, aggregation_path, reformat_path, reformat_path / "sectors"]:
     folder.mkdir(parents=True, exist_ok=True)
 
 # mappings path
@@ -48,4 +48,4 @@ sectors_order= ["AGRICULTURE","MANUFACTURE","SERVICES","STEEL","CHEMICAL","ENERG
 
 reformat_EXIOBASE(aggregation_folder=str(aggregation_path), reformat_folder=str(reformat_path),energy_sectors=["ENERGY"],sectors_order=sectors_order, add_inventories=False)
 
-pd.DataFrame({"sector": sectors_order}).to_csv(reformat_path / "sectors.csv", index=False)
+pd.DataFrame({"sector": sectors_order}).to_csv(reformat_path / "sectors" / "sectors.csv", index=False)
