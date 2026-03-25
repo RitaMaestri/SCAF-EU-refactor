@@ -21,6 +21,26 @@ def reformat_elasticities(
     return row.rename_axis("commodity").reset_index(name="elasticity")
 
 
+def validate_template_mapping_consistency(
+    template_df: pd.DataFrame,
+    mapping_df: pd.DataFrame,
+) -> None:
+    """Raise ValueError if template and mapping reference different variable sets."""
+    template_vars = set(template_df["variable_name"].unique())
+    mapping_vars = set(mapping_df["variable_solver"].unique())
+    errors = []
+    missing_in_mapping = template_vars - mapping_vars
+    if missing_in_mapping:
+        errors.append(f"  Variables in template with no mapping: {sorted(missing_in_mapping)}")
+    missing_in_template = mapping_vars - template_vars
+    if missing_in_template:
+        errors.append(f"  Variables in mapping not present in template: {sorted(missing_in_template)}")
+    if errors:
+        raise ValueError(
+            "Inconsistencies between growth_factors_template and mapping_file:\n" + "\n".join(errors)
+        )
+
+
 def collect_year_columns(
     calibration_root: Path,
     mapping_df: pd.DataFrame,

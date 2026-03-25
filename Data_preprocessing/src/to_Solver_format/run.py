@@ -3,7 +3,7 @@ import pandas as pd
 import sys
 from pathlib import Path
 
-from lib import build_growth_factors, fill_row_with_ones, build_hybridization, reformat_elasticities
+from lib import build_growth_factors, fill_row_with_ones, build_hybridization, reformat_elasticities, validate_template_mapping_consistency
 
 SRC_ROOT = Path(__file__).resolve().parents[1]
 if str(SRC_ROOT) not in sys.path:
@@ -24,6 +24,8 @@ end_year = int(config["end_year"]) if config.get("end_year") else None
 
 template_df = pd.read_csv(template_path)
 mapping_df = pd.read_csv(mapping_path)
+
+validate_template_mapping_consistency(template_df, mapping_df)
 
 growth_factors_df = build_growth_factors(template_df, mapping_df, calibration_root, end_year)
 growth_factors_df = fill_row_with_ones(growth_factors_df, "pXj", "SERVICES", "")
