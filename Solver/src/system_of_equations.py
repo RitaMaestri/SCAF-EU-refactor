@@ -111,8 +111,10 @@ def system(var, par):
         "eqaEj":eq.eqaEj(a_Eej=d["a_Ej"], E_vol=d["E_vol"], Yj=d['Yj'], _index = non_zero_index_intermediate_E_vol),
 
         "eqPrimaryEnergyPrices":eq.eqPricePrimaryEnergy(pE=d["pE"], energy_index=E),
+        
+        "eqRhoX":eq.eqRhoTrade(rho=d["rhoX"], pE_trade=d['pXj'][E], pE=d["pE"]),
 
-
+        "eqRhoM":eq.eqRhoTrade(rho=d["rhoM"], pE_trade=d['pMj'][E], pE=d["pE"]),
 
         ### CDES
         "eqCj_CDE":eq.eqC_CDE(A_Cj=d["A_Cj_nE"],betaCj=d["betaCj_nE"],u_C=d["u_C"],gammaCj=d["gammaCj_nE"],pCj=np.delete(d["pCj"], E),Cj=np.delete(d["Cj"], E),R=d["R_nE"]),

@@ -207,6 +207,9 @@ class calibrationVariables:
         self.pXj0[E] = _trade_energy["pXj0_E"]
         self.pMj0[E] = _trade_energy["pMj0_E"]
 
+        self.rhoM =  self.pMj0[E]/self.pE[E, _col_map["PE"]]
+        self.rhoX =  self.pXj0[E]/self.pE[E, _col_map["PE"]]
+        
         #adjusting energy quantity and price
 
         self.Sj0[E]=self.E_vol.sum()

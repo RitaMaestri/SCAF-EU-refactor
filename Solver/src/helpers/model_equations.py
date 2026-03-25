@@ -707,3 +707,30 @@ def eqaEj(a_Eej, E_vol, Yj, _index=None):
         zero=zero.flatten()
     
     return zero
+
+
+def eqaEj(a_Eej, E_vol, Yj, _index=None):
+    #index must be in the form of a tuple of arrays (row indices, column indices)
+    a_wo_households = a_Eej[:-1, :]
+    E_wo_households = E_vol[:-1, :]
+
+    # moltiplica tutte le colonne per Yj (broadcast su colonne)
+    # (Yj è (N-1,), lo trasformo in (N-1, 1) per moltiplicare riga-per-riga)
+    prod = a_wo_households * Yj[:, None]
+
+    if _index is not None:
+        prod = prod[_index]
+        E_wo_households = E_wo_households[_index]
+        zero = 1 - E_wo_households / prod
+    else:
+        zero = 1 - E_wo_households / prod
+        zero=zero.flatten()
+    
+    return zero
+
+
+def eqRhoTrade(rho, pE_trade, pE):
+    computed_rho = pE_trade / pE[E, [_PE_col]]
+    zero = 1 - rho / computed_rho
+
+    return zero

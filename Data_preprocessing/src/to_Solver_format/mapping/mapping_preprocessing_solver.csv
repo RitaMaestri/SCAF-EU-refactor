@@ -6,7 +6,5 @@ wI,macro_indicators/macro_indicators.csv,Investment share,,
 bKLj,Productivities/productivities.csv,Productivity growth factors,Sector,
 E_vol,Hybridization/hybridization_df.csv,Volume,Energy consumers,Energy uses
 rhoE,Hybridization/hybridization_df.csv,Rho,Energy consumers,Energy uses
-pXj,Energy_trade/energy_trade_projection.csv,Import|Energy Price,Sector,
-pMj,Energy_trade/energy_trade_projection.csv,Import|Energy Price,Sector,
 Xj,Energy_trade/energy_trade_projection.csv,Export|Energy,Sector,
 Mj,Energy_trade/energy_trade_projection.csv,Import|Energy,Sector,
