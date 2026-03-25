@@ -108,6 +108,30 @@ def fill_technical_coefficients(
     return result
 
 
+def compute_ind_technical_coefficients(
+    ind_mapping_df: pd.DataFrame,
+    remind_df: pd.DataFrame,
+    year_cols: list,
+    region: str = "EUR",
+) -> tuple:
+    """Compute IND technical coefficients as IND_energy_consumption / IND_output.
+
+    Returns (coeff_ts, unit_str) where unit_str follows the EJ/{output_unit} convention.
+    """
+    output_var = ind_mapping_df["IND_output"].iloc[0]
+    consumption_var = ind_mapping_df["IND_energy_consumption"].iloc[0]
+
+    unit = ind_mapping_df["output_unit"].iloc[0]
+    unit_str = "" if pd.isna(unit) else str(unit).strip()
+    unit_value = f"EJ/{unit_str}" if unit_str else "EJ"
+
+    output_ts = extract_trade_volume(remind_df, region=region, variable=output_var)
+    consumption_ts = extract_trade_volume(remind_df, region=region, variable=consumption_var)
+
+    coeff_ts = (consumption_ts / output_ts).reindex(year_cols)
+    return coeff_ts, unit_value
+
+
 def compute_technical_coefficients(
     mapping_df: pd.DataFrame,
     remind_df: pd.DataFrame,

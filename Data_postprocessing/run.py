@@ -10,48 +10,8 @@ from scipy import stats
 from lib import extract_var_df, plot_varj_evol, plot_variable_1D, plot_KL_GDP_evolution
 
 
-# sectors_names_eng=[
-# "AGRICULTURE",
-# "MANUFACTURE",
-# "SERVICES",
 
-#     ]
-
-# A = sectors_names_eng.index("AGRICULTURE")
-# M = sectors_names_eng.index("MANUFACTURE")
-# SE = sectors_names_eng.index("SERVICES")
-
-
-# cmap=["#6CD900",
-# "#8C8CFF",
-# "#FF91C8"
-# ]
-
-
-
-
-sectors_names_eng=[
-"AGRICULTURE",
-"MANUFACTURE",
-"SERVICES",
-"STEEL",
-"CHEMICAL",
-"ENERGY",
-"TRANSPORTATION",
-    ]
-
-A = sectors_names_eng.index("AGRICULTURE")
-M = sectors_names_eng.index("MANUFACTURE")
-SE = sectors_names_eng.index("SERVICES")
-E = sectors_names_eng.index("ENERGY")
-ST = sectors_names_eng.index("STEEL")
-CH = sectors_names_eng.index("CHEMICAL")
-T = sectors_names_eng.index("TRANSPORTATION")
-
-
-
-
-csv_path = "Solver/results/results(24-03-2026_17:12).csv"
+csv_path = "Solver/results/results(25-03-2026_17:59).csv"
 csv_stem = os.path.splitext(os.path.basename(csv_path))[0]
 output_dir = os.path.join("Data_postprocessing", "plots", csv_stem)
 os.makedirs(output_dir, exist_ok=True)
