@@ -17,6 +17,74 @@ def convert_remind_price_to_exiobase(price_2017_usd_per_gj, mapping_path):
     return float(price_2017_usd_per_gj) * total_conversion_factor
 
 
+def compute_energy_trade_rhos(
+    import_price_ts,
+    export_price_ts,
+    remind_prices_by_energy_use_path,
+    year_cols,
+    model="REMIND-EXIOBASE",
+    scenario="SSP2-NPi2025",
+    region="EUR",
+):
+    """Compute dimensionless rho time series for energy imports and exports.
+
+    Rho is defined as the trade price divided by the primary energy (PE) price,
+    both expressed in REMIND units (US$2017/GJ), so the result is unitless.
+
+    Parameters
+    ----------
+    import_price_ts : pd.Series
+        Aggregated energy import price time series indexed by year strings
+        (US$2017/GJ).
+    export_price_ts : pd.Series
+        Aggregated energy export price time series indexed by year strings
+        (US$2017/GJ).
+    remind_prices_by_energy_use_path : path-like
+        Path to the ``remind_prices_by_energy_use.csv`` cache file produced by
+        the Hybridization module.
+    year_cols : list of str
+        Ordered list of year column labels shared with the trade price series.
+    model : str
+        Model label for the output rows.
+    scenario : str
+        Scenario label for the output rows.
+    region : str
+        REMIND region code used to look up the PE price.
+
+    Returns
+    -------
+    pd.DataFrame
+        Two-row DataFrame with IAMC-style label columns followed by the rho
+        values for each year.  Variables are ``'Rho|Import'`` and
+        ``'Rho|Export'``.  Unit is empty (dimensionless).
+    """
+    prices_df = pd.read_csv(remind_prices_by_energy_use_path)
+    pe_row = prices_df[
+        (prices_df["Region"] == region) &
+        (prices_df["energy_use"] == "PE")
+    ]
+    pe_price_ts = pe_row.iloc[0][year_cols]
+
+    rho_import_ts = import_price_ts / pe_price_ts
+    rho_export_ts = export_price_ts / pe_price_ts
+
+    labels = pd.DataFrame(
+        {
+            "Model": [model, model],
+            "Scenario": [scenario, scenario],
+            "Region": [region, region],
+            "Variable": ["Rho|Import", "Rho|Export"],
+            "Sector": ["ENERGY", "ENERGY"],
+            "Unit": ["", ""],
+        }
+    )
+    values = pd.DataFrame(
+        [rho_import_ts.to_numpy(), rho_export_ts.to_numpy()],
+        columns=year_cols,
+    )
+    return pd.concat([labels, values], axis=1)
+
+
 def vol_prices_timeseries_to_df(
     import_volume_ts,
     export_volume_ts,

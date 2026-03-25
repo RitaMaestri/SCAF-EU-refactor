@@ -8,7 +8,8 @@ from lib import (
     REMIND_time_series_extractor,
     replace_unnamed_multiindex_labels,
     convert_remind_price_to_exiobase,
-    vol_prices_timeseries_to_df
+    vol_prices_timeseries_to_df,
+    compute_energy_trade_rhos,
 )
 
 
@@ -22,6 +23,7 @@ from common.path_loader import load_config
 
 # useful paths
 module_dir = Path(__file__).resolve().parent
+repo_root = module_dir.parents[2]
 this_folder = str(module_dir)
 config = load_config(module_dir)
 
@@ -98,7 +100,14 @@ energy_aggregated_export_price_time_series = (
     aggregated_energy_export_values_time_series / aggregated_energy_export_volumes_time_series
 ).ffill()
 
-
+### RHOS ###
+remind_prices_path = repo_root / config["remind_prices_by_energy_use"]
+rho_rows = compute_energy_trade_rhos(
+    import_price_ts=energy_aggregated_import_price_time_series,
+    export_price_ts=energy_aggregated_export_price_time_series,
+    remind_prices_by_energy_use_path=remind_prices_path,
+    year_cols=year_cols,
+)
 
 
 IOT=pd.read_csv(
@@ -162,5 +171,7 @@ out_df= vol_prices_timeseries_to_df(import_volume_ts=aggregated_energy_import_vo
     price_unit="M 2020 EUR/EJ",
     import_price_conversion_factor=REMIND_to_EXIOBASE_import_price_conversion_factor,
     export_price_conversion_factor=REMIND_to_EXIOBASE_export_price_conversion_factor)
+
+out_df = pd.concat([out_df, rho_rows], ignore_index=True)
 
 out_df.to_csv(os.path.join(out_path, "energy_trade_projection.csv"), index=False)
