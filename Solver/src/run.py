@@ -1,10 +1,12 @@
 import numpy as np
 import pandas as pd
 import sys
+import os
 import random
 import math
 import copy
 import warnings
+import yaml
 warnings.filterwarnings("ignore")
 
 
@@ -24,7 +26,7 @@ from system_of_equations import system, joint_dict
 
 from run_setup import (growth_ratios_df,
                         years, 
-                        output_file_name, 
+                        run_name, 
                         energy_calibration_data, 
                         population_calibration_data, 
                         calibration_year, 
@@ -146,8 +148,40 @@ for t in range(len(years)):
 
     timeseries_df= dict_to_timeseries_df(endo_solution, timeseries_df, years[t], VARIABLES_SPECS, years) 
 
-       
-#  SAVE CSV  
-timeseries_df.to_csv(output_file_name, index=False)
+
+########################################################################
+############################  SAVE RESULTS  ############################
+########################################################################
+
+def save_results(df, run_name, base_dir="Solver/results"):
+    while True:
+        tag = input("\nDo you want to tag this run? [y/n]: ").strip().lower()
+        if tag in ("y", "n"):
+            break
+        print("Please enter 'y' or 'n'.")
+
+    if tag == "n":
+        out_dir = os.path.join(base_dir, "drafts")
+        os.makedirs(out_dir, exist_ok=True)
+        df.to_csv(os.path.join(out_dir, f"{run_name}.csv"), index=False)
+        print(f"Results saved to {out_dir}/{run_name}.csv")
+    else:
+        description = input("Enter a short description for this run: ").strip()
+        out_dir = os.path.join(base_dir, run_name)
+        os.makedirs(out_dir, exist_ok=True)
+        df.to_csv(os.path.join(out_dir, f"{run_name}.csv"), index=False)
+        metadata = {"id": run_name, "description": description}
+        with open(os.path.join(out_dir, f"{run_name}_metadata.yaml"), "w") as f:
+            yaml.dump(metadata, f, default_flow_style=False, allow_unicode=True)
+        print(f"Results saved to {out_dir}/")
+        print("\n--- Git commands (copy and run manually) ---")
+        print('git add .')
+        print(f'git commit -m "Add results for {run_name}"')
+        print(f'git tag -a "{run_name}" -m "{description}"')
+        print('git push origin "$(git branch --show-current)" --tags')
+        print("--------------------------------------------")
+
+
+save_results(timeseries_df, run_name)
 
 

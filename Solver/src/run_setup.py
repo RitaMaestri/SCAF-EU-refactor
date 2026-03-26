@@ -7,11 +7,10 @@ import pandas as pd
 #######################  SETUP  #############################
 #############################################################
 
-#outoutput file name
+#run name (used to build output paths)
 now = datetime.now()
-dt_string = now.strftime("%d-%m-%Y_%H:%M")
-add_string = "results"
-output_file_name = str().join(["Solver/results/", add_string, "(", dt_string, ")", ".csv"])
+dt_string = now.strftime("%Y-%m-%d_%H-%M")
+run_name = f"results_{dt_string}"
 
 #growth ratios df
 growth_ratios_df = pd.read_csv("Solver/preprocessed_data/growth_factors.csv")
