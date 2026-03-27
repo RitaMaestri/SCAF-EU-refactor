@@ -278,3 +278,92 @@ def plot_KL_GDP_evolution(df, year_cols, output_dir=None):
         plt.close()
     else:
         plt.show()
+
+
+def plot_VA_share_vs_log_gdp_per_capita(df, year_cols, output_dir=None):
+    pKLj_rows = df.loc[df['variable_name'] == "pKLj"].reset_index(drop=True)
+    KLj_rows  = df.loc[df['variable_name'] == "KLj"].reset_index(drop=True)
+
+    pKLj = pKLj_rows[year_cols].values.astype("float")   # (n_sectors, n_years)
+    KLj  = KLj_rows[year_cols].values.astype("float")
+    sector_names = pKLj_rows['row_label'].values
+
+    nominal_VA = pKLj * KLj                              # (n_sectors, n_years)
+    shares = nominal_VA / nominal_VA.sum(axis=0)         # (n_sectors, n_years)
+
+    GDPreal = df.loc[df['variable_name'] == "GDPreal", year_cols].values[0].astype("float")
+    L       = df.loc[df['variable_name'] == "L",       year_cols].values[0].astype("float")
+    log_gdp_pc = np.log(GDPreal / L)
+
+    for j, sector in enumerate(sector_names):
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.plot(log_gdp_pc, shares[j], marker='o', markersize=4, linewidth=1.5)
+        ax.set_title(sector, fontsize=17)
+        ax.set_xlabel("log(GDP per capita)", fontsize=14)
+        ax.set_ylabel("Share of value added", fontsize=14)
+        ax.set_ylim(0, 1)
+
+        if output_dir is not None:
+            fname = f"VA_share_{sector.replace(' ', '_')}.png"
+            plt.savefig(os.path.join(output_dir, fname), bbox_inches='tight')
+            plt.close()
+        else:
+            plt.show()
+
+
+def plot_energy_volumes_comparison(df, REMIND_E_volumes, year_cols, output_dir=None):
+    # Filter SCAF results to E_vol rows
+    evol_rows = df.loc[df['variable_name'] == "E_vol"].reset_index(drop=True)
+
+    # Common year columns present in both datasets
+    remind_year_cols = [c for c in year_cols if c in REMIND_E_volumes.columns]
+
+    # Group SCAF by energy use (col_label), summing over energy consumers (row_label)
+    scaf_by_use = (
+        evol_rows.groupby('col_label')[year_cols]
+        .sum()
+        .astype("float")
+    )
+
+    # Group REMIND by energy use, summing over energy consumers
+    remind_by_use = (
+        REMIND_E_volumes.groupby('Energy uses')[remind_year_cols]
+        .sum()
+        .astype("float")
+    )
+
+    x = np.array(remind_year_cols).astype('int')
+
+    def _save_or_show(fig, fname):
+        if output_dir is not None:
+            plt.savefig(os.path.join(output_dir, fname), bbox_inches='tight')
+            plt.close(fig)
+        else:
+            plt.show()
+
+    # One plot per energy use type
+    for use in scaf_by_use.index:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.plot(x, scaf_by_use.loc[use, remind_year_cols].values,
+                color='red',  linewidth=2, label='SCAF')
+        ax.plot(x, remind_by_use.loc[use].values,
+                color='blue', linewidth=2, label='REMIND')
+        ax.set_title(f"Energy volume: {use}", fontsize=17)
+        ax.set_xlabel("Year", fontsize=14)
+        ax.set_ylabel("Energy volume (EJ)", fontsize=14)
+        ax.legend(loc='upper right', fontsize=13)
+        safe_use = use.replace('&', 'and').replace(' ', '_')
+        _save_or_show(fig, f"E_vol_{safe_use}.png")
+
+    # Aggregate: total energy summed over all uses and consumers
+    scaf_total   = scaf_by_use[remind_year_cols].sum(axis=0).values
+    remind_total = remind_by_use[remind_year_cols].sum(axis=0).values
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(x, scaf_total,   color='red',  linewidth=2, label='SCAF')
+    ax.plot(x, remind_total, color='blue', linewidth=2, label='REMIND')
+    ax.set_title("Total energy volume", fontsize=17)
+    ax.set_xlabel("Year", fontsize=14)
+    ax.set_ylabel("Energy volume (EJ)", fontsize=14)
+    ax.legend(loc='upper right', fontsize=13)
+    _save_or_show(fig, "E_vol_total.png")

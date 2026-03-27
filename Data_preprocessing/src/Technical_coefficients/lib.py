@@ -132,6 +132,73 @@ def compute_ind_technical_coefficients(
     return coeff_ts, unit_value
 
 
+def build_remind_activity_outputs(
+    mapping_df: pd.DataFrame,
+    ind_mapping_df: pd.DataFrame,
+    remind_df: pd.DataFrame,
+    year_cols: list,
+    energy_domestic_output: pd.Series,
+    region: str = "EUR",
+) -> pd.DataFrame:
+    """Build one row per energy_use with the corresponding REMIND output variable
+    time series (denominator of technical coefficients) in REMIND-like format.
+
+    Columns: Model, Scenario, Region, Variable, energy_use, Unit, [year_cols]
+    """
+    eur_remind = remind_df[remind_df["Region"] == region]
+    reference_row = eur_remind.iloc[0]
+
+    ind_output_var = ind_mapping_df["IND_output"].iloc[0].strip()
+
+    rows = []
+    for _, map_row in mapping_df.iterrows():
+        energy_use = map_row["energy_use"]
+        out_var = map_row["output_volume_REMIND"]
+
+        if energy_use == "PE":
+            row = {
+                "Model": reference_row["Model"],
+                "Scenario": reference_row["Scenario"],
+                "Region": region,
+                "Variable": "Final Energy|Output",
+                "energy_use": energy_use,
+                "Unit": "EJ",
+            }
+            for y in year_cols:
+                row[y] = energy_domestic_output[y] if y in energy_domestic_output.index else float("nan")
+            rows.append(row)
+            continue
+
+        if energy_use == "IND":
+            variable = ind_output_var
+        elif pd.isna(out_var) or str(out_var).strip() == "":
+            continue
+        else:
+            variable = str(out_var).strip()
+
+        remind_mask = (eur_remind["Variable"] == variable)
+        remind_rows = eur_remind.loc[remind_mask]
+        if remind_rows.empty:
+            raise ValueError(
+                f"No REMIND row for Region={region!r}, Variable={variable!r}"
+            )
+        remind_row = remind_rows.iloc[0]
+
+        row = {
+            "Model": remind_row["Model"],
+            "Scenario": remind_row["Scenario"],
+            "Region": remind_row["Region"],
+            "Variable": variable,
+            "energy_use": energy_use,
+            "Unit": remind_row["Unit"],
+        }
+        for y in year_cols:
+            row[y] = remind_row[y] if y in remind_row.index else float("nan")
+        rows.append(row)
+
+    return pd.DataFrame(rows, columns=["Model", "Scenario", "Region", "Variable", "energy_use", "Unit"] + year_cols)
+
+
 def compute_technical_coefficients(
     mapping_df: pd.DataFrame,
     remind_df: pd.DataFrame,

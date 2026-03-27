@@ -176,7 +176,7 @@ def save_results(df, run_name, base_dir="Solver/results"):
         print(f"Results saved to {out_dir}/")
         print("\n--- Git commands (copy and run manually) ---")
         print('git add .')
-        print(f'git commit -m "Add results for {run_name}"')
+        print(f'git commit -m "{run_name}"')
         print(f'git tag -a "{run_name}" -m "{description}"')
         print('git push origin "$(git branch --show-current)" --tags')
         print("--------------------------------------------")

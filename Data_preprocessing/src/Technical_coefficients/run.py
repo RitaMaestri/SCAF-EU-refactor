@@ -8,6 +8,7 @@ if str(SRC_ROOT) not in sys.path:
 
 from common.path_loader import load_config
 from lib import (
+    build_remind_activity_outputs,
     compute_total_energy_supply,
     extract_trade_volume,
     load_remind,
@@ -26,6 +27,7 @@ mapping_path                 = repo_root / config["mapping"]
 ind_mapping_path             = this_folder / "mappings" / "technical_coefficients_IND.csv"
 sectors_mapping_path         = repo_root / config["map_sectors"]
 out_path                     = repo_root / config["calibration_output_root"] / config["out_path"]
+remind_out_path              = repo_root / config["calibration_output_root"] / config["out_path_remind_outputs"]
 
 # --- Load data ---
 energy_domestic_df = pd.read_csv(energy_domestic_volumes_path)
@@ -65,6 +67,15 @@ energy_exports_ts = extract_trade_volume(energy_trade_df, region="EUR", variable
 # --- Domestic output: produced energy = supply - imports + exports ---
 energy_domestic_output = total_energy_supply_ts - energy_imports_ts + energy_exports_ts
 
+# --- Build REMIND activity outputs (denominators) ---
+remind_activities_df = build_remind_activity_outputs(
+    mapping_df=mapping_df,
+    ind_mapping_df=ind_mapping_df,
+    remind_df=remind_df,
+    year_cols=year_cols,
+    energy_domestic_output=energy_domestic_output,
+)
+
 # --- Fill PE row: PE volumes (EUR) / energy_domestic_output ---
 pe_volumes_ts = energy_domestic_df.loc[
     (energy_domestic_df["Region"] == "EUR") &
@@ -97,3 +108,4 @@ technical_coefficients_df.loc[ind_mask, "Unit"] = ind_unit
 out_path.parent.mkdir(parents=True, exist_ok=True)
 
 technical_coefficients_df.to_csv(str(out_path), index=False)
+remind_activities_df.to_csv(str(remind_out_path), index=False)

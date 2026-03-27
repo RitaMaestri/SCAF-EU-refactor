@@ -2,5 +2,6 @@
   "REMIND":"Data_preprocessing/raw_data/REMIND/REMIND_generic_SSP2-NPi2025.mif",
   "mapping": "Data_preprocessing/src/Technical_coefficients/mappings/technical_coefficients_output.csv",
   "map_sectors": "Data_preprocessing/src/reformat_EXIOBASE/mappings/map_sectors.csv",
-  "out_path": "Technical_coefficients/technical_coefficients.csv"
+  "out_path": "Technical_coefficients/technical_coefficients.csv",
+  "out_path_remind_outputs": "Technical_coefficients/REMIND_activities_outputs.csv"
 }
