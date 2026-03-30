@@ -7,29 +7,22 @@ from functools import partial
 import os
 import json
 
-# Cache directory for CDES calibration parameters
-CACHE_DIR = "Solver/preprocessed_data/calibration/calibration_cache"
-if not os.path.exists(CACHE_DIR):
-    os.makedirs(CACHE_DIR)
+def get_cache_filepath(cache_dir, db_name):
+    """Return the path to the single JSON cache file for a given database."""
+    return os.path.join(cache_dir, f"{db_name}_cache.json")
 
-def get_cache_filename(db_name, param_name):
-    """Generate cache filename based on database and parameter name."""
-    return os.path.join(CACHE_DIR, f"{db_name}_{param_name}.npy")
-
-def get_cache_metadata_filename(db_name):
-    """Generate cache metadata filename to track source database."""
-    return os.path.join(CACHE_DIR, f"{db_name}_metadata.json")
-
-def save_expensive_params(db_name, params_dict, N, mask_sig=None):
+def save_expensive_params(cache_dir, db_name, params_dict, N, mask_sig=None):
     """
-    Save expensive calibration parameters to files.
+    Save expensive calibration parameters to a human-readable JSON file.
 
     Parameters
     ----------
+    cache_dir : str
+        Directory in which the cache file is stored.
     db_name : str
-        Database name (e.g., 'GTAP') to include in filename
+        Database name (e.g., 'GTAP') used to name the cache file.
     params_dict : dict
-        Dictionary of parameter_name: parameter_value pairs
+        Dictionary of parameter_name: parameter_value pairs.
     N : int
         Number of sectors, stored in cache metadata for invalidation.
     mask_sig : array-like of bool, optional
@@ -38,40 +31,35 @@ def save_expensive_params(db_name, params_dict, N, mask_sig=None):
         provided on load, the stored signature is validated against the
         current mask before accepting cached values.
     """
-    # Save each parameter
+    os.makedirs(cache_dir, exist_ok=True)
+    filepath = get_cache_filepath(cache_dir, db_name)
+
+    # Load existing file to merge (so multiple save calls don't wipe each other)
+    if os.path.exists(filepath):
+        with open(filepath, 'r') as f:
+            cache = json.load(f)
+    else:
+        cache = {'database': db_name, 'parameters': {}}
+
+    # Serialize parameters — arrays become lists, scalars stay as numbers
     for param_name, param_value in params_dict.items():
-        filepath = get_cache_filename(db_name, param_name)
-        if isinstance(param_value, (np.ndarray, list)):
-            np.save(filepath, param_value)
-        elif isinstance(param_value, (int, float)):
-            # Save scalar as single-element array for consistency
-            np.save(filepath, np.array([param_value]))
+        if isinstance(param_value, np.ndarray):
+            cache['parameters'][param_name] = param_value.tolist()
+        elif isinstance(param_value, list):
+            cache['parameters'][param_name] = param_value
+        elif isinstance(param_value, (int, float, np.integer, np.floating)):
+            cache['parameters'][param_name] = float(param_value)
         else:
             print(f"Warning: Cannot cache parameter {param_name} of type {type(param_value)}")
 
-    # Merge with existing metadata so multiple save calls do not wipe each
-    # other's parameter lists or validation fields.
-    metadata_file = get_cache_metadata_filename(db_name)
-    if os.path.exists(metadata_file):
-        with open(metadata_file, 'r') as f:
-            metadata = json.load(f)
-        existing_params = set(metadata.get('parameters', []))
-        existing_params.update(params_dict.keys())
-        metadata['parameters'] = sorted(existing_params)
-    else:
-        metadata = {
-            'database': db_name,
-            'parameters': sorted(params_dict.keys()),
-        }
-
-    metadata['N'] = N
+    cache['N'] = N
     if mask_sig is not None:
-        metadata['pCjIj_nonzero_indices'] = sorted(
+        cache['pCjIj_nonzero_indices'] = sorted(
             int(i) for i in np.where(np.asarray(mask_sig))[0]
         )
 
-    with open(metadata_file, 'w') as f:
-        json.dump(metadata, f, indent=2)
+    with open(filepath, 'w') as f:
+        json.dump(cache, f, indent=2)
 
     print(f"Cached {len(params_dict)} parameters from {db_name}")
 
@@ -79,12 +67,14 @@ def save_expensive_params(db_name, params_dict, N, mask_sig=None):
 
 
 
-def load_expensive_params(db_name, param_names, N, mask_sig=None):
+def load_expensive_params(cache_dir, db_name, param_names, N, mask_sig=None):
     """
-    Load expensive calibration parameters from cache files.
+    Load expensive calibration parameters from a JSON cache file.
 
     Parameters
     ----------
+    cache_dir : str
+        Directory in which the cache file is stored.
     db_name : str
         Database name (e.g., 'GTAP')
     param_names : list
@@ -102,24 +92,21 @@ def load_expensive_params(db_name, param_names, N, mask_sig=None):
         Dictionary of loaded parameters, or None if cache doesn't exist or
         is stale.
     """
-    params = {}
-    metadata_file = get_cache_metadata_filename(db_name)
+    filepath = get_cache_filepath(cache_dir, db_name)
 
-    # Check if metadata exists
-    if not os.path.exists(metadata_file):
+    if not os.path.exists(filepath):
         return None
 
-    # Load and verify metadata
-    with open(metadata_file, 'r') as f:
-        metadata = json.load(f)
+    with open(filepath, 'r') as f:
+        cache = json.load(f)
 
-    if metadata.get('N') != N:
-        print(f"Cache N={metadata.get('N')} != current N={N}. Recalculating...")
+    if cache.get('N') != N:
+        print(f"Cache N={cache.get('N')} != current N={N}. Recalculating...")
         return None
 
     # Validate mask signature when the caller supplies one
     if mask_sig is not None:
-        stored_indices = metadata.get('pCjIj_nonzero_indices')
+        stored_indices = cache.get('pCjIj_nonzero_indices')
         if stored_indices is None:
             print(f"Cache has no mask signature for {db_name}. Recalculating...")
             return None
@@ -128,19 +115,17 @@ def load_expensive_params(db_name, param_names, N, mask_sig=None):
             print(f"Cache mask signature mismatch for {db_name}. Recalculating...")
             return None
 
-    # Try to load each parameter
+    stored_params = cache.get('parameters', {})
+    params = {}
     for param_name in param_names:
-        filepath = get_cache_filename(db_name, param_name)
-        if not os.path.exists(filepath):
-            print(f"Cache file missing for '{param_name}'. Recalculating all parameters...")
+        if param_name not in stored_params:
+            print(f"Cache entry missing for '{param_name}'. Recalculating all parameters...")
             return None
-
-        data = np.load(filepath)
-        # Convert single-element array back to scalar if needed
-        if isinstance(data, np.ndarray) and data.shape == (1,):
-            params[param_name] = float(data.flat[0])
+        value = stored_params[param_name]
+        if isinstance(value, list):
+            params[param_name] = np.array(value)
         else:
-            params[param_name] = data
+            params[param_name] = float(value)
 
     print(f"Loaded {len(params)} parameters from cache ({db_name})")
     return params

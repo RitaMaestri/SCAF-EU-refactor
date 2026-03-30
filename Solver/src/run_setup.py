@@ -33,3 +33,6 @@ compensated_price_elasticities_df = pd.read_csv("Solver/preprocessed_data/elasti
 years_int = np.array([eval(i) for i in growth_ratios_df.columns[3:]])
 years = [str(y) for y in years_int]
 calibration_year = years[0]
+
+# Cache directory for calibration parameters
+CACHE_DIR = "Solver/preprocessed_data/calibration/calibration_cache"

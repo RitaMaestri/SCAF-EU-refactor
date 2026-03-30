@@ -35,11 +35,12 @@ from run_setup import (growth_ratios_df,
                         kl_elasticities_df, 
                         income_elasticities_df, 
                         compensated_price_elasticities_df,
-                        assumed_variables_df)
+                        assumed_variables_df,
+                        CACHE_DIR)
 
 from Variables_specs import VARIABLES_SPECS, CALIBRATION_MAPPING
 
-cal = calibrationVariables(calibration_year, energy_calibration_data, population_calibration_data, armington_elasticities_df, export_elasticities_df, kl_elasticities_df, income_elasticities_df, compensated_price_elasticities_df, assumed_variables_df)
+cal = calibrationVariables(calibration_year, energy_calibration_data, population_calibration_data, armington_elasticities_df, export_elasticities_df, kl_elasticities_df, income_elasticities_df, compensated_price_elasticities_df, assumed_variables_df, cache_dir=CACHE_DIR)
 for var in VARIABLES_SPECS.values():
     var.initialize_calibration_value(cal, CALIBRATION_MAPPING)
 

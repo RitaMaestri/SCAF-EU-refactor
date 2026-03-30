@@ -118,7 +118,8 @@ class calibrationVariables:
                  kl_elasticities_df, 
                  income_elasticities_df, 
                  compensated_price_elasticities_df, 
-                 assumed_variables_df):
+                 assumed_variables_df,
+                 cache_dir="Solver/preprocessed_data/calibration/calibration_cache"):
         
         _av = assumed_variables_df["value"]
 
@@ -302,7 +303,7 @@ class calibrationVariables:
         solI_param_names = ['I0', 'pI0', 'alphaIj']
         _pCjIj_mask = imp.pCjIj != 0
 
-        cached_solI = load_expensive_params(db_name, solI_param_names, N,
+        cached_solI = load_expensive_params(cache_dir, db_name, solI_param_names, N,
                                             mask_sig=_pCjIj_mask)
         if cached_solI is not None:
             self.I0      = cached_solI['I0']
@@ -315,7 +316,7 @@ class calibrationVariables:
             self.I0      = computed_solI['I0']
             self.pI0     = computed_solI['pI0']
             self.alphaIj = computed_solI['alphaIj']
-            save_expensive_params(db_name, computed_solI, N, mask_sig=_pCjIj_mask)
+            save_expensive_params(cache_dir, db_name, computed_solI, N, mask_sig=_pCjIj_mask)
 
 
 
@@ -362,7 +363,7 @@ class calibrationVariables:
         CDES_params_names = ['betaCj_nE', 'computed_ni_j_nE', 'computed_etaCj_nE', 
                                    'gammaCj_nE', 'u_C', 'A_Cj_nE', 'normalisation_factor']
         
-        cached_params = load_expensive_params(db_name, CDES_params_names, N)
+        cached_params = load_expensive_params(cache_dir, db_name, CDES_params_names, N)
         
         if cached_params is not None:
             # Load from cache
@@ -388,7 +389,7 @@ class calibrationVariables:
             self.normalisation_factor = computed_params['normalisation_factor']
             
             # Save to cache
-            save_expensive_params(db_name, computed_params, N)
+            save_expensive_params(cache_dir, db_name, computed_params, N)
         
 
 
