@@ -3,7 +3,6 @@ K,macro_indicators/macro_indicators.csv,Capital Stock|Non-ESM,,
 L,SSP2/population.csv,Population,,
 GDPreal,macro_indicators/macro_indicators.csv,GDP|PPP,,
 wI,macro_indicators/macro_indicators.csv,Investment share,,
-bKLj,Productivities/productivities.csv,Productivity growth factors,Sector,
 E_vol,Hybridization/hybridization_df.csv,Volume,Energy consumers,Energy uses
 rhoE,Hybridization/hybridization_df.csv,Rho,Energy consumers,Energy uses
 rhoX,Energy_trade/energy_trade_projection.csv,Rho|Export,Sector,

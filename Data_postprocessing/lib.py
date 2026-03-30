@@ -280,16 +280,24 @@ def plot_KL_GDP_evolution(df, year_cols, output_dir=None):
         plt.show()
 
 
-def plot_VA_share_vs_log_gdp_per_capita(df, year_cols, output_dir=None):
-    pKLj_rows = df.loc[df['variable_name'] == "pKLj"].reset_index(drop=True)
-    KLj_rows  = df.loc[df['variable_name'] == "KLj"].reset_index(drop=True)
+def plot_VA_share_vs_log_gdp_per_capita(df, year_cols, use_consumption=False, output_dir=None):
+    if use_consumption:
+        p_rows = df.loc[df['variable_name'] == "pCj"].reset_index(drop=True)
+        q_rows = df.loc[df['variable_name'] == "Cj"].reset_index(drop=True)
+        ylabel = "Share of nominal household consumption"
+        fname_prefix = "Cj_share"
+    else:
+        p_rows = df.loc[df['variable_name'] == "pKLj"].reset_index(drop=True)
+        q_rows = df.loc[df['variable_name'] == "KLj"].reset_index(drop=True)
+        ylabel = "Share of value added"
+        fname_prefix = "VA_share"
 
-    pKLj = pKLj_rows[year_cols].values.astype("float")   # (n_sectors, n_years)
-    KLj  = KLj_rows[year_cols].values.astype("float")
-    sector_names = pKLj_rows['row_label'].values
+    p_vals = p_rows[year_cols].values.astype("float")   # (n_sectors, n_years)
+    q_vals = q_rows[year_cols].values.astype("float")
+    sector_names = p_rows['row_label'].values
 
-    nominal_VA = pKLj * KLj                              # (n_sectors, n_years)
-    shares = nominal_VA / nominal_VA.sum(axis=0)         # (n_sectors, n_years)
+    nominal = p_vals * q_vals                            # (n_sectors, n_years)
+    shares = nominal / nominal.sum(axis=0)               # (n_sectors, n_years)
 
     GDPreal = df.loc[df['variable_name'] == "GDPreal", year_cols].values[0].astype("float")
     L       = df.loc[df['variable_name'] == "L",       year_cols].values[0].astype("float")
@@ -300,11 +308,11 @@ def plot_VA_share_vs_log_gdp_per_capita(df, year_cols, output_dir=None):
         ax.plot(log_gdp_pc, shares[j], marker='o', markersize=4, linewidth=1.5)
         ax.set_title(sector, fontsize=17)
         ax.set_xlabel("log(GDP per capita)", fontsize=14)
-        ax.set_ylabel("Share of value added", fontsize=14)
+        ax.set_ylabel(ylabel, fontsize=14)
         ax.set_ylim(0, 1)
 
         if output_dir is not None:
-            fname = f"VA_share_{sector.replace(' ', '_')}.png"
+            fname = f"{fname_prefix}_{sector.replace(' ', '_')}.png"
             plt.savefig(os.path.join(output_dir, fname), bbox_inches='tight')
             plt.close()
         else:
