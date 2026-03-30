@@ -4,6 +4,7 @@ L,SSP2/population.csv,Population,,
 GDPreal,macro_indicators/macro_indicators.csv,GDP|PPP,,
 wI,macro_indicators/macro_indicators.csv,Investment share,,
 E_vol,Hybridization/hybridization_df.csv,Volume,Energy consumers,Energy uses
+bKLj,Productivities/productivities.csv,Productivity growth factors,Sector,
 rhoE,Hybridization/hybridization_df.csv,Rho,Energy consumers,Energy uses
 rhoX,Energy_trade/energy_trade_projection.csv,Rho|Export,Sector,
 rhoM,Energy_trade/energy_trade_projection.csv,Rho|Import,Sector,
