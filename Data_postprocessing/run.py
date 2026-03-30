@@ -11,7 +11,7 @@ from lib import extract_var_df, plot_varj_evol, plot_variable_1D, plot_KL_GDP_ev
 
 
 
-results_path = "Solver/results/drafts/results_2026-03-30_12-40.csv"
+results_path = "Solver/results/results_2026-03-30_12-07/results_2026-03-30_12-07.csv"
 
 REMIND_E_volumes_path = "Solver/preprocessed_data/calibration/hybridization_df.csv"
 REMIND_E_volumes = pd.read_csv(REMIND_E_volumes_path)
@@ -55,6 +55,8 @@ plot_KL_GDP_evolution(SCAF_results, year_cols, output_dir=output_dir)
 ################# plot sectoral VA share vs log GDP per capita #################
 plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, use_consumption=False, output_dir=output_dir)
 plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, use_consumption=True,  output_dir=output_dir)
+plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, use_consumption=True, fix_ylim=False, output_dir=output_dir)
+
 ###############################################################################
 
 ################# compare SCAF vs REMIND energy volumes #######################
@@ -64,10 +66,5 @@ plot_energy_volumes_comparison(SCAF_results, REMIND_E_volumes, year_cols, output
 ################# compare Yj growth vs REMIND output by sector ################
 plot_Yj_vs_REMIND_output(SCAF_results, REMIND_output, year_cols, output_dir=output_dir)
 ###############################################################################
-
-
-
-
-
 
 

@@ -280,7 +280,7 @@ def plot_KL_GDP_evolution(df, year_cols, output_dir=None):
         plt.show()
 
 
-def plot_VA_share_vs_log_gdp_per_capita(df, year_cols, use_consumption=False, output_dir=None):
+def plot_VA_share_vs_log_gdp_per_capita(df, year_cols, use_consumption=False, fix_ylim=True, output_dir=None):
     if use_consumption:
         p_rows = df.loc[df['variable_name'] == "pCj"].reset_index(drop=True)
         q_rows = df.loc[df['variable_name'] == "Cj"].reset_index(drop=True)
@@ -309,7 +309,9 @@ def plot_VA_share_vs_log_gdp_per_capita(df, year_cols, use_consumption=False, ou
         ax.set_title(sector, fontsize=17)
         ax.set_xlabel("log(GDP per capita)", fontsize=14)
         ax.set_ylabel(ylabel, fontsize=14)
-        ax.set_ylim(0, 1)
+        if fix_ylim:
+            ax.set_ylim(0, 1)
+            fname_prefix = "Cj_share_not_normalised"
 
         if output_dir is not None:
             fname = f"{fname_prefix}_{sector.replace(' ', '_')}.png"
