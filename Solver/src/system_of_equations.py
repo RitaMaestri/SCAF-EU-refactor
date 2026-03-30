@@ -1,6 +1,6 @@
 import numpy as np
 import helpers.model_equations as eq
-from import_EXIOBASE import non_zero_index_G, non_zero_index_I, non_zero_index_X, non_zero_index_M, non_zero_index_Yij
+from import_EXIOBASE import non_zero_index_G, non_zero_index_I, non_zero_index_X, non_zero_index_M, non_zero_index_Yij, non_zero_index_C
 from calibration import SE, E, N
 
 def fill_nans(par_value, var_value, key):
@@ -29,6 +29,16 @@ def joint_dict(par, var):
             d[key] = fill_nans(par[key], var[key],key)
     return d
 
+def find_keys_with_large_elements(dictionary, threshold=10e-5):
+    keys_with_large_elements = []
+
+    for key, value in dictionary.items():
+        # Check if at least one element in the array is greater than one
+        if isinstance(value, (list, np.ndarray)):
+            if np.any(abs(np.array(value)) > threshold):
+                keys_with_large_elements.append(key)
+
+    return keys_with_large_elements
 
 def system(var, par):
 
@@ -39,8 +49,8 @@ def system(var, par):
     non_zero_index_intermediate_E_vol = np.where(d["E_vol"][:-1, :] != 0) #where the energy volumes are not zero in the matrix w/o households
     index_wo_E=np.delete(np.array(range(N)), E)
     index_E=np.array([E])
+    non_zero_index_C_wo_E=np.intersect1d(index_wo_E, non_zero_index_C)
     index_wo_E_SE=np.delete(index_wo_E, SE)
-    
     global equations
     # ADD NON ZERO INDEXES FOR ENERGY MATRICES
     equations= {
@@ -115,22 +125,30 @@ def system(var, par):
         "eqRhoX":eq.eqRhoTrade(rho=d["rhoX"], pE_trade=d['pXj'][E], pE=d["pE"]),
 
         "eqRhoM":eq.eqRhoTrade(rho=d["rhoM"], pE_trade=d['pMj'][E], pE=d["pE"]),
+        ### Cobb Douglas
+        "eqCobbDouglasjC":eq.eqCobbDouglasj(Qj=d['Cj'][non_zero_index_C_wo_E],alphaQj=d['alphaCj_nE'],pCj=d['pCj'][non_zero_index_C_wo_E],Q=d['R_nE']),
 
         ### CDES
-        "eqCj_CDE":eq.eqC_CDE(A_Cj=d["A_Cj_nE"],betaCj=d["betaCj_nE"],u_C=d["u_C"],gammaCj=d["gammaCj_nE"],pCj=np.delete(d["pCj"], E),Cj=np.delete(d["Cj"], E),R=d["R_nE"]),
+        #"eqCj_CDE":eq.eqC_CDE(A_Cj=d["A_Cj_nE"],betaCj=d["betaCj_nE"],u_C=d["u_C"],gammaCj=d["gammaCj_nE"],pCj=np.delete(d["pCj"], E),Cj=np.delete(d["Cj"], E),R=d["R_nE"]),
         ###
-        "eq_u_CDE":eq.eq_u_CDE(norm_factor=d["normalisation_factor"], A_Cj=d["A_Cj_nE"],betaCj=d["betaCj_nE"],u_C=d["u_C"],gammaCj=d["gammaCj_nE"],pCj=np.delete(d["pCj"], E),Cj=np.delete(d["Cj"], E),R=d["R_nE"]),
+        #"eq_u_CDE":eq.eq_u_CDE(norm_factor=d["normalisation_factor"], A_Cj=d["A_Cj_nE"],betaCj=d["betaCj_nE"],u_C=d["u_C"],gammaCj=d["gammaCj_nE"],pCj=np.delete(d["pCj"], E),Cj=np.delete(d["Cj"], E),R=d["R_nE"]),
+        #households energy budget
         ###
-        "eq_R_E":eq.eq_R_E(R_E=d["R_E"], pC_E=d["pCj"][E], C_E=d["Cj"][E]),
+       ###
+        #"eq_u_CDE":eq.eq_u_CDE(norm_factor=d["normalisation_factor"], A_Cj=d["A_Cj_nE"],betaCj=d["betaCj_nE"],u_C=d["u_C"],gammaCj=d["gammaCj_nE"],pCj=np.delete(d["pCj"], E),Cj=np.delete(d["Cj"], E),R=d["R_nE"]),      "eq_R_E":eq.eq_R_E(R_E=d["R_E"], pC_E=d["pCj"][E], C_E=d["Cj"][E]),
         ###
         "eq_RH_nE":eq.eq_RH_nE(R=d["R"], R_E=d["R_E"], R_nE=d["R_nE"]),
         ###
         "eqpCE":eq.eqsum_pESE(p_SE=d['pSj'][E], tauSE=d['tauSj'][E], S_E=d['Sj'][E], Y_Ej=d['Yij'][E,:], C_E=d['Cj'][E], pY_Ej=d['pY_Ej'], p_CE=d['pCj'][E]),#
+        #lambdaKLM
+
+
         ###
         "eqaKLj0":eq.eqaKLj0(aKLj0=d['aKLj0'], aKLj=d['aKLj'], lambda_KLM=d['lambda_KLM']),
         ###
         'eqaYij0':eq.eqaYij0(aYij0=d['aYij0'], aYij=d['aYij'], lambda_KLM=d['lambda_KLM']),#
         ###
+
         "eqWorldPrices": eq.eqSameRatio(numerator1=d['pXj'][index_wo_E_SE],numerator2=d['pYj'][index_wo_E_SE],denominator1=d['pXj'][SE],denominator2=d['pYj'][SE]),
         ###
         "eqMultwI":eq.eqMultiplication(result=d['Ri'],mult1=d['wI'],mult2=d['GDP']),
@@ -182,5 +200,6 @@ def system(var, par):
     
     solution = np.hstack(list(equations.values()))
         
-        
+    non_zero_equations=find_keys_with_large_elements(equations)
+
     return solution
