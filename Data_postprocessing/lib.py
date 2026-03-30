@@ -355,15 +355,57 @@ def plot_energy_volumes_comparison(df, REMIND_E_volumes, year_cols, output_dir=N
         safe_use = use.replace('&', 'and').replace(' ', '_')
         _save_or_show(fig, f"E_vol_{safe_use}.png")
 
-    # Aggregate: total energy summed over all uses and consumers
-    scaf_total   = scaf_by_use[remind_year_cols].sum(axis=0).values
-    remind_total = remind_by_use[remind_year_cols].sum(axis=0).values
+    # Aggregate: total energy summed over all uses and consumers (excluding primary energy PE)
+    scaf_total   = scaf_by_use.drop(index="PE", errors="ignore")[remind_year_cols].sum(axis=0).values
+    remind_total = remind_by_use.drop(index="PE", errors="ignore")[remind_year_cols].sum(axis=0).values
 
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.plot(x, scaf_total,   color='red',  linewidth=2, label='SCAF')
     ax.plot(x, remind_total, color='blue', linewidth=2, label='REMIND')
-    ax.set_title("Total energy volume", fontsize=17)
+    ax.set_title("Total final energy volume", fontsize=17)
     ax.set_xlabel("Year", fontsize=14)
     ax.set_ylabel("Energy volume (EJ)", fontsize=14)
     ax.legend(loc='upper right', fontsize=13)
     _save_or_show(fig, "E_vol_total.png")
+
+
+def plot_Yj_vs_REMIND_output(df, REMIND_output, year_cols, output_dir=None):
+    # Mapping: SCAF sector row_label -> REMIND Variable string
+    sector_remind_map = {
+        "STEEL":       "Production|Industry|Steel",
+        "CHEMICAL":    "Value Added|Industry|Chemicals",
+        "MANUFACTURE": "Value Added|Industry|Other Industry",
+    }
+
+    yj_rows = df.loc[df['variable_name'] == "Yj"].reset_index(drop=True)
+
+    # Restrict to years present in both datasets
+    common_years = [c for c in year_cols if c in REMIND_output.columns]
+    x = np.array(common_years).astype('int')
+
+    for sector, remind_var in sector_remind_map.items():
+        scaf_row = yj_rows.loc[yj_rows['row_label'] == sector, common_years]
+        if scaf_row.empty:
+            continue
+        scaf_vals = scaf_row.values[0].astype("float")
+        scaf_vals = scaf_vals / scaf_vals[0]
+
+        remind_row = REMIND_output.loc[REMIND_output['Variable'] == remind_var, common_years]
+        if remind_row.empty:
+            continue
+        remind_vals = remind_row.values[0].astype("float")
+        remind_vals = remind_vals / remind_vals[0]
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.plot(x, scaf_vals,   color='red',  linewidth=2, label='SCAF')
+        ax.plot(x, remind_vals, color='blue', linewidth=2, label='REMIND')
+        ax.set_title(f"Output growth: {sector}", fontsize=17)
+        ax.set_xlabel("Year", fontsize=14)
+        ax.set_ylabel("Normalised output (2020 = 1)", fontsize=14)
+        ax.legend(loc='upper right', fontsize=13)
+
+        if output_dir is not None:
+            plt.savefig(os.path.join(output_dir, f"Yj_vs_REMIND_{sector}.png"), bbox_inches='tight')
+            plt.close(fig)
+        else:
+            plt.show()

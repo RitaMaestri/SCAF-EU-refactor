@@ -9,5 +9,4 @@ rhoE,Hybridization/hybridization_df.csv,Rho,Energy consumers,Energy uses
 rhoX,Energy_trade/energy_trade_projection.csv,Rho|Export,Sector,
 rhoM,Energy_trade/energy_trade_projection.csv,Rho|Import,Sector,
 Xj,Energy_trade/energy_trade_projection.csv,Export|Energy,Sector,
-Mj,Energy_trade/energy_trade_projection.csv,Import|Energy,Sector,
 a_Ej,Technical_coefficients/technical_coefficients.csv,Technical coefficients,Energy consumers,Energy uses
