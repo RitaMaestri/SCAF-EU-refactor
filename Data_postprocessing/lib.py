@@ -303,6 +303,9 @@ def plot_VA_share_vs_log_gdp_per_capita(df, year_cols, use_consumption=False, fi
     L       = df.loc[df['variable_name'] == "L",       year_cols].values[0].astype("float")
     log_gdp_pc = np.log(GDPreal / L)
 
+    if fix_ylim:
+        fname_prefix += "_not_normalised"
+
     for j, sector in enumerate(sector_names):
         fig, ax = plt.subplots(figsize=(8, 6))
         ax.plot(log_gdp_pc, shares[j], marker='o', markersize=4, linewidth=1.5)
@@ -311,7 +314,6 @@ def plot_VA_share_vs_log_gdp_per_capita(df, year_cols, use_consumption=False, fi
         ax.set_ylabel(ylabel, fontsize=14)
         if fix_ylim:
             ax.set_ylim(0, 1)
-            fname_prefix = "Cj_share_not_normalised"
 
         if output_dir is not None:
             fname = f"{fname_prefix}_{sector.replace(' ', '_')}.png"
