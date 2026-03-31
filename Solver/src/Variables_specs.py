@@ -283,7 +283,7 @@ VARIABLES_SPECS = {
 				  idx_labels=[sectors_plus_hh, energy_types],
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
-				  status="endo"),
+				  exo_names = [("ENERGY", "PE")]),
 
     'rhoE':Variable(name="rhoE",
 				  dimension='matrix',
@@ -543,7 +543,7 @@ VARIABLES_SPECS = {
 				  idx_labels=sectors,
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
-				  exo_names=["SERVICES"]),
+				  status="endo"),
 
     'lambda_KLM':Variable("lambda_KLM",
 				  dimension='scalar',
