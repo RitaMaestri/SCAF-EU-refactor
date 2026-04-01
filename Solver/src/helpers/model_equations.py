@@ -485,8 +485,8 @@ def eqRevenueCost(p1j,p2j,p12j,V1j,V2j,V12j, _index=None):
 
 ###############################################################################################################
 
-def eqSameRatio(numerator1,numerator2,denominator1,denominator2):
-    zero= 1 - numerator1 * denominator2 / (numerator2 * denominator1)
+def eqSameRatio(numerator1,numerator2,denominator1,denominator2, lambda_pXj):
+    zero= 1 -  numerator1 * denominator2 / (lambda_pXj * numerator2 * denominator1)
     return zero
 
 ###############################################################################################################

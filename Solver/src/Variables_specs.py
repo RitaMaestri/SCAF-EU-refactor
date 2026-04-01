@@ -192,6 +192,13 @@ VARIABLES_SPECS = {
 				  bounds=(0, np.inf),
 				  status="endo"),
 
+    'lambda_pXj': Variable(name="lambda_pXj",
+				  dimension='vector',
+				  idx_labels=sectors,
+				  is_t_minus_one=False,
+				  bounds=(0, np.inf),
+				  status="exo"),
+                  
     'Xj': Variable(name="Xj",
 				  dimension='vector',
 				  idx_labels=sectors,
@@ -283,7 +290,7 @@ VARIABLES_SPECS = {
 				  idx_labels=[sectors_plus_hh, energy_types],
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
-				  exo_names = [("ENERGY", "PE")]),
+				  status="endo"),
 
     'rhoE':Variable(name="rhoE",
 				  dimension='matrix',
@@ -543,7 +550,7 @@ VARIABLES_SPECS = {
 				  idx_labels=sectors,
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
-				  status="endo"),
+				  exo_names=["SERVICES"]),
 
     'lambda_KLM':Variable("lambda_KLM",
 				  dimension='scalar',
@@ -630,6 +637,7 @@ CALIBRATION_MAPPING = {
     'pCj':                 'pCj0',
     'Mj':                  'Mj0',
     'pMj':                 'pMj0',
+    "lambda_pXj":          'lambda_pXj',
     'pXj':                 'pXj0',
     'Xj':                  'Xj0',
     'Dj':                  'Dj0',

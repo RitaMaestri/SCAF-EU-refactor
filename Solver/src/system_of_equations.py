@@ -151,7 +151,7 @@ def system(var, par):
         'eqaYij0':eq.eqaYij0(aYij0=d['aYij0'], aYij=d['aYij'], lambda_KLM=d['lambda_KLM']),#
         ###
 
-        "eqWorldPrices": eq.eqSameRatio(numerator1=d['pXj'][index_wo_E_SE],numerator2=d['pYj'][index_wo_E_SE],denominator1=d['pXj'][SE],denominator2=d['pYj'][SE]),
+        "eqWorldPrices": eq.eqSameRatio(numerator1=d['pXj'][index_wo_E_SE],numerator2=d['pYj'][index_wo_E_SE],denominator1=d['pXj'][SE],denominator2=d['pYj'][SE], lambda_pXj=d['lambda_pXj'][index_wo_E_SE]),
         ###
         "eqMultwI":eq.eqMultiplication(result=d['Ri'],mult1=d['wI'],mult2=d['GDP']),
         ###

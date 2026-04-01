@@ -140,6 +140,8 @@ class calibrationVariables:
         self.pKLj0=np.full(N, float(_av["pKLj0"]))
         self.pXj0=np.full(N, float(_av["pXj0"]))
         self.pDj0=np.full(N, float(_av["pDj0"]))
+        self.lambda_pXj=np.full(N, float(_av["lambda_pXj"]))
+
         self.pMj0=cp(self.pXj0)
 
         #taxes
@@ -412,7 +414,6 @@ class calibrationVariables:
         self.aKLj0=cp(self.aKLj)
         self.aYij0=cp(self.aYij)
 
-       
         # self.lambda_XMj=np.array([float(0)]*N)
         # self.Rh_E = imp.pCjCj[E]
         # self.computed_ni_j_nE = cached_params['computed_ni_j_nE']
