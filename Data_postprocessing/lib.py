@@ -186,8 +186,10 @@ def plot_varj_evol(df, var, pq, max_year="2050", display_top_names=4, display_bo
     plt.ylabel("Relative change with respect to year 2020", fontsize = 17)
 
     if output_dir is not None:
-        fname = (mytitle if mytitle else (pq + var)).replace(" ", "_") + ".png"
-        plt.savefig(os.path.join(output_dir, fname), bbox_inches='tight')
+        stem = (mytitle if mytitle else (pq + var)).replace(" ", "_")
+        subdir = os.path.join(output_dir, stem)
+        os.makedirs(subdir, exist_ok=True)
+        plt.savefig(os.path.join(subdir, stem + ".png"), bbox_inches='tight')
         plt.close()
     else:
         plt.show()
@@ -232,8 +234,10 @@ def plot_1D(var_df, title, diff=False, output_dir=None):
     plt.xlabel("Year",fontsize = 20)
     plt.ylabel("Relative change with respect to year 2020", fontsize = 20)
     if output_dir is not None:
-        fname = title.replace(" ", "_") + ".png"
-        plt.savefig(os.path.join(output_dir, fname), bbox_inches='tight')
+        stem = title.replace(" ", "_")
+        subdir = os.path.join(output_dir, stem)
+        os.makedirs(subdir, exist_ok=True)
+        plt.savefig(os.path.join(subdir, stem + ".png"), bbox_inches='tight')
         plt.close()
     else:
         plt.show()
@@ -274,29 +278,143 @@ def plot_KL_GDP_evolution(df, year_cols, output_dir=None):
     plt.ylabel("Relative change with respect to year 2020", fontsize = 17)
 
     if output_dir is not None:
-        plt.savefig(os.path.join(output_dir, "IAM_parameters_evolution.png"), bbox_inches='tight')
+        subdir = os.path.join(output_dir, "IAM_parameters_evolution")
+        os.makedirs(subdir, exist_ok=True)
+        plt.savefig(os.path.join(subdir, "IAM_parameters_evolution.png"), bbox_inches='tight')
         plt.close()
     else:
         plt.show()
 
 
-def plot_VA_share_vs_log_gdp_per_capita(df, year_cols, use_consumption=False, fix_ylim=True, output_dir=None):
-    if use_consumption:
+def plot_VA_share_vs_log_gdp_per_capita(df, year_cols, use_consumption=False, use_real_va=False,
+                                        use_real_capital=False, use_nominal_capital=False,
+                                        use_real_labour=False, use_nominal_labour=False,
+                                        use_real_Yj=False, use_nominal_Yj=False,
+                                        use_real_Sj=False, use_nominal_Sj=False,
+                                        use_real_Cj=False,
+                                        use_real_Ij=False, use_nominal_Ij=False,
+                                        use_real_Gj=False, use_nominal_Gj=False,
+                                        fix_ylim=True, exclude_energy=False, output_dir=None):
+    if use_real_va:
+        lj_rows = df.loc[df['variable_name'] == "Lj"].reset_index(drop=True)
+        kj_rows = df.loc[df['variable_name'] == "Kj"].reset_index(drop=True)
+        pL_base = df.loc[df['variable_name'] == "pL", year_cols[0]].values[0].astype("float")
+        pK_base = df.loc[df['variable_name'] == "pK", year_cols[0]].values[0].astype("float")
+        lj_vals = lj_rows[year_cols].values.astype("float")  # (n_sectors, n_years)
+        kj_vals = kj_rows[year_cols].values.astype("float")
+        sector_names = lj_rows['row_label'].values
+        nominal = lj_vals * pL_base + kj_vals * pK_base      # (n_sectors, n_years)
+        ylabel = "Share of real value added"
+        fname_prefix = "real_VA_share"
+    elif use_consumption:
         p_rows = df.loc[df['variable_name'] == "pCj"].reset_index(drop=True)
         q_rows = df.loc[df['variable_name'] == "Cj"].reset_index(drop=True)
         ylabel = "Share of nominal household consumption"
         fname_prefix = "Cj_share"
+        p_vals = p_rows[year_cols].values.astype("float")   # (n_sectors, n_years)
+        q_vals = q_rows[year_cols].values.astype("float")
+        sector_names = p_rows['row_label'].values
+        nominal = p_vals * q_vals                            # (n_sectors, n_years)
+    elif use_real_capital:
+        kj_rows = df.loc[df['variable_name'] == "Kj"].reset_index(drop=True)
+        sector_names = kj_rows['row_label'].values
+        nominal = kj_rows[year_cols].values.astype("float")  # (n_sectors, n_years)
+        ylabel = "Share of real capital"
+        fname_prefix = "Kj_share"
+    elif use_nominal_capital:
+        kj_rows = df.loc[df['variable_name'] == "Kj"].reset_index(drop=True)
+        pK_vals = df.loc[df['variable_name'] == "pK", year_cols].values.astype("float")  # (1, n_years)
+        sector_names = kj_rows['row_label'].values
+        nominal = kj_rows[year_cols].values.astype("float") * pK_vals  # (n_sectors, n_years)
+        ylabel = "Share of nominal capital"
+        fname_prefix = "nominal_Kj_share"
+    elif use_real_labour:
+        lj_rows = df.loc[df['variable_name'] == "Lj"].reset_index(drop=True)
+        sector_names = lj_rows['row_label'].values
+        nominal = lj_rows[year_cols].values.astype("float")  # (n_sectors, n_years)
+        ylabel = "Share of real labour"
+        fname_prefix = "Lj_share"
+    elif use_nominal_labour:
+        lj_rows = df.loc[df['variable_name'] == "Lj"].reset_index(drop=True)
+        pL_vals = df.loc[df['variable_name'] == "pL", year_cols].values.astype("float")  # (1, n_years)
+        sector_names = lj_rows['row_label'].values
+        nominal = lj_rows[year_cols].values.astype("float") * pL_vals  # (n_sectors, n_years)
+        ylabel = "Share of nominal labour"
+        fname_prefix = "nominal_Lj_share"
+    elif use_real_Yj:
+        yj_rows = df.loc[df['variable_name'] == "Yj"].reset_index(drop=True)
+        sector_names = yj_rows['row_label'].values
+        nominal = yj_rows[year_cols].values.astype("float")  # (n_sectors, n_years)
+        ylabel = "Share of real output"
+        fname_prefix = "Yj_share"
+    elif use_nominal_Yj:
+        yj_rows  = df.loc[df['variable_name'] == "Yj"].reset_index(drop=True)
+        pyj_rows = df.loc[df['variable_name'] == "pYj"].reset_index(drop=True)
+        sector_names = yj_rows['row_label'].values
+        nominal = pyj_rows[year_cols].values.astype("float") * yj_rows[year_cols].values.astype("float")
+        ylabel = "Share of nominal output"
+        fname_prefix = "nominal_Yj_share"
+    elif use_real_Sj:
+        sj_rows = df.loc[df['variable_name'] == "Sj"].reset_index(drop=True)
+        sector_names = sj_rows['row_label'].values
+        nominal = sj_rows[year_cols].values.astype("float")
+        ylabel = "Share of real sales"
+        fname_prefix = "real_Sj_share"
+    elif use_nominal_Sj:
+        sj_rows  = df.loc[df['variable_name'] == "Sj"].reset_index(drop=True)
+        psj_rows = df.loc[df['variable_name'] == "pSj"].reset_index(drop=True)
+        sector_names = sj_rows['row_label'].values
+        nominal = psj_rows[year_cols].values.astype("float") * sj_rows[year_cols].values.astype("float")
+        ylabel = "Share of nominal sales"
+        fname_prefix = "nominal_Sj_share"
+    elif use_real_Cj:
+        cj_rows = df.loc[df['variable_name'] == "Cj"].reset_index(drop=True)
+        sector_names = cj_rows['row_label'].values
+        nominal = cj_rows[year_cols].values.astype("float")
+        ylabel = "Share of real household consumption"
+        fname_prefix = "real_Cj_share"
+    elif use_real_Ij:
+        ij_rows = df.loc[df['variable_name'] == "Ij"].reset_index(drop=True)
+        sector_names = ij_rows['row_label'].values
+        nominal = ij_rows[year_cols].values.astype("float")
+        ylabel = "Share of real investment"
+        fname_prefix = "real_Ij_share"
+    elif use_nominal_Ij:
+        ij_rows  = df.loc[df['variable_name'] == "Ij"].reset_index(drop=True)
+        pcj_rows = df.loc[df['variable_name'] == "pCj"].reset_index(drop=True)
+        sector_names = ij_rows['row_label'].values
+        nominal = pcj_rows[year_cols].values.astype("float") * ij_rows[year_cols].values.astype("float")
+        ylabel = "Share of nominal investment"
+        fname_prefix = "nominal_Ij_share"
+    elif use_real_Gj:
+        gj_rows = df.loc[df['variable_name'] == "Gj"].reset_index(drop=True)
+        sector_names = gj_rows['row_label'].values
+        nominal = gj_rows[year_cols].values.astype("float")
+        ylabel = "Share of real government expenditure"
+        fname_prefix = "real_Gj_share"
+    elif use_nominal_Gj:
+        gj_rows  = df.loc[df['variable_name'] == "Gj"].reset_index(drop=True)
+        pcj_rows = df.loc[df['variable_name'] == "pCj"].reset_index(drop=True)
+        sector_names = gj_rows['row_label'].values
+        nominal = pcj_rows[year_cols].values.astype("float") * gj_rows[year_cols].values.astype("float")
+        ylabel = "Share of nominal government expenditure"
+        fname_prefix = "nominal_Gj_share"
     else:
         p_rows = df.loc[df['variable_name'] == "pKLj"].reset_index(drop=True)
         q_rows = df.loc[df['variable_name'] == "KLj"].reset_index(drop=True)
         ylabel = "Share of value added"
         fname_prefix = "VA_share"
+        p_vals = p_rows[year_cols].values.astype("float")   # (n_sectors, n_years)
+        q_vals = q_rows[year_cols].values.astype("float")
+        sector_names = p_rows['row_label'].values
+        nominal = p_vals * q_vals                            # (n_sectors, n_years)
 
-    p_vals = p_rows[year_cols].values.astype("float")   # (n_sectors, n_years)
-    q_vals = q_rows[year_cols].values.astype("float")
-    sector_names = p_rows['row_label'].values
+    if exclude_energy:
+        mask = np.array([s.upper() != "ENERGY" for s in sector_names])
+        nominal = nominal[mask]
+        sector_names = sector_names[mask]
+        fname_prefix += "_excl_energy"
 
-    nominal = p_vals * q_vals                            # (n_sectors, n_years)
     shares = nominal / nominal.sum(axis=0)               # (n_sectors, n_years)
 
     GDPreal = df.loc[df['variable_name'] == "GDPreal", year_cols].values[0].astype("float")
@@ -305,6 +423,10 @@ def plot_VA_share_vs_log_gdp_per_capita(df, year_cols, use_consumption=False, fi
 
     if fix_ylim:
         fname_prefix += "_not_normalised"
+
+    subdir = os.path.join(output_dir, fname_prefix) if output_dir is not None else None
+    if subdir is not None:
+        os.makedirs(subdir, exist_ok=True)
 
     for j, sector in enumerate(sector_names):
         fig, ax = plt.subplots(figsize=(8, 6))
@@ -317,7 +439,7 @@ def plot_VA_share_vs_log_gdp_per_capita(df, year_cols, use_consumption=False, fi
 
         if output_dir is not None:
             fname = f"{fname_prefix}_{sector.replace(' ', '_')}.png"
-            plt.savefig(os.path.join(output_dir, fname), bbox_inches='tight')
+            plt.savefig(os.path.join(subdir, fname), bbox_inches='tight')
             plt.close()
         else:
             plt.show()
@@ -346,9 +468,13 @@ def plot_energy_volumes_comparison(df, REMIND_E_volumes, year_cols, output_dir=N
 
     x = np.array(remind_year_cols).astype('int')
 
+    evol_subdir = os.path.join(output_dir, "E_vol") if output_dir is not None else None
+    if evol_subdir is not None:
+        os.makedirs(evol_subdir, exist_ok=True)
+
     def _save_or_show(fig, fname):
         if output_dir is not None:
-            plt.savefig(os.path.join(output_dir, fname), bbox_inches='tight')
+            plt.savefig(os.path.join(evol_subdir, fname), bbox_inches='tight')
             plt.close(fig)
         else:
             plt.show()
@@ -417,7 +543,135 @@ def plot_Yj_vs_REMIND_output(df, REMIND_output, year_cols, output_dir=None):
         ax.legend(loc='upper right', fontsize=13)
 
         if output_dir is not None:
-            plt.savefig(os.path.join(output_dir, f"Yj_vs_REMIND_{sector}.png"), bbox_inches='tight')
+            yj_subdir = os.path.join(output_dir, "Yj_vs_REMIND")
+            os.makedirs(yj_subdir, exist_ok=True)
+            plt.savefig(os.path.join(yj_subdir, f"Yj_vs_REMIND_{sector}.png"), bbox_inches='tight')
             plt.close(fig)
         else:
             plt.show()
+
+
+def plot_sector_Sj_Yj(df, year_cols, sector, output_dir=None):
+    x = np.array(year_cols).astype('int')
+
+    def _get(var_name):
+        row = df.loc[
+            (df['variable_name'] == var_name) & (df['row_label'] == sector),
+            year_cols
+        ]
+        return row.values[0].astype("float") if not row.empty else None
+
+    data = {label: _get(label) for label in ["Sj", "pSj", "Yj", "pYj"]}
+
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    fig.suptitle(sector, fontsize=18)
+
+    for ax, (label, vals) in zip(axes.flat, data.items()):
+        if vals is not None:
+            ax.plot(x, vals / vals[0], marker='o', markersize=3, linewidth=1.5)
+        ax.set_title(label, fontsize=14)
+        ax.set_xlabel("Year", fontsize=12)
+        ax.set_ylabel("Relative change (2020 = 1)", fontsize=12)
+
+    plt.tight_layout()
+
+    if output_dir is not None:
+        subdir = os.path.join(output_dir, "Sj_pSj_Yj_pYj")
+        os.makedirs(subdir, exist_ok=True)
+        plt.savefig(os.path.join(subdir, f"Sj_pSj_Yj_pYj_{sector}.png"), bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
+
+
+def plot_energy_expenditure_by_sector(df, year_cols, output_dir=None):
+    """Plot pY_Ej * Yij(ENERGY -> j) for each sector j, normalised to 2020=1."""
+    x = np.array(year_cols).astype('int')
+
+    pY_Ej_rows = df.loc[df['variable_name'] == "pY_Ej"].reset_index(drop=True)
+    Yij_energy_rows = df.loc[
+        (df['variable_name'] == "Yij") & (df['row_label'] == "ENERGY")
+    ].reset_index(drop=True)
+
+    # Align on col_label (consuming sector) for Yij and row_label for pY_Ej
+    sectors = pY_Ej_rows['row_label'].values
+    expenditure = []
+    for sector in sectors:
+        pY_E = pY_Ej_rows.loc[pY_Ej_rows['row_label'] == sector, year_cols].values
+        Y_E  = Yij_energy_rows.loc[Yij_energy_rows['col_label'] == sector, year_cols].values
+        if pY_E.size == 0 or Y_E.size == 0:
+            expenditure.append(None)
+        else:
+            expenditure.append((pY_E[0] * Y_E[0]).astype("float"))
+
+    fig, ax = plt.subplots(figsize=(14, 8))
+
+    for j, (sector, vals) in enumerate(zip(sectors, expenditure)):
+        if vals is None:
+            continue
+        y = vals / vals[0]
+        ax.plot(x, y, label=sector, color=my_cmap(j), linewidth=1.5, marker='o', markersize=3)
+        ax.annotate(text=sector, xy=(x[-1], y[-1]), xytext=(5, 0),
+                    textcoords='offset points', va='center', fontsize=10)
+
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    ax.legend(loc='center left', bbox_to_anchor=(1.0, 0.5), prop={'size': 12})
+    ax.set_title("Nominal energy expenditure by sector (pY_Ej × Yij[ENERGY→j])", fontsize=16)
+    ax.set_xlabel("Year", fontsize=14)
+    ax.set_ylabel("Relative change (2020 = 1)", fontsize=14)
+    plt.xlim(int(year_cols[0]) - 0.01, int(year_cols[-1]) + 0.01)
+
+    if output_dir is not None:
+        subdir = os.path.join(output_dir, "energy_expenditure_by_sector")
+        os.makedirs(subdir, exist_ok=True)
+        plt.savefig(os.path.join(subdir, "energy_expenditure_by_sector.png"), bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
+
+
+def plot_energy_sector_inputs(df, year_cols, output_dir=None):
+    """Plot pSj[sector] * Yij(sector -> ENERGY) for each supplying sector, normalised to 2020=1."""
+    x = np.array(year_cols).astype('int')
+
+    pSj_rows = df.loc[df['variable_name'] == "pSj"].reset_index(drop=True)
+    Yij_to_energy = df.loc[
+        (df['variable_name'] == "Yij") & (df['col_label'] == "ENERGY")
+    ].reset_index(drop=True)
+
+    sectors = pSj_rows['row_label'].values
+    inputs = []
+    for sector in sectors:
+        pS  = pSj_rows.loc[pSj_rows['row_label'] == sector, year_cols].values
+        Y   = Yij_to_energy.loc[Yij_to_energy['row_label'] == sector, year_cols].values
+        if pS.size == 0 or Y.size == 0:
+            inputs.append(None)
+        else:
+            inputs.append((pS[0] * Y[0]).astype("float"))
+
+    fig, ax = plt.subplots(figsize=(14, 8))
+
+    for j, (sector, vals) in enumerate(zip(sectors, inputs)):
+        if vals is None:
+            continue
+        y = vals / vals[0]
+        ax.plot(x, y, label=sector, color=my_cmap(j), linewidth=1.5, marker='o', markersize=3)
+        ax.annotate(text=sector, xy=(x[-1], y[-1]), xytext=(5, 0),
+                    textcoords='offset points', va='center', fontsize=10)
+
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    ax.legend(loc='center left', bbox_to_anchor=(1.0, 0.5), prop={'size': 12})
+    ax.set_title("Nominal intermediate consumption of the energy sector by input (pSj × Yij[j→ENERGY])", fontsize=15)
+    ax.set_xlabel("Year", fontsize=14)
+    ax.set_ylabel("Relative change (2020 = 1)", fontsize=14)
+    plt.xlim(int(year_cols[0]) - 0.01, int(year_cols[-1]) + 0.01)
+
+    if output_dir is not None:
+        subdir = os.path.join(output_dir, "energy_sector_inputs")
+        os.makedirs(subdir, exist_ok=True)
+        plt.savefig(os.path.join(subdir, "energy_sector_inputs.png"), bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()

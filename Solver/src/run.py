@@ -161,26 +161,28 @@ def save_results(df, run_name, base_dir="Solver/results"):
             break
         print("Please enter 'y' or 'n'.")
 
+    description = input("Enter a short description for this run: ").strip()
+
     if tag == "n":
-        out_dir = os.path.join(base_dir, "drafts")
-        os.makedirs(out_dir, exist_ok=True)
-        df.to_csv(os.path.join(out_dir, f"{run_name}.csv"), index=False)
-        print(f"Results saved to {out_dir}/{run_name}.csv")
+        out_dir = os.path.join(base_dir, "drafts", run_name)
     else:
-        description = input("Enter a short description for this run: ").strip()
-        out_dir = os.path.join(base_dir, run_name)
-        os.makedirs(out_dir, exist_ok=True)
-        df.to_csv(os.path.join(out_dir, f"{run_name}.csv"), index=False)
-        metadata = {"id": run_name, "description": description}
-        with open(os.path.join(out_dir, f"{run_name}_metadata.yaml"), "w") as f:
-            yaml.dump(metadata, f, default_flow_style=False, allow_unicode=True)
-        print(f"Results saved to {out_dir}/")
-        print("\n--- Git commands (copy and run manually) ---")
-        print('git add .')
-        print(f'git commit -m "{run_name}"')
+        out_dir = os.path.join(base_dir, "tagged", run_name)
+
+    os.makedirs(out_dir, exist_ok=True)
+    df.to_csv(os.path.join(out_dir, f"{run_name}.csv"), index=False)
+    metadata = {"id": run_name, "description": description}
+    with open(os.path.join(out_dir, f"{run_name}_metadata.yaml"), "w") as f:
+        yaml.dump(metadata, f, default_flow_style=False, allow_unicode=True)
+    print(f"Results saved to {out_dir}/")
+
+    print("\n--- Git commands (copy and run manually) ---")
+    print('git add .')
+    print(f'git commit -m "{run_name}"')
+    if tag == "y":
         print(f'git tag -a "{run_name}" -m "{description}"')
-        print('git push origin "$(git branch --show-current)" --tags')
-        print("--------------------------------------------")
+    print('git push origin "$(git branch --show-current)"', end="")
+    print(" --tags" if tag == "y" else "")
+    print("--------------------------------------------")
 
 
 save_results(timeseries_df, run_name)
