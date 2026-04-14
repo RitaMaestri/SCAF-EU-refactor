@@ -204,7 +204,7 @@ VARIABLES_SPECS = {
 				  idx_labels=sectors,
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
-				  exo_names=["ENERGY"]),
+				  status="endo"),
 
     'Dj': Variable(name="Dj",
 				  dimension='vector',
