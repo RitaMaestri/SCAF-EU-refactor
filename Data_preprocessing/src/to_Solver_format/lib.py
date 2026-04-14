@@ -149,7 +149,11 @@ def build_growth_factors(
 
         rows.append({"variable_name": var_name, "row_label": row_label, "col_label": col_label, **normalised})
 
-    return pd.DataFrame(rows, columns=["variable_name", "row_label", "col_label"] + year_cols)
+    df = pd.DataFrame(rows, columns=["variable_name", "row_label", "col_label"] + year_cols)
+    df[["variable_name", "row_label", "col_label"]] = (
+        df[["variable_name", "row_label", "col_label"]].astype(str)
+    )
+    return df
 
 
 def build_hybridization(calibration_root: Path) -> pd.DataFrame:

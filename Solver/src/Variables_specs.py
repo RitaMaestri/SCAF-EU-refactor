@@ -183,7 +183,7 @@ VARIABLES_SPECS = {
 				  idx_labels=sectors,
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
-				  status="endo"),
+				  exo_names=["ENERGY"]),
 
     'pMj': Variable(name="pMj",
 				  dimension='vector',
@@ -204,7 +204,7 @@ VARIABLES_SPECS = {
 				  idx_labels=sectors,
 				  is_t_minus_one=False,
 				  bounds=(0, np.inf),
-				  status="endo"),
+				  exo_names=["ENERGY"]),
 
     'Dj': Variable(name="Dj",
 				  dimension='vector',

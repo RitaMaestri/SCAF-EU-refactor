@@ -15,7 +15,7 @@ from lib import extract_var_df, plot_varj_evol, plot_varj_evol_absolute, plot_va
 
 
 # Set to a specific CSV path to plot a single run, or None to plot all tagged results
-results_path = "/home/rita/Documents/Tesi/Projects/SCAF-EU-refactor/Solver/results/tagged/results_2026-03-30_19-03/results_2026-03-30_19-03.csv"
+results_path = "/home/rita/Documents/Tesi/Projects/SCAF-EU-refactor/Solver/results/tagged/results_2026-04-14_15-33/results_2026-04-14_15-33.csv"
 #results_path = None
 
 # Load shared data once
