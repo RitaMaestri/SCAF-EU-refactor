@@ -6,5 +6,6 @@
   "iots_folder": "regional_IOTs/",
   "remind_prices_by_energy_use": "Data_preprocessing/src/Hybridization/cache/REMIND_prices_by_energy_use.csv",
   "remind_volumes_by_energy_use": "Data_preprocessing/src/Hybridization/cache/REMIND_volumes_by_energy_use.csv",
-  "remind_values_by_energy_use": "Data_preprocessing/src/Hybridization/cache/REMIND_values_by_energy_use.csv"
+  "remind_values_by_energy_use": "Data_preprocessing/src/Hybridization/cache/REMIND_values_by_energy_use.csv",
+  "energy_trade_values_cache": "Data_preprocessing/src/Energy_trade_scenarisation/cache/energy_trade_values.csv"
 }

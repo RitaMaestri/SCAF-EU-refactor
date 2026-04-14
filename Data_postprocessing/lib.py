@@ -195,6 +195,61 @@ def plot_varj_evol(df, var, pq, max_year="2050", display_top_names=4, display_bo
         plt.show()
 
 
+def plot_varj_evol_absolute(df, var, pq, max_year="2050", display_top_names=7, display_bottom_names=0, mytitle=None, output_dir=None):
+    """Like plot_varj_evol but plots absolute values (not normalised to calibration year)."""
+    var_df = extract_var_df(var, pq, df)
+    var_df = var_df.loc[:, :max_year]
+    fig = plt.figure(figsize=(14, 10))
+    ax = fig.add_subplot(111)
+
+    x = np.array(var_df.columns[1:]).astype('int')
+    yL = x[-1].astype(str)
+
+    end_values = var_df[yL].values
+    nans = np.argwhere(np.isnan(end_values)).flatten()
+    rank = np.argsort(-end_values)
+    rank = rank[~np.in1d(rank, nans)]
+    display_bottom_names_idx = len(sectors_names_eng) - display_bottom_names
+    index_side_writing = np.hstack([rank[:display_top_names], rank[display_bottom_names_idx:]])
+
+    for j in range(len(var_df)):
+        y = np.array(var_df.iloc[j, 1:]).astype('float')
+        lab = var_df.iloc[j, 0]
+        color = my_cmap(j)
+        ax.plot(x, y, label=lab, color=color)
+        if j in index_side_writing:
+            ax.annotate(text=lab, xy=(x[-1], y[-1]), xytext=(5, 0), textcoords='offset points', va='center')
+
+    handles, labels = ax.get_legend_handles_labels()
+    unique_labels = dict(zip(labels, handles))
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    ax.legend(unique_labels.values(), unique_labels.keys(), loc='center left', bbox_to_anchor=(1.16, 0.5), prop={'size': 13})
+
+    if mytitle is None:
+        if pq == "pq":
+            plt.title("p" + var + var + " (absolute)", fontsize=17)
+        elif pq == "p":
+            plt.title("p" + var + " (absolute)", fontsize=17)
+        elif pq == "q":
+            plt.title(var + " (absolute)", fontsize=17)
+    else:
+        plt.title(mytitle, fontsize=17)
+
+    plt.xlim(2019.99, 2050.01)
+    plt.xlabel("Year", fontsize=17)
+    plt.ylabel("Absolute value", fontsize=17)
+
+    if output_dir is not None:
+        stem = (mytitle if mytitle else (pq + var + "_absolute")).replace(" ", "_")
+        subdir = os.path.join(output_dir, stem)
+        os.makedirs(subdir, exist_ok=True)
+        plt.savefig(os.path.join(subdir, stem + ".png"), bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
+
+
 def plot_splitted_evolutions(var, pq, diff):
     
     var_df=extract_var_df(var, pq)

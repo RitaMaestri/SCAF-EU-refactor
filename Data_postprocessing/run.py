@@ -11,11 +11,11 @@ from scipy.ndimage.interpolation import shift
 import sys
 import matplotlib.colors as mcolors
 from scipy import stats
-from lib import extract_var_df, plot_varj_evol, plot_variable_1D, plot_KL_GDP_evolution, plot_VA_share_vs_log_gdp_per_capita, plot_energy_volumes_comparison, plot_Yj_vs_REMIND_output, plot_sector_Sj_Yj, sectors_names_eng, plot_energy_expenditure_by_sector, plot_energy_sector_inputs
+from lib import extract_var_df, plot_varj_evol, plot_varj_evol_absolute, plot_variable_1D, plot_KL_GDP_evolution, plot_VA_share_vs_log_gdp_per_capita, plot_energy_volumes_comparison, plot_Yj_vs_REMIND_output, plot_sector_Sj_Yj, sectors_names_eng, plot_energy_expenditure_by_sector, plot_energy_sector_inputs
 
 
 # Set to a specific CSV path to plot a single run, or None to plot all tagged results
-results_path = "Solver/results/tagged/results_2026-03-30_19-03/results_2026-03-30_19-03.csv"
+results_path = "/home/rita/Documents/Tesi/Projects/SCAF-EU-refactor/Solver/results/tagged/results_2026-03-30_19-03/results_2026-03-30_19-03.csv"
 #results_path = None
 
 # Load shared data once
@@ -43,6 +43,8 @@ def plot_run(results_path):
     year_cols = [c for c in SCAF_results.columns if c not in meta_cols and int(c) <= 2050]
     SCAF_results = SCAF_results[meta_cols + year_cols]
     
+    plot_varj_evol_absolute(df=SCAF_results, var="KLj", pq="pq", display_top_names=7, mytitle="Absolute evolution of the value added per sector (value)", output_dir=output_dir)
+
     plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, use_real_Sj=True, exclude_energy=True, fix_ylim=False, output_dir=output_dir)
     plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, use_nominal_Sj=True, exclude_energy=True, fix_ylim=False, output_dir=output_dir)
     plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, use_real_Cj=True, exclude_energy=True, fix_ylim=False, output_dir=output_dir)

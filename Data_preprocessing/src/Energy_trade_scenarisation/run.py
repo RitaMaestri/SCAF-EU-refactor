@@ -100,6 +100,40 @@ energy_aggregated_export_price_time_series = (
     aggregated_energy_export_values_time_series / aggregated_energy_export_volumes_time_series
 ).ffill()
 
+### CACHE: energy trade values ###
+energy_trade_values_cache_path = repo_root / config["energy_trade_values_cache"]
+energy_trade_values_cache_path.parent.mkdir(parents=True, exist_ok=True)
+
+_model = REMIND_raw["Model"].iloc[0]
+_scenario = REMIND_raw["Scenario"].iloc[0]
+_trade_unit = "bn US$2017"
+
+energy_trade_values_df = pd.concat(
+    [
+        pd.DataFrame(
+            {
+                "Model": [_model, _model],
+                "Scenario": [_scenario, _scenario],
+                "Region": ["EUR", "EUR"],
+                "Variable": [
+                    "aggregated_energy_import_values",
+                    "aggregated_energy_export_values",
+                ],
+                "Unit": [_trade_unit, _trade_unit],
+            }
+        ),
+        pd.DataFrame(
+            [
+                aggregated_energy_import_values_time_series.to_numpy(),
+                aggregated_energy_export_values_time_series.to_numpy(),
+            ],
+            columns=year_cols,
+        ),
+    ],
+    axis=1,
+)
+energy_trade_values_df.to_csv(energy_trade_values_cache_path, index=False)
+
 ### RHOS ###
 remind_prices_path = repo_root / config["remind_prices_by_energy_use"]
 rho_rows = compute_energy_trade_rhos(

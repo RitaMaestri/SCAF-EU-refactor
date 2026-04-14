@@ -14,6 +14,7 @@ PIPELINE = [
     {"name": "productivities", "script": "Data_preprocessing/src/Productivities/run.py"},
     {"name": "hybridization", "script": "Data_preprocessing/src/Hybridization/run.py"},
     {"name": "energy_trade", "script": "Data_preprocessing/src/Energy_trade_scenarisation/run.py"},
+    {"name": "KLM_expenditures", "script": "Data_preprocessing/src/KLM_expenditures/run.py"},
     {"name": "technical_coefficients", "script": "Data_preprocessing/src/Technical_coefficients/run.py"},
     {"name": "macro_indicators", "script": "Data_preprocessing/src/macro_indicators/run.py"},
     {"name": "to_solver_format", "script": "Data_preprocessing/src/to_Solver_format/run.py"},
