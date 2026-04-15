@@ -349,6 +349,8 @@ def plot_VA_share_vs_log_gdp_per_capita(df, year_cols, use_consumption=False, us
                                         use_real_Cj=False,
                                         use_real_Ij=False, use_nominal_Ij=False,
                                         use_real_Gj=False, use_nominal_Gj=False,
+                                        use_real_Xj=False, use_nominal_Xj=False,
+                                        use_nominal_Mj=False,
                                         fix_ylim=True, exclude_energy=False, output_dir=None):
     if use_real_va:
         lj_rows = df.loc[df['variable_name'] == "Lj"].reset_index(drop=True)
@@ -454,6 +456,26 @@ def plot_VA_share_vs_log_gdp_per_capita(df, year_cols, use_consumption=False, us
         nominal = pcj_rows[year_cols].values.astype("float") * gj_rows[year_cols].values.astype("float")
         ylabel = "Share of nominal government expenditure"
         fname_prefix = "nominal_Gj_share"
+    elif use_real_Xj:
+        xj_rows = df.loc[df['variable_name'] == "Xj"].reset_index(drop=True)
+        sector_names = xj_rows['row_label'].values
+        nominal = xj_rows[year_cols].values.astype("float")
+        ylabel = "Share of real exports"
+        fname_prefix = "real_Xj_share"
+    elif use_nominal_Xj:
+        xj_rows  = df.loc[df['variable_name'] == "Xj"].reset_index(drop=True)
+        pxj_rows = df.loc[df['variable_name'] == "pXj"].reset_index(drop=True)
+        sector_names = xj_rows['row_label'].values
+        nominal = pxj_rows[year_cols].values.astype("float") * xj_rows[year_cols].values.astype("float")
+        ylabel = "Share of nominal exports"
+        fname_prefix = "nominal_Xj_share"
+    elif use_nominal_Mj:
+        mj_rows  = df.loc[df['variable_name'] == "Mj"].reset_index(drop=True)
+        pmj_rows = df.loc[df['variable_name'] == "pMj"].reset_index(drop=True)
+        sector_names = mj_rows['row_label'].values
+        nominal = pmj_rows[year_cols].values.astype("float") * mj_rows[year_cols].values.astype("float")
+        ylabel = "Share of nominal imports"
+        fname_prefix = "nominal_Mj_share"
     else:
         p_rows = df.loc[df['variable_name'] == "pKLj"].reset_index(drop=True)
         q_rows = df.loc[df['variable_name'] == "KLj"].reset_index(drop=True)
@@ -560,6 +582,38 @@ def plot_energy_volumes_comparison(df, REMIND_E_volumes, year_cols, output_dir=N
     ax.set_ylabel("Energy volume (EJ)", fontsize=14)
     ax.legend(loc='upper right', fontsize=13)
     _save_or_show(fig, "E_vol_total.png")
+
+
+def plot_energy_volumes_by_consumer(df, year_cols, output_dir=None):
+    """One plot per energy consumer: total E_vol summed over all energy uses."""
+    evol_rows = df.loc[df['variable_name'] == "E_vol"].reset_index(drop=True)
+
+    by_consumer = (
+        evol_rows.groupby('row_label')[year_cols]
+        .sum()
+        .astype("float")
+    )
+
+    x = np.array(year_cols).astype('int')
+
+    subdir = os.path.join(output_dir, "E_vol_by_consumer") if output_dir is not None else None
+    if subdir is not None:
+        os.makedirs(subdir, exist_ok=True)
+
+    for consumer in by_consumer.index:
+        vals = by_consumer.loc[consumer].values
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.plot(x, vals, linewidth=2)
+        ax.set_title(f"Energy volume: {consumer}", fontsize=17)
+        ax.set_xlabel("Year", fontsize=14)
+        ax.set_ylabel("Energy volume (EJ)", fontsize=14)
+        plt.xlim(x[0] - 0.01, x[-1] + 0.01)
+        if output_dir is not None:
+            safe = consumer.replace('&', 'and').replace(' ', '_')
+            plt.savefig(os.path.join(subdir, f"E_vol_consumer_{safe}.png"), bbox_inches='tight')
+            plt.close(fig)
+        else:
+            plt.show()
 
 
 def plot_Yj_vs_REMIND_output(df, REMIND_output, year_cols, output_dir=None):
@@ -686,6 +740,42 @@ def plot_energy_expenditure_by_sector(df, year_cols, output_dir=None):
         plt.show()
 
 
+def plot_pY_Ej(df, year_cols, output_dir=None):
+    """One plot per sector showing the evolution of pY_Ej (energy price faced by sector j)."""
+    x = np.array(year_cols).astype('int')
+
+    pY_Ej_rows = df.loc[df['variable_name'] == "pY_Ej"].reset_index(drop=True)
+
+    subdir = os.path.join(output_dir, "pY_Ej") if output_dir is not None else None
+    if subdir is not None:
+        os.makedirs(subdir, exist_ok=True)
+
+    for j, row in pY_Ej_rows.iterrows():
+        sector = row['row_label']
+        vals = row[year_cols].values.astype("float")
+
+        fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+        fig.suptitle(f"pY_Ej — {sector}", fontsize=16)
+
+        axes[0].plot(x, vals, color=my_cmap(j), linewidth=1.5, marker='o', markersize=3)
+        axes[0].set_title("Absolute", fontsize=13)
+        axes[0].set_xlabel("Year", fontsize=12)
+        axes[0].set_ylabel("pY_Ej", fontsize=12)
+
+        axes[1].plot(x, vals / vals[0], color=my_cmap(j), linewidth=1.5, marker='o', markersize=3)
+        axes[1].set_title("Normalised (2020 = 1)", fontsize=13)
+        axes[1].set_xlabel("Year", fontsize=12)
+        axes[1].set_ylabel("Relative change (2020 = 1)", fontsize=12)
+
+        plt.tight_layout()
+
+        if output_dir is not None:
+            plt.savefig(os.path.join(subdir, f"pY_Ej_{sector}.png"), bbox_inches='tight')
+            plt.close(fig)
+        else:
+            plt.show()
+
+
 def plot_energy_sector_inputs(df, year_cols, output_dir=None):
     """Plot pSj[sector] * Yij(sector -> ENERGY) for each supplying sector, normalised to 2020=1."""
     x = np.array(year_cols).astype('int')
@@ -728,5 +818,107 @@ def plot_energy_sector_inputs(df, year_cols, output_dir=None):
         os.makedirs(subdir, exist_ok=True)
         plt.savefig(os.path.join(subdir, "energy_sector_inputs.png"), bbox_inches='tight')
         plt.close()
+    else:
+        plt.show()
+
+
+def plot_demand_components_stacked(df, year_cols, year=None, output_dir=None):
+    """Two stacked bar charts (absolute and normalised) of demand components per sector.
+
+    Components: pXj*Xj (exports), pCj*Cj (consumption), pIj*Ij (investment), pGj*Gj (government).
+    Falls back to pCj when pIj or pGj are not present in the data.
+    One bar per sector (7 sectors), ordered as in sectors_names_eng.
+    """
+    if year is None:
+        year = year_cols[0]
+
+    def _sector_vals(var_name):
+        """Return {sector: value} for the requested year, or {} if variable absent."""
+        rows = df.loc[df['variable_name'] == var_name].reset_index(drop=True)
+        if rows.empty:
+            return {}
+        return dict(zip(rows['row_label'].values, rows[year].values.astype("float")))
+
+    def _sector_vals_with_fallback(primary, fallback):
+        d = _sector_vals(primary)
+        return d if d else _sector_vals(fallback)
+
+    pXj = _sector_vals("pXj")
+    Xj  = _sector_vals("Xj")
+    pCj = _sector_vals("pCj")
+    Cj  = _sector_vals("Cj")
+    pIj = _sector_vals_with_fallback("pIj", "pCj")
+    Ij  = _sector_vals("Ij")
+    pGj = _sector_vals_with_fallback("pGj", "pCj")
+    Gj  = _sector_vals("Gj")
+
+    def _product(p_dict, q_dict, sector):
+        return p_dict.get(sector, 0.0) * q_dict.get(sector, 0.0)
+
+    comp_labels = ["pXj·Xj", "pCj·Cj", "pIj·Ij", "pGj·Gj"]
+    comp_colors = ["#4C72B0", "#DD8452", "#55A868", "#C44E52"]
+    comp_getters = [
+        (pXj, Xj),
+        (pCj, Cj),
+        (pIj, Ij),
+        (pGj, Gj),
+    ]
+
+    n_sectors = len(sectors_names_eng)
+    # shape: (4 components, 7 sectors)
+    comp_values = np.array([
+        [_product(p, q, s) for s in sectors_names_eng]
+        for p, q in comp_getters
+    ])
+
+    x = np.arange(n_sectors)
+
+    subdir = os.path.join(output_dir, "demand_components_stacked") if output_dir is not None else None
+    if subdir is not None:
+        os.makedirs(subdir, exist_ok=True)
+
+    # ---- Chart 1: Absolute ----
+    fig1, ax1 = plt.subplots(figsize=(12, 7))
+    bottoms = np.zeros(n_sectors)
+    for i, (label, vals) in enumerate(zip(comp_labels, comp_values)):
+        ax1.bar(x, vals, bottom=bottoms, color=comp_colors[i], label=label, edgecolor='white', linewidth=0.5)
+        bottoms += vals
+
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(sectors_names_eng, rotation=30, ha='right', fontsize=11)
+    ax1.set_ylabel("Nominal value", fontsize=13)
+    ax1.set_title(f"Demand components by sector — absolute ({year})", fontsize=15)
+    ax1.legend(loc='upper right', fontsize=12)
+    plt.tight_layout()
+
+    if subdir is not None:
+        fig1.savefig(os.path.join(subdir, f"demand_components_absolute_{year}.png"), bbox_inches='tight')
+        plt.close(fig1)
+    else:
+        plt.show()
+
+    # ---- Chart 2: Normalised (100 % stacked) ----
+    totals = comp_values.sum(axis=0)          # (n_sectors,)
+    # guard against zero totals
+    safe_totals = np.where(totals == 0, 1.0, totals)
+    comp_shares = comp_values / safe_totals[np.newaxis, :] * 100  # percentage
+
+    fig2, ax2 = plt.subplots(figsize=(12, 7))
+    bottoms = np.zeros(n_sectors)
+    for i, (label, shares) in enumerate(zip(comp_labels, comp_shares)):
+        ax2.bar(x, shares, bottom=bottoms, color=comp_colors[i], label=label, edgecolor='white', linewidth=0.5)
+        bottoms += shares
+
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(sectors_names_eng, rotation=30, ha='right', fontsize=11)
+    ax2.set_ylabel("Share (%)", fontsize=13)
+    ax2.set_ylim(0, 100)
+    ax2.set_title(f"Demand components by sector — normalised ({year})", fontsize=15)
+    ax2.legend(loc='upper right', fontsize=12)
+    plt.tight_layout()
+
+    if subdir is not None:
+        fig2.savefig(os.path.join(subdir, f"demand_components_normalised_{year}.png"), bbox_inches='tight')
+        plt.close(fig2)
     else:
         plt.show()

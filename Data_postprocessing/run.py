@@ -11,11 +11,11 @@ from scipy.ndimage.interpolation import shift
 import sys
 import matplotlib.colors as mcolors
 from scipy import stats
-from lib import extract_var_df, plot_varj_evol, plot_varj_evol_absolute, plot_variable_1D, plot_KL_GDP_evolution, plot_VA_share_vs_log_gdp_per_capita, plot_energy_volumes_comparison, plot_Yj_vs_REMIND_output, plot_sector_Sj_Yj, sectors_names_eng, plot_energy_expenditure_by_sector, plot_energy_sector_inputs
+from lib import extract_var_df, plot_varj_evol, plot_varj_evol_absolute, plot_variable_1D, plot_KL_GDP_evolution, plot_VA_share_vs_log_gdp_per_capita, plot_energy_volumes_comparison, plot_energy_volumes_by_consumer, plot_Yj_vs_REMIND_output, plot_sector_Sj_Yj, sectors_names_eng, plot_energy_expenditure_by_sector, plot_energy_sector_inputs, plot_pY_Ej, plot_demand_components_stacked
 
 
 # Set to a specific CSV path to plot a single run, or None to plot all tagged results
-results_path = "Solver/results/tagged/results_2026-04-14_17-45/results_2026-04-14_17-45.csv"
+results_path = "Solver/results/tagged/results_2026-03-30_19-13/results_2026-03-30_19-13.csv"
 #results_path = None
 
 # Load shared data once
@@ -43,7 +43,20 @@ def plot_run(results_path):
     year_cols = [c for c in SCAF_results.columns if c not in meta_cols and int(c) <= 2050]
     SCAF_results = SCAF_results[meta_cols + year_cols]
     
+    plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, use_nominal_Mj=True, fix_ylim=False, output_dir=output_dir)
+    plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, use_nominal_Mj=True, exclude_energy=True, fix_ylim=False, output_dir=output_dir)
+
+
+    ################# demand components stacked bar charts ########################
+    plot_demand_components_stacked(SCAF_results, year_cols, output_dir=output_dir)
+    ###############################################################################
+
+
+
     plot_varj_evol_absolute(df=SCAF_results, var="KLj", pq="pq", display_top_names=7, mytitle="Absolute evolution of the value added per sector (value)", output_dir=output_dir)
+    plot_energy_volumes_by_consumer(SCAF_results, year_cols, output_dir=output_dir)
+    plot_varj_evol_absolute(df=SCAF_results, var="Xj", pq="pq", display_top_names=7, mytitle="Absolute evolution of exports per sector (value)", output_dir=output_dir)
+
 
     plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, use_real_Sj=True, exclude_energy=True, fix_ylim=False, output_dir=output_dir)
     plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, use_nominal_Sj=True, exclude_energy=True, fix_ylim=False, output_dir=output_dir)
@@ -53,7 +66,8 @@ def plot_run(results_path):
     plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, use_nominal_Ij=True, exclude_energy=True, fix_ylim=False, output_dir=output_dir)
     plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, use_real_Gj=True, exclude_energy=True, fix_ylim=False, output_dir=output_dir)
     plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, use_nominal_Gj=True, exclude_energy=True, fix_ylim=False, output_dir=output_dir)
-    
+    plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, use_nominal_Xj=True, fix_ylim=False, output_dir=output_dir)
+    plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, use_nominal_Xj=True, exclude_energy=True, fix_ylim=False, output_dir=output_dir)
 
 
     plot_energy_sector_inputs(SCAF_results, year_cols, output_dir=output_dir)
@@ -78,7 +92,9 @@ def plot_run(results_path):
 
     ################# nominal energy expenditure by sector #########################
     plot_energy_expenditure_by_sector(SCAF_results, year_cols, output_dir=output_dir)
+    plot_pY_Ej(SCAF_results, year_cols, output_dir=output_dir)
     ###############################################################################
+
 
 
     plot_varj_evol(df=SCAF_results, var="KLj", pq="pq", diff=False, display_top_names=7, mytitle="Normalised evolution of the value added per sector (value)", output_dir=output_dir)
@@ -89,6 +105,8 @@ def plot_run(results_path):
     plot_varj_evol(df=SCAF_results, var="Lj", pq="q", diff=False, display_top_names=7, mytitle="Normalised evolution of labour per sector (volume)", output_dir=output_dir)
 
     plot_varj_evol(df=SCAF_results, var="Yj", pq="q", diff=False, display_top_names=7, output_dir=output_dir)
+
+    plot_varj_evol(df=SCAF_results, var="Xj", pq="q",  diff=False, display_top_names=7, mytitle="Normalised evolution of exports per sector (volume)", output_dir=output_dir)
 
     plot_variable_1D(SCAF_results, "bKL", "q", diff=False, output_dir=output_dir)
     ###############################################################################
