@@ -129,12 +129,12 @@ def system(var, par):
 
         "eqRhoM":eq.eqRhoTrade(rho=d["rhoM"], pE_trade=d['pMj'][E], pE=d["pE"]),
         ### Cobb Douglas
-        #"eqCobbDouglasjC":eq.eqCobbDouglasj(Qj=d['Cj'][non_zero_index_C_wo_E],alphaQj=d['alphaCj_nE'],pCj=d['pCj'][non_zero_index_C_wo_E],Q=d['R_nE']),
+        "eqCobbDouglasjC":eq.eqCobbDouglasj(Qj=d['Cj'][non_zero_index_C_wo_E],alphaQj=d['alphaCj_nE'],pCj=d['pCj'][non_zero_index_C_wo_E],Q=d['R_nE']),
 
         ### CDES
-        "eqCj_CDE":eq.eqC_CDE(A_Cj=d["A_Cj_nE"],betaCj=d["betaCj_nE"],u_C=d["u_C"],gammaCj=d["gammaCj_nE"],pCj=np.delete(d["pCj"], E),Cj=np.delete(d["Cj"], E),R=d["R_nE"]),
+        #"eqCj_CDE":eq.eqC_CDE(A_Cj=d["A_Cj_nE"],betaCj=d["betaCj_nE"],u_C=d["u_C"],gammaCj=d["gammaCj_nE"],pCj=np.delete(d["pCj"], E),Cj=np.delete(d["Cj"], E),R=d["R_nE"]),
         ###
-        "eq_u_CDE":eq.eq_u_CDE(norm_factor=d["normalisation_factor"], A_Cj=d["A_Cj_nE"],betaCj=d["betaCj_nE"],u_C=d["u_C"],gammaCj=d["gammaCj_nE"],pCj=np.delete(d["pCj"], E),Cj=np.delete(d["Cj"], E),R=d["R_nE"]),
+        #"eq_u_CDE":eq.eq_u_CDE(norm_factor=d["normalisation_factor"], A_Cj=d["A_Cj_nE"],betaCj=d["betaCj_nE"],u_C=d["u_C"],gammaCj=d["gammaCj_nE"],pCj=np.delete(d["pCj"], E),Cj=np.delete(d["Cj"], E),R=d["R_nE"]),
         #households energy budget
         ###
         "eq_R_E":eq.eq_R_E(R_E=d["R_E"], pC_E=d["pCj"][E], C_E=d["Cj"][E]),
@@ -150,7 +150,6 @@ def system(var, par):
         ###
         'eqaYij0':eq.eqaYij0(aYij0=d['aYij0'], aYij=d['aYij'], lambda_KLM=d['lambda_KLM']),#
         ###
-
         "eqWorldPrices": eq.eqSameRatio(numerator1=d['pXj'][index_wo_E_SE],numerator2=d['pYj'][index_wo_E_SE],denominator1=d['pXj'][SE],denominator2=d['pYj'][SE], lambda_pXj=d['lambda_pXj'][index_wo_E_SE]),
         ###
         "eqMultwI":eq.eqMultiplication(result=d['Ri'],mult1=d['wI'],mult2=d['GDP']),

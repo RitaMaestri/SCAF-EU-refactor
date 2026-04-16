@@ -11,11 +11,11 @@ from scipy.ndimage.interpolation import shift
 import sys
 import matplotlib.colors as mcolors
 from scipy import stats
-from lib import extract_var_df, plot_varj_evol, plot_varj_evol_absolute, plot_variable_1D, plot_KL_GDP_evolution, plot_VA_share_vs_log_gdp_per_capita, plot_energy_volumes_comparison, plot_energy_volumes_by_consumer, plot_Yj_vs_REMIND_output, plot_sector_Sj_Yj, sectors_names_eng, plot_energy_expenditure_by_sector, plot_energy_sector_inputs, plot_pY_Ej, plot_demand_components_stacked
+from lib import extract_var_df, plot_varj_evol, plot_varj_evol_absolute, plot_variable_1D, plot_KL_GDP_evolution, plot_VA_share_vs_log_gdp_per_capita, plot_structural_change_panel, plot_structural_change_panel_diff, plot_energy_volumes_comparison, plot_energy_volumes_by_consumer, plot_Yj_vs_REMIND_output, plot_sector_Sj_Yj, sectors_names_eng, plot_energy_expenditure_by_sector, plot_energy_expenditure_share, plot_export_share_of_output, plot_real_export_share_of_output, plot_nominal_demand_evolutions, plot_energy_sector_inputs, plot_pY_Ej, plot_demand_components_stacked
 
-
+no_SC_path = "Solver/results/tagged/results_2026-03-30_19-03/results_2026-03-30_19-03.csv"
 # Set to a specific CSV path to plot a single run, or None to plot all tagged results
-results_path = "Solver/results/tagged/results_2026-03-30_19-13/results_2026-03-30_19-13.csv"
+results_path = "Solver/results/tagged/results_2026-03-30_19-08/results_2026-03-30_19-08.csv"
 #results_path = None
 
 # Load shared data once
@@ -26,8 +26,15 @@ REMIND_E_volumes = REMIND_E_volumes[(REMIND_E_volumes["Region"]=="EUR") & (REMIN
 REMIND_output_path = "Data_preprocessing/data_calibration_evolution/Technical_coefficients/REMIND_activities_outputs.csv"
 REMIND_output = pd.read_csv(REMIND_output_path)
 
+no_SC_df = None
+if no_SC_path:
+    _no_sc_raw = pd.read_csv(no_SC_path)
+    _meta = ['variable_name', 'row_label', 'col_label', 'status']
+    _ycols = [c for c in _no_sc_raw.columns if c not in _meta and int(c) <= 2050]
+    no_SC_df = _no_sc_raw[_meta + _ycols]
 
-def plot_run(results_path):
+
+def plot_run(results_path, subtitle=""):
     csv_stem = os.path.splitext(os.path.basename(results_path))[0]
     output_dir = os.path.join("Data_postprocessing", "plots", csv_stem)
     os.makedirs(output_dir, exist_ok=True)
@@ -43,8 +50,29 @@ def plot_run(results_path):
     year_cols = [c for c in SCAF_results.columns if c not in meta_cols and int(c) <= 2050]
     SCAF_results = SCAF_results[meta_cols + year_cols]
     
+    ################# structural change panel #######################################
+    plot_structural_change_panel(SCAF_results, year_cols, fix_ylim=True,  subtitle=subtitle, output_dir=output_dir)
+    plot_structural_change_panel(SCAF_results, year_cols, fix_ylim=False, subtitle=subtitle, output_dir=output_dir)
+    if no_SC_df is not None:
+        plot_structural_change_panel_diff(SCAF_results, no_SC_df, year_cols, subtitle=subtitle, output_dir=output_dir)
+    ###############################################################################
+
+
+    ################# nominal energy expenditure by sector #########################
+    plot_energy_expenditure_by_sector(SCAF_results, year_cols, output_dir=output_dir)
+    plot_energy_expenditure_by_sector(SCAF_results, year_cols, normalise=False, output_dir=output_dir)
+    plot_energy_expenditure_share(SCAF_results, year_cols, output_dir=output_dir)
+    plot_export_share_of_output(SCAF_results, year_cols, output_dir=output_dir)
+    plot_real_export_share_of_output(SCAF_results, year_cols, output_dir=output_dir)
+    plot_nominal_demand_evolutions(SCAF_results, year_cols, output_dir=output_dir)
+    plot_pY_Ej(SCAF_results, year_cols, output_dir=output_dir)
+    ###############################################################################
+
+
+
     plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, use_nominal_Mj=True, fix_ylim=False, output_dir=output_dir)
     plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, use_nominal_Mj=True, exclude_energy=True, fix_ylim=False, output_dir=output_dir)
+
 
 
     ################# demand components stacked bar charts ########################
@@ -90,10 +118,6 @@ def plot_run(results_path):
     plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, use_nominal_Yj=True, fix_ylim=False, output_dir=output_dir)
     ###############################################################################
 
-    ################# nominal energy expenditure by sector #########################
-    plot_energy_expenditure_by_sector(SCAF_results, year_cols, output_dir=output_dir)
-    plot_pY_Ej(SCAF_results, year_cols, output_dir=output_dir)
-    ###############################################################################
 
 
 
@@ -156,12 +180,14 @@ def plot_run(results_path):
 
 
 
+subtitle = input("Structural change panel subtitle (leave blank to omit): ").strip()
+
 if results_path:
-    plot_run(results_path)
+    plot_run(results_path, subtitle=subtitle)
 else:
     tagged_csvs = sorted(glob.glob("Solver/results/tagged/**/*.csv", recursive=True))
     for path in tagged_csvs:
         print(f"Plotting {path}...")
-        plot_run(path)
+        plot_run(path, subtitle=subtitle)
 
 
