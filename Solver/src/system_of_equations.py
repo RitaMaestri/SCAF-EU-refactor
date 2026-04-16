@@ -70,7 +70,7 @@ def system(var, par):
         ### 
         "eqpYj_E":eq.eqpYj_E(pYj=d['pYj'], pCj=d['pCj'], aKLj=d['aKLj'], pKLj=d['pKLj'], aYij=d['aYij'], pY_Ej=d["pY_Ej"], tauYj=d['tauYj']),
         ###
-        "eqCESquantityX":eq.eqCESquantity(Xj=d['Xj'], Zj=d['Yj'] , alphaXj=d['alphaXj'], alphaYj=d['alphaDj'], pXj=d['pXj'], pYj=d['pDj'], sigmaj=d['sigmaXj'], thetaj=d['thetaj'], _index=np.intersect1d(index_wo_E, non_zero_index_X)),
+        "eqCESquantityX":eq.eqCESquantity(Xj=d['Xj'], Zj=d['Yj'] , alphaXj=d['alphaXj'], alphaYj=d['alphaDj'], pXj=d['pXj'], pYj=d['pDj'], sigmaj=d['sigmaXj'], thetaj=d['thetaj'], _index=np.intersect1d(index_wo_E,non_zero_index_X)),
         ###
         "eqCESquantityDy":eq.eqCESquantity(Xj=d['Dj'], Zj=d['Yj'], alphaXj=d['alphaDj'], alphaYj=d['alphaXj'], pXj=d['pDj'], pYj=d['pXj'], sigmaj=d['sigmaXj'],  thetaj=d['thetaj'], _index=index_wo_E),
         ###
@@ -78,11 +78,11 @@ def system(var, par):
         ###
         "eqpriceYj":eq.eqRevenueCost(p1j=d['pDj'],p2j=d['pXj'],p12j=d['pYj'],V1j=d['Dj'],V2j=d['Xj'],V12j=d['Yj']),
         ###
-        "eqCESquantityDs":eq.eqCESquantity(Xj=d['Dj'], Zj=d['Sj'], alphaXj=d['betaDj'], alphaYj=d['betaMj'], pXj=d['pDj'], pYj=d['pMj'], sigmaj=d['sigmaSj'], thetaj=d['csij'], _index=index_wo_E),
+        "eqCESquantityDs":eq.eqCESquantity(Xj=d['Dj'], Zj=d['Sj'], alphaXj=d['betaDj'], alphaYj=d['betaMj'], pXj=d['pDj'], pYj=d['pMj'], sigmaj=d['sigmaSj'], thetaj=d['csij']),
         ###
-        "eqDs_Equantity":eq.eqsum_scalar(d['Sj'][E], d['Dj'][E], d['Mj'][E]),
+        #"eqDs_Equantity":eq.eqsum_scalar(d['Sj'][E], d['Dj'][E], d['Mj'][E]),
         ###
-        "eqCESquantityM":eq.eqCESquantity(Xj=d['Mj'], Zj=d['Sj'], alphaXj=d['betaMj'], alphaYj=d['betaDj'], pXj=d['pMj'], pYj=d['pDj'], sigmaj=d['sigmaSj'], thetaj=d['csij'], _index=np.intersect1d(index_wo_E, non_zero_index_M)),#np.intersect1d(index_wo_E,non_zero_index_M)
+        "eqCESquantityM":eq.eqCESquantity(Xj=d['Mj'], Zj=d['Sj'], alphaXj=d['betaMj'], alphaYj=d['betaDj'], pXj=d['pMj'], pYj=d['pDj'], sigmaj=d['sigmaSj'], thetaj=d['csij'], _index=non_zero_index_M),#np.intersect1d(index_wo_E,non_zero_index_M)
         ###
         "eqpriceSj":eq.eqRevenueCost(p1j=d['pDj'],p2j=d['pMj'],p12j=d['pSj'],V1j=d['Dj'],V2j=d['Mj'],V12j=d['Sj']),
         ###
