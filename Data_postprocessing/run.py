@@ -15,7 +15,7 @@ from lib import extract_var_df, plot_varj_evol, plot_varj_evol_absolute, plot_va
 
 no_SC_path = "Solver/results/tagged/results_2026-03-30_19-03/results_2026-03-30_19-03.csv"
 # Set to a specific CSV path to plot a single run, or None to plot all tagged results
-results_path = "Solver/results/drafts/results_2026-03-31_18-18/results_2026-03-31_18-18.csv"
+results_path = "Solver/results/tagged/results_2026-04-17_15-10/results_2026-04-17_15-10.csv"
 #results_path = None
 
 # Load shared data once
