@@ -585,7 +585,7 @@ VARIABLES_SPECS = {
 				  idx_labels=[],
 				  is_t_minus_one=False,
 				  bounds=(-np.inf,np.inf),
-				  status="exo"),
+				  status="endo"),
 
     "gammaCj_nE":Variable(name="gammaCj_nE",
 				  dimension='vector',

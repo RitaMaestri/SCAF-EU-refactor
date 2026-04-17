@@ -656,9 +656,9 @@ def plot_structural_change_panel_diff(df, df_ref, year_cols, subtitle="", output
     cj_shares_ref, _         = _shares_cj(df_ref)
 
     row_data = [
-        (va_shares_df  - va_shares_ref,  va_names,  "Δ VA share\n(pKLj·KLj)"),
-        (rva_shares_df - rva_shares_ref, rva_names, "Δ Real VA share\n(Lj·pL₀+Kj·pK₀)"),
-        (cj_shares_df  - cj_shares_ref,  cj_names,  "Δ Cj share\n(pCj·Cj)"),
+        (va_shares_df  - va_shares_ref,  va_names,  "Δ nominal VA share"),
+        (rva_shares_df - rva_shares_ref, rva_names, "Δ real VA share"),
+        (cj_shares_df  - cj_shares_ref,  cj_names,  "Δ households consumption share"),
     ]
 
     fig, axes = plt.subplots(3, 3, figsize=(18, 14))
@@ -676,6 +676,8 @@ def plot_structural_change_panel_diff(df, df_ref, year_cols, subtitle="", output
             if idx.size > 0:
                 ax.plot(log_gdp_pc, diff_shares[idx[0]], marker='o', markersize=4, linewidth=1.5)
             ax.axhline(0, color='grey', linewidth=0.8, linestyle='--')
+            ylo, yhi = ax.get_ylim()
+            ax.set_ylim(min(ylo, -0.001), max(yhi, 0.001))
             if row_idx == 0:
                 ax.set_title(sector, fontsize=14)
             if col_idx == 0:
