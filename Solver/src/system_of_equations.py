@@ -55,12 +55,9 @@ def system(var, par):
     # ADD NON ZERO INDEXES FOR ENERGY MATRICES
     equations= {
         ###
-        "eqKj":eq.eqFj(Fj=d['Kj'],pF=d['pK'],KLj=d['KLj'],pKLj=d["pKLj"],alphaFj=d["alphaKj_CobbDouglas"]),
+        "eqCESquantityKj":eq.eqCESquantity(Xj=d['Kj'], Zj=d['KLj'], alphaXj=d['alphaKj'], alphaYj=d['alphaLj'], pXj=d['pK'], pYj=d['pL'], sigmaj=d['sigmaKLj'], thetaj=d['bKLj'], theta=d['bKL']),#e-5
         ###
-        "eqLj":eq.eqFj(Fj=d['Lj'],pF=d['pL'],KLj=d['KLj'],pKLj=d["pKLj"],alphaFj=d["alphaLj_CobbDouglas"]),
-        ###
-        "eqKLj":eq.eqKLj(KLj=d["KLj"],bKL=d["bKL"], bKLj=d["bKLj"], Lj=d["Lj"], Kj=d["Kj"], alphaLj=d["alphaLj_CobbDouglas"], alphaKj=d["alphaKj_CobbDouglas"]),
-        #"eqpriceKL":eq.eqRevenueCost(p1j=d['pK'],p2j=d['pL'],p12j=d['pKLj'],V1j=d['Kj'],V2j=d['Lj'],V12j=d['KLj']),
+        "eqCESpriceKL":eq.eqCESprice(pZj=d['pKLj'], pXj=d['pL'], pYj=d['pK'], alphaXj=d['alphaLj'], alphaYj=d['alphaKj'], sigmaj=d['sigmaKLj'], thetaj=d['bKLj'], theta = d['bKL'], E_exception=True),
         ###
         "eqYij":eq.eqYij(Yij=d['Yij'], aYij=d['aYij'],Yj=d['Yj'], _index=non_zero_index_Yij),
         ###
@@ -153,6 +150,8 @@ def system(var, par):
         "eqWorldPrices": eq.eqSameRatio(numerator1=d['pXj'][index_wo_E_SE],numerator2=d['pYj'][index_wo_E_SE],denominator1=d['pXj'][SE],denominator2=d['pYj'][SE], lambda_pXj=d['lambda_pXj'][index_wo_E_SE]),
         ###
         "eqMultwI":eq.eqMultiplication(result=d['Ri'],mult1=d['wI'],mult2=d['GDP']),
+        ###
+        "eqCESquantityLj":eq.eqCESquantity(Xj=d['Lj'], Zj=d['KLj'], alphaXj=d['alphaLj'], alphaYj=d['alphaKj'], pXj=d['pL'], pYj=d['pK'], sigmaj=d['sigmaKLj'], thetaj=d['bKLj'], theta=d['bKL']),#e-5
         ###
         "eqFL":eq.eqF(F=d['L'],Fj=d['Lj']),
         ###
