@@ -10,11 +10,11 @@ from scipy.ndimage.interpolation import shift
 import sys
 import matplotlib.colors as mcolors
 from scipy import stats
-from lib import extract_var_df, plot_varj_evol, plot_varj_evol_absolute, plot_variable_1D, plot_KL_GDP_evolution, plot_VA_share_vs_log_gdp_per_capita, plot_variable_share_vs_log_gdp_per_capita, plot_variable_diff_by_sector, plot_aggregate_diff, plot_structural_change_panel, plot_structural_change_panel_diff, plot_energy_volumes_comparison, plot_energy_volumes_diverging_stacked, plot_energy_volumes_diverging_stacked_scaf_diff, plot_energy_volumes_by_consumer, plot_Yj_vs_REMIND_output, plot_sector_Sj_Yj, plot_sector_Sj_Yj_diff, sectors_names_eng, plot_energy_expenditure_by_sector, plot_energy_expenditure_share, plot_export_share_of_output, plot_export_share_of_output_diff, plot_real_export_share_of_output, plot_nominal_demand_evolutions, plot_energy_sector_inputs, plot_pY_Ej, plot_demand_components_stacked
+from lib import extract_var_df, plot_varj_evol, plot_varj_evol_absolute, plot_variable_1D, plot_KL_GDP_evolution, plot_VA_share_vs_log_gdp_per_capita, plot_variable_share_vs_log_gdp_per_capita, plot_variable_diff_by_sector, plot_aggregate_diff, plot_structural_change_panel, plot_structural_change_panel_diff, plot_energy_volumes_comparison_by_use, plot_total_energy_volume_comparison, plot_energy_volumes_diverging_stacked, plot_energy_volumes_diverging_stacked_scaf_diff, plot_energy_volumes_by_consumer, plot_Yj_vs_REMIND_output, plot_sector_Sj_Yj, plot_sector_Sj_Yj_diff, sectors_names_eng, plot_energy_expenditure_by_sector, plot_energy_expenditure_share, plot_export_share_of_output, plot_export_share_of_output_diff, plot_real_export_share_of_output, plot_nominal_demand_evolutions, plot_energy_sector_inputs, plot_pY_Ej, plot_demand_components_stacked
 
 no_SC_path = "Solver/results/tagged/results_2026-03-30_19-03/results_2026-03-30_19-03.csv"
 # Set to a specific CSV path to plot a single run, or None to plot all tagged results
-results_path = "Solver/results/tagged/results_2026-04-16_16-56/results_2026-04-16_16-56.csv"
+results_path = "Solver/results/tagged/results_2026-04-14_17-45/results_2026-04-14_17-45.csv"
 #results_path = None
 
 # Load shared data once
@@ -59,8 +59,19 @@ def presentation_plots(results_path, subtitle="", output_name=None):
     if no_SC_df is not None:
         plot_energy_volumes_diverging_stacked_scaf_diff(SCAF_results, no_SC_df, year_cols, output_dir=output_dir)
 
+    plot_energy_volumes_diverging_stacked(SCAF_results, REMIND_E_volumes, year_cols,
+                                          scaf_label=subtitle, output_dir=output_dir)
 
-def exploratory_plots(results_path):
+    plot_total_energy_volume_comparison(
+        SCAF_results, REMIND_E_volumes, year_cols,
+        include_PE=True,
+        scaf_label=subtitle,
+        df_no_sc=no_SC_df,
+        output_dir=output_dir,
+    )
+
+
+def exploratory_plots(results_path, subtitle=""):
     csv_stem = os.path.splitext(os.path.basename(results_path))[0]
     output_dir = os.path.join("Data_postprocessing", "plots", "exploratory_analysis", csv_stem)
     os.makedirs(output_dir, exist_ok=True)
@@ -92,7 +103,8 @@ def exploratory_plots(results_path):
 
 
     ################# compare SCAF vs REMIND energy volumes #######################
-    plot_energy_volumes_comparison(SCAF_results, REMIND_E_volumes, year_cols, output_dir=output_dir)
+    plot_energy_volumes_comparison_by_use(SCAF_results, REMIND_E_volumes, year_cols, scaf_label=subtitle, output_dir=output_dir)
+    plot_total_energy_volume_comparison(SCAF_results, REMIND_E_volumes, year_cols, scaf_label=subtitle, output_dir=output_dir)
     plot_energy_volumes_diverging_stacked(SCAF_results, REMIND_E_volumes, year_cols, output_dir=output_dir)
     ###############################################################################
 
@@ -207,7 +219,7 @@ def exploratory_plots(results_path):
 
 def plot_run(results_path, subtitle=""):
     presentation_plots(results_path, subtitle=subtitle)
-    exploratory_plots(results_path)
+    exploratory_plots(results_path, subtitle=subtitle)
 
 exploratory_plots(results_path)
 

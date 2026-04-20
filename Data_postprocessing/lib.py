@@ -685,26 +685,27 @@ def plot_structural_change_panel_diff(df, df_ref, year_cols, subtitle="", output
         plt.show()
 
 
-def plot_energy_volumes_comparison(df, REMIND_E_volumes, year_cols, output_dir=None):
-    # Filter SCAF results to E_vol rows
+def plot_energy_volumes_comparison_by_use(df, REMIND_E_volumes, year_cols, scaf_label="SCAF", df_no_sc=None, output_dir=None):
     evol_rows = df.loc[df['variable_name'] == "E_vol"].reset_index(drop=True)
-
-    # Common year columns present in both datasets
     remind_year_cols = [c for c in year_cols if c in REMIND_E_volumes.columns]
 
-    # Group SCAF by energy use (col_label), summing over energy consumers (row_label)
     scaf_by_use = (
         evol_rows.groupby('col_label')[year_cols]
         .sum()
         .astype("float")
     )
-
-    # Group REMIND by energy use, summing over energy consumers
     remind_by_use = (
         REMIND_E_volumes.groupby('Energy uses')[remind_year_cols]
         .sum()
         .astype("float")
     )
+    if df_no_sc is not None:
+        no_sc_by_use = (
+            df_no_sc.loc[df_no_sc['variable_name'] == "E_vol"]
+            .groupby('col_label')[year_cols]
+            .sum()
+            .astype("float")
+        )
 
     x = np.array(remind_year_cols).astype('int')
 
@@ -719,13 +720,15 @@ def plot_energy_volumes_comparison(df, REMIND_E_volumes, year_cols, output_dir=N
         else:
             plt.show()
 
-    # One plot per energy use type
     for use in scaf_by_use.index:
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.plot(x, scaf_by_use.loc[use, remind_year_cols].values,
-                color='red',  linewidth=2, label='SCAF')
+                color='red', linewidth=2, label=scaf_label)
+        if df_no_sc is not None and use in no_sc_by_use.index:
+            ax.plot(x, no_sc_by_use.loc[use, remind_year_cols].values,
+                    color='blue', linewidth=2, label='No structural change')
         ax.plot(x, remind_by_use.loc[use].values,
-                color='blue', linewidth=2, label='REMIND')
+                color='grey', linestyle='--', linewidth=2, label='REMIND')
         ax.set_title(f"Energy volume: {use}", fontsize=17)
         ax.set_xlabel("Year", fontsize=14)
         ax.set_ylabel("Energy volume (EJ)", fontsize=14)
@@ -733,13 +736,55 @@ def plot_energy_volumes_comparison(df, REMIND_E_volumes, year_cols, output_dir=N
         safe_use = use.replace('&', 'and').replace(' ', '_')
         _save_or_show(fig, f"E_vol_{safe_use}.png")
 
-    # Aggregate: total energy summed over all uses and consumers (excluding primary energy PE)
-    scaf_total   = scaf_by_use.drop(index="PE", errors="ignore")[remind_year_cols].sum(axis=0).values
-    remind_total = remind_by_use.drop(index="PE", errors="ignore")[remind_year_cols].sum(axis=0).values
+
+def plot_total_energy_volume_comparison(df, REMIND_E_volumes, year_cols, include_PE=False, scaf_label="SCAF", df_no_sc=None, output_dir=None):
+    evol_rows = df.loc[df['variable_name'] == "E_vol"].reset_index(drop=True)
+    remind_year_cols = [c for c in year_cols if c in REMIND_E_volumes.columns]
+
+    scaf_by_use = (
+        evol_rows.groupby('col_label')[year_cols]
+        .sum()
+        .astype("float")
+    )
+    remind_by_use = (
+        REMIND_E_volumes.groupby('Energy uses')[remind_year_cols]
+        .sum()
+        .astype("float")
+    )
+    if df_no_sc is not None:
+        no_sc_by_use = (
+            df_no_sc.loc[df_no_sc['variable_name'] == "E_vol"]
+            .groupby('col_label')[year_cols]
+            .sum()
+            .astype("float")
+        )
+
+    x = np.array(remind_year_cols).astype('int')
+
+    evol_subdir = os.path.join(output_dir, "E_vol") if output_dir is not None else None
+    if evol_subdir is not None:
+        os.makedirs(evol_subdir, exist_ok=True)
+
+    def _save_or_show(fig, fname):
+        if output_dir is not None:
+            plt.savefig(os.path.join(evol_subdir, fname), bbox_inches='tight')
+            plt.close(fig)
+        else:
+            plt.show()
+
+    def _total(by_use):
+        filtered = by_use if include_PE else by_use.drop(index="PE", errors="ignore")
+        return filtered[remind_year_cols].sum(axis=0).values
+
+    scaf_total   = _total(scaf_by_use)
+    remind_total = _total(remind_by_use)
 
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(x, scaf_total,   color='red',  linewidth=2, label='SCAF')
-    ax.plot(x, remind_total, color='blue', linewidth=2, label='REMIND')
+    ax.plot(x, scaf_total, color='red', linewidth=2, label=scaf_label)
+    if df_no_sc is not None:
+        no_sc_total = _total(no_sc_by_use)
+        ax.plot(x, no_sc_total, color='blue', linewidth=2, label='No structural change')
+    ax.plot(x, remind_total, color='grey', linestyle='--', linewidth=2, label='REMIND')
     ax.set_title("Total final energy volume", fontsize=17)
     ax.set_xlabel("Year", fontsize=14)
     ax.set_ylabel("Energy volume (EJ)", fontsize=14)
@@ -747,7 +792,7 @@ def plot_energy_volumes_comparison(df, REMIND_E_volumes, year_cols, output_dir=N
     _save_or_show(fig, "E_vol_total.png")
 
 
-def plot_energy_volumes_diverging_stacked(df, REMIND_E_volumes, year_cols, output_dir=None):
+def plot_energy_volumes_diverging_stacked(df, REMIND_E_volumes, year_cols, scaf_label="SCAF", output_dir=None):
     """Diverging stacked bar chart of the SCAF − REMIND energy volume gap, decomposed by energy type.
 
     One bar per year in the time series. For each year, positive contributions (SCAF > REMIND)
@@ -795,8 +840,8 @@ def plot_energy_volumes_diverging_stacked(df, REMIND_E_volumes, year_cols, outpu
     ax.set_xticks(x)
     ax.set_xticklabels(remind_year_cols, rotation=45, ha='right', fontsize=11)
     ax.set_xlabel("Year", fontsize=13)
-    ax.set_ylabel("SCAF \u2212 REMIND (EJ)", fontsize=13)
-    ax.set_title("Energy volume gap: SCAF \u2212 REMIND, decomposed by energy type", fontsize=15)
+    ax.set_ylabel(f"{scaf_label} \u2212 REMIND (EJ)", fontsize=13)
+    ax.set_title(f"Energy volume gap: {scaf_label} \u2212 REMIND, decomposed by energy type", fontsize=15)
     ax.legend(loc='upper right', fontsize=11)
     plt.tight_layout()
 
