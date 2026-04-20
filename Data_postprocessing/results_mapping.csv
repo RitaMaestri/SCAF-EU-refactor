@@ -1,0 +1,8 @@
+ID, origin_folder, key, plot_subtitle, number_of_drivers, data_or_hypothesis, energy_import
+results_2026-03-30_19-03, tagged, no_SC, No structural change , baseline, baseline, endogenous
+results_2026-04-16_16-56, tagged, PIK-TFP, Heterogeneous TFP growth rates, one_driver, data_SC, endogenous
+results_2026-03-30_19-13, tagged, CDES, CDES consumption function, one_driver, data_SC, endogenous
+results_2026-03-30_17-18, tagged, KL, KL elasticities, one_driver, data_SC,endogenous
+results_2026-03-30_12-07, tagged, PIK-TFP_CDES_KL, All structural change drivers, all_drivers, data_SC,endogenous
+results_2026-03-31_15-20, drafts, tech-coeff, Services technical coefficients ,one_driver, hypothesis_SC,endogenous
+results_2026-03-31_18-18, drafts, trade, Changes in comparative advantage,one_driver, hypothesis_SC,endogenous

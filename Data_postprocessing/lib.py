@@ -341,150 +341,28 @@ def plot_KL_GDP_evolution(df, year_cols, output_dir=None):
         plt.show()
 
 
-def plot_VA_share_vs_log_gdp_per_capita(df, year_cols, use_consumption=False, use_real_va=False,
-                                        use_real_capital=False, use_nominal_capital=False,
-                                        use_real_labour=False, use_nominal_labour=False,
-                                        use_real_Yj=False, use_nominal_Yj=False,
-                                        use_real_Sj=False, use_nominal_Sj=False,
-                                        use_real_Cj=False,
-                                        use_real_Ij=False, use_nominal_Ij=False,
-                                        use_real_Gj=False, use_nominal_Gj=False,
-                                        use_real_Xj=False, use_nominal_Xj=False,
-                                        use_nominal_Mj=False,
+def plot_VA_share_vs_log_gdp_per_capita(df, year_cols, use_real_va=False,
                                         fix_ylim=True, exclude_energy=False, output_dir=None):
     if use_real_va:
         lj_rows = df.loc[df['variable_name'] == "Lj"].reset_index(drop=True)
         kj_rows = df.loc[df['variable_name'] == "Kj"].reset_index(drop=True)
         pL_base = df.loc[df['variable_name'] == "pL", year_cols[0]].values[0].astype("float")
         pK_base = df.loc[df['variable_name'] == "pK", year_cols[0]].values[0].astype("float")
-        lj_vals = lj_rows[year_cols].values.astype("float")  # (n_sectors, n_years)
+        lj_vals = lj_rows[year_cols].values.astype("float")
         kj_vals = kj_rows[year_cols].values.astype("float")
         sector_names = lj_rows['row_label'].values
-        nominal = lj_vals * pL_base + kj_vals * pK_base      # (n_sectors, n_years)
+        nominal = lj_vals * pL_base + kj_vals * pK_base
         ylabel = "Share of real value added"
         fname_prefix = "real_VA_share"
-    elif use_consumption:
-        p_rows = df.loc[df['variable_name'] == "pCj"].reset_index(drop=True)
-        q_rows = df.loc[df['variable_name'] == "Cj"].reset_index(drop=True)
-        ylabel = "Share of nominal household consumption"
-        fname_prefix = "Cj_share"
-        p_vals = p_rows[year_cols].values.astype("float")   # (n_sectors, n_years)
-        q_vals = q_rows[year_cols].values.astype("float")
-        sector_names = p_rows['row_label'].values
-        nominal = p_vals * q_vals                            # (n_sectors, n_years)
-    elif use_real_capital:
-        kj_rows = df.loc[df['variable_name'] == "Kj"].reset_index(drop=True)
-        sector_names = kj_rows['row_label'].values
-        nominal = kj_rows[year_cols].values.astype("float")  # (n_sectors, n_years)
-        ylabel = "Share of real capital"
-        fname_prefix = "Kj_share"
-    elif use_nominal_capital:
-        kj_rows = df.loc[df['variable_name'] == "Kj"].reset_index(drop=True)
-        pK_vals = df.loc[df['variable_name'] == "pK", year_cols].values.astype("float")  # (1, n_years)
-        sector_names = kj_rows['row_label'].values
-        nominal = kj_rows[year_cols].values.astype("float") * pK_vals  # (n_sectors, n_years)
-        ylabel = "Share of nominal capital"
-        fname_prefix = "nominal_Kj_share"
-    elif use_real_labour:
-        lj_rows = df.loc[df['variable_name'] == "Lj"].reset_index(drop=True)
-        sector_names = lj_rows['row_label'].values
-        nominal = lj_rows[year_cols].values.astype("float")  # (n_sectors, n_years)
-        ylabel = "Share of real labour"
-        fname_prefix = "Lj_share"
-    elif use_nominal_labour:
-        lj_rows = df.loc[df['variable_name'] == "Lj"].reset_index(drop=True)
-        pL_vals = df.loc[df['variable_name'] == "pL", year_cols].values.astype("float")  # (1, n_years)
-        sector_names = lj_rows['row_label'].values
-        nominal = lj_rows[year_cols].values.astype("float") * pL_vals  # (n_sectors, n_years)
-        ylabel = "Share of nominal labour"
-        fname_prefix = "nominal_Lj_share"
-    elif use_real_Yj:
-        yj_rows = df.loc[df['variable_name'] == "Yj"].reset_index(drop=True)
-        sector_names = yj_rows['row_label'].values
-        nominal = yj_rows[year_cols].values.astype("float")  # (n_sectors, n_years)
-        ylabel = "Share of real output"
-        fname_prefix = "Yj_share"
-    elif use_nominal_Yj:
-        yj_rows  = df.loc[df['variable_name'] == "Yj"].reset_index(drop=True)
-        pyj_rows = df.loc[df['variable_name'] == "pYj"].reset_index(drop=True)
-        sector_names = yj_rows['row_label'].values
-        nominal = pyj_rows[year_cols].values.astype("float") * yj_rows[year_cols].values.astype("float")
-        ylabel = "Share of nominal output"
-        fname_prefix = "nominal_Yj_share"
-    elif use_real_Sj:
-        sj_rows = df.loc[df['variable_name'] == "Sj"].reset_index(drop=True)
-        sector_names = sj_rows['row_label'].values
-        nominal = sj_rows[year_cols].values.astype("float")
-        ylabel = "Share of real sales"
-        fname_prefix = "real_Sj_share"
-    elif use_nominal_Sj:
-        sj_rows  = df.loc[df['variable_name'] == "Sj"].reset_index(drop=True)
-        psj_rows = df.loc[df['variable_name'] == "pSj"].reset_index(drop=True)
-        sector_names = sj_rows['row_label'].values
-        nominal = psj_rows[year_cols].values.astype("float") * sj_rows[year_cols].values.astype("float")
-        ylabel = "Share of nominal sales"
-        fname_prefix = "nominal_Sj_share"
-    elif use_real_Cj:
-        cj_rows = df.loc[df['variable_name'] == "Cj"].reset_index(drop=True)
-        sector_names = cj_rows['row_label'].values
-        nominal = cj_rows[year_cols].values.astype("float")
-        ylabel = "Share of real household consumption"
-        fname_prefix = "real_Cj_share"
-    elif use_real_Ij:
-        ij_rows = df.loc[df['variable_name'] == "Ij"].reset_index(drop=True)
-        sector_names = ij_rows['row_label'].values
-        nominal = ij_rows[year_cols].values.astype("float")
-        ylabel = "Share of real investment"
-        fname_prefix = "real_Ij_share"
-    elif use_nominal_Ij:
-        ij_rows  = df.loc[df['variable_name'] == "Ij"].reset_index(drop=True)
-        pcj_rows = df.loc[df['variable_name'] == "pCj"].reset_index(drop=True)
-        sector_names = ij_rows['row_label'].values
-        nominal = pcj_rows[year_cols].values.astype("float") * ij_rows[year_cols].values.astype("float")
-        ylabel = "Share of nominal investment"
-        fname_prefix = "nominal_Ij_share"
-    elif use_real_Gj:
-        gj_rows = df.loc[df['variable_name'] == "Gj"].reset_index(drop=True)
-        sector_names = gj_rows['row_label'].values
-        nominal = gj_rows[year_cols].values.astype("float")
-        ylabel = "Share of real government expenditure"
-        fname_prefix = "real_Gj_share"
-    elif use_nominal_Gj:
-        gj_rows  = df.loc[df['variable_name'] == "Gj"].reset_index(drop=True)
-        pcj_rows = df.loc[df['variable_name'] == "pCj"].reset_index(drop=True)
-        sector_names = gj_rows['row_label'].values
-        nominal = pcj_rows[year_cols].values.astype("float") * gj_rows[year_cols].values.astype("float")
-        ylabel = "Share of nominal government expenditure"
-        fname_prefix = "nominal_Gj_share"
-    elif use_real_Xj:
-        xj_rows = df.loc[df['variable_name'] == "Xj"].reset_index(drop=True)
-        sector_names = xj_rows['row_label'].values
-        nominal = xj_rows[year_cols].values.astype("float")
-        ylabel = "Share of real exports"
-        fname_prefix = "real_Xj_share"
-    elif use_nominal_Xj:
-        xj_rows  = df.loc[df['variable_name'] == "Xj"].reset_index(drop=True)
-        pxj_rows = df.loc[df['variable_name'] == "pXj"].reset_index(drop=True)
-        sector_names = xj_rows['row_label'].values
-        nominal = pxj_rows[year_cols].values.astype("float") * xj_rows[year_cols].values.astype("float")
-        ylabel = "Share of nominal exports"
-        fname_prefix = "nominal_Xj_share"
-    elif use_nominal_Mj:
-        mj_rows  = df.loc[df['variable_name'] == "Mj"].reset_index(drop=True)
-        pmj_rows = df.loc[df['variable_name'] == "pMj"].reset_index(drop=True)
-        sector_names = mj_rows['row_label'].values
-        nominal = pmj_rows[year_cols].values.astype("float") * mj_rows[year_cols].values.astype("float")
-        ylabel = "Share of nominal imports"
-        fname_prefix = "nominal_Mj_share"
     else:
         p_rows = df.loc[df['variable_name'] == "pKLj"].reset_index(drop=True)
         q_rows = df.loc[df['variable_name'] == "KLj"].reset_index(drop=True)
         ylabel = "Share of value added"
         fname_prefix = "VA_share"
-        p_vals = p_rows[year_cols].values.astype("float")   # (n_sectors, n_years)
+        p_vals = p_rows[year_cols].values.astype("float")
         q_vals = q_rows[year_cols].values.astype("float")
         sector_names = p_rows['row_label'].values
-        nominal = p_vals * q_vals                            # (n_sectors, n_years)
+        nominal = p_vals * q_vals
 
     if exclude_energy:
         mask = np.array([s.upper() != "ENERGY" for s in sector_names])
@@ -520,6 +398,119 @@ def plot_VA_share_vs_log_gdp_per_capita(df, year_cols, use_consumption=False, us
             plt.close()
         else:
             plt.show()
+
+
+def plot_variable_share_vs_log_gdp_per_capita(df, year_cols, quantity, price, is_nominal, y_label,
+                                               fix_ylim=True, exclude_energy=False, output_dir=None):
+    q_rows = df.loc[df['variable_name'] == quantity].reset_index(drop=True)
+    sector_names = q_rows['row_label'].values
+    if is_nominal:
+        p_vals = df.loc[df['variable_name'] == price, year_cols].values.astype("float")
+        nominal = p_vals * q_rows[year_cols].values.astype("float")
+        fname_prefix = f"nominal_{quantity}_shares"
+    else:
+        p_base = df.loc[df['variable_name'] == price, year_cols[0]].values[0].astype("float")
+        nominal = q_rows[year_cols].values.astype("float") * p_base
+        fname_prefix = f"real_{quantity}_shares"
+
+    if exclude_energy:
+        mask = np.array([s.upper() != "ENERGY" for s in sector_names])
+        nominal = nominal[mask]
+        sector_names = sector_names[mask]
+        fname_prefix += "_excl_energy"
+
+    shares = nominal / nominal.sum(axis=0)
+
+    GDPreal = df.loc[df['variable_name'] == "GDPreal", year_cols].values[0].astype("float")
+    L       = df.loc[df['variable_name'] == "L",       year_cols].values[0].astype("float")
+    log_gdp_pc = np.log(GDPreal / L)
+
+    if fix_ylim:
+        fname_prefix += "_not_normalised"
+
+    subdir = os.path.join(output_dir, fname_prefix) if output_dir is not None else None
+    if subdir is not None:
+        os.makedirs(subdir, exist_ok=True)
+
+    for j, sector in enumerate(sector_names):
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.plot(log_gdp_pc, shares[j], marker='o', markersize=4, linewidth=1.5)
+        ax.set_title(sector, fontsize=17)
+        ax.set_xlabel("log(GDP per capita)", fontsize=14)
+        ax.set_ylabel(y_label, fontsize=14)
+        if fix_ylim:
+            ax.set_ylim(0, 1)
+
+        if output_dir is not None:
+            fname = f"{fname_prefix}_{sector.replace(' ', '_')}.png"
+            plt.savefig(os.path.join(subdir, fname), bbox_inches='tight')
+            plt.close()
+        else:
+            plt.show()
+
+
+def plot_variable_diff_by_sector(df, df_ref, year_cols, quantity, price, is_nominal, y_label,
+                                 output_dir=None):
+    q_df  = df.loc[df['variable_name']         == quantity].reset_index(drop=True)
+    q_ref = df_ref.loc[df_ref['variable_name'] == quantity].reset_index(drop=True)
+    sector_names = q_df['row_label'].values
+
+    if is_nominal:
+        p_df  = df.loc[df['variable_name']         == price, year_cols].values.astype("float")
+        p_ref = df_ref.loc[df_ref['variable_name'] == price, year_cols].values.astype("float")
+        val_df  = p_df  * q_df[year_cols].values.astype("float")
+        val_ref = p_ref * q_ref[year_cols].values.astype("float")
+        fname_prefix = f"diff_nominal_{quantity}"
+    else:
+        p_base = df_ref.loc[df_ref['variable_name'] == price, year_cols[0]].values[0].astype("float")
+        val_df  = q_df[year_cols].values.astype("float")  * p_base
+        val_ref = q_ref[year_cols].values.astype("float") * p_base
+        fname_prefix = f"diff_real_{quantity}"
+
+    diff = val_df - val_ref
+    years = [int(c) for c in year_cols]
+
+    subdir = os.path.join(output_dir, fname_prefix) if output_dir is not None else None
+    if subdir is not None:
+        os.makedirs(subdir, exist_ok=True)
+
+    for j, sector in enumerate(sector_names):
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.plot(years, diff[j], marker='o', markersize=4, linewidth=1.5)
+        ax.axhline(0, color='grey', linewidth=0.8, linestyle='--')
+        ax.set_title(sector, fontsize=17)
+        ax.set_xlabel("Year", fontsize=14)
+        ax.set_ylabel(y_label, fontsize=14)
+
+        if output_dir is not None:
+            fname = f"{fname_prefix}_{sector.replace(' ', '_')}.png"
+            plt.savefig(os.path.join(subdir, fname), bbox_inches='tight')
+            plt.close()
+        else:
+            plt.show()
+
+
+def plot_aggregate_diff(df, df_ref, year_cols, variable_name, y_label, output_dir=None):
+    val_df  = df.loc[df['variable_name']         == variable_name, year_cols].values[0].astype("float")
+    val_ref = df_ref.loc[df_ref['variable_name'] == variable_name, year_cols].values[0].astype("float")
+    diff  = (val_df - val_ref) / val_ref * 100
+    years = [int(c) for c in year_cols]
+
+    fname_prefix = f"diff_{variable_name}"
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.plot(years, diff, marker='o', markersize=4, linewidth=1.5)
+    ax.axhline(0, color='grey', linewidth=0.8, linestyle='--')
+    ax.set_title(f"Δ {variable_name} vs no-SC", fontsize=17)
+    ax.set_xlabel("Year", fontsize=14)
+    ax.set_ylabel(y_label, fontsize=14)
+
+    if output_dir is not None:
+        subdir = os.path.join(output_dir, fname_prefix)
+        os.makedirs(subdir, exist_ok=True)
+        plt.savefig(os.path.join(subdir, f"{fname_prefix}.png"), bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
 
 
 def plot_structural_change_panel(df, year_cols, fix_ylim=True, subtitle="", output_dir=None):
@@ -756,6 +747,130 @@ def plot_energy_volumes_comparison(df, REMIND_E_volumes, year_cols, output_dir=N
     _save_or_show(fig, "E_vol_total.png")
 
 
+def plot_energy_volumes_diverging_stacked(df, REMIND_E_volumes, year_cols, output_dir=None):
+    """Diverging stacked bar chart of the SCAF − REMIND energy volume gap, decomposed by energy type.
+
+    One bar per year in the time series. For each year, positive contributions (SCAF > REMIND)
+    are stacked upward from zero and negative contributions (SCAF < REMIND) downward.
+    All energy uses (including PE) are included.
+    """
+    evol_rows = df.loc[df['variable_name'] == "E_vol"].reset_index(drop=True)
+    remind_year_cols = [c for c in year_cols if c in REMIND_E_volumes.columns]
+
+    scaf_by_use = evol_rows.groupby('col_label')[year_cols].sum().astype("float")
+    remind_by_use = (
+        REMIND_E_volumes.groupby('Energy uses')[remind_year_cols]
+        .sum()
+        .astype("float")
+    )
+
+    uses = [u for u in scaf_by_use.index if u in remind_by_use.index]
+
+    diff = np.array([
+        scaf_by_use.loc[u, remind_year_cols].values - remind_by_use.loc[u].values
+        for u in uses
+    ])
+
+    colors = plt.cm.tab10(np.linspace(0, 0.9, len(uses)))
+
+    x = np.array(remind_year_cols).astype('int')
+    bar_width = (x[1] - x[0]) * 0.8 if len(x) > 1 else 4
+
+    fig, ax = plt.subplots(figsize=(14, 7))
+
+    pos_bottoms = np.zeros(len(remind_year_cols))
+    neg_bottoms = np.zeros(len(remind_year_cols))
+
+    for i, (use, d) in enumerate(zip(uses, diff)):
+        pos = np.where(d > 0, d, 0.0)
+        neg = np.where(d < 0, d, 0.0)
+        ax.bar(x, pos, bottom=pos_bottoms, color=colors[i], label=use,
+               edgecolor='white', linewidth=0.4, width=bar_width)
+        ax.bar(x, neg, bottom=neg_bottoms, color=colors[i],
+               edgecolor='white', linewidth=0.4, width=bar_width)
+        pos_bottoms += pos
+        neg_bottoms += neg
+
+    ax.axhline(0, color='black', linewidth=0.8)
+    ax.set_xticks(x)
+    ax.set_xticklabels(remind_year_cols, rotation=45, ha='right', fontsize=11)
+    ax.set_xlabel("Year", fontsize=13)
+    ax.set_ylabel("SCAF \u2212 REMIND (EJ)", fontsize=13)
+    ax.set_title("Energy volume gap: SCAF \u2212 REMIND, decomposed by energy type", fontsize=15)
+    ax.legend(loc='upper right', fontsize=11)
+    plt.tight_layout()
+
+    subdir = os.path.join(output_dir, "E_vol") if output_dir is not None else None
+    if subdir is not None:
+        os.makedirs(subdir, exist_ok=True)
+        fig.savefig(os.path.join(subdir, "E_vol_diverging_stacked.png"), bbox_inches='tight')
+        plt.close(fig)
+    else:
+        plt.show()
+
+
+def plot_energy_volumes_diverging_stacked_scaf_diff(df, df_baseline, year_cols, output_dir=None):
+    """Diverging stacked bar chart of the SCAF scenario − SCAF baseline energy volume gap, decomposed by energy type.
+
+    One bar per year. Positive contributions (scenario > baseline) stack upward from zero,
+    negative contributions (scenario < baseline) stack downward. All energy uses included.
+    """
+    def _by_use(data):
+        return (
+            data.loc[data['variable_name'] == "E_vol"]
+            .groupby('col_label')[year_cols]
+            .sum()
+            .astype("float")
+        )
+
+    scaf_by_use      = _by_use(df)
+    baseline_by_use  = _by_use(df_baseline)
+
+    uses = [u for u in scaf_by_use.index if u in baseline_by_use.index]
+
+    diff = np.array([
+        scaf_by_use.loc[u].values - baseline_by_use.loc[u].values
+        for u in uses
+    ])
+
+    colors = plt.cm.tab10(np.linspace(0, 0.9, len(uses)))
+
+    x = np.array(year_cols).astype('int')
+    bar_width = (x[1] - x[0]) * 0.8 if len(x) > 1 else 4
+
+    fig, ax = plt.subplots(figsize=(14, 7))
+
+    pos_bottoms = np.zeros(len(year_cols))
+    neg_bottoms = np.zeros(len(year_cols))
+
+    for i, (use, d) in enumerate(zip(uses, diff)):
+        pos = np.where(d > 0, d, 0.0)
+        neg = np.where(d < 0, d, 0.0)
+        ax.bar(x, pos, bottom=pos_bottoms, color=colors[i], label=use,
+               edgecolor='white', linewidth=0.4, width=bar_width)
+        ax.bar(x, neg, bottom=neg_bottoms, color=colors[i],
+               edgecolor='white', linewidth=0.4, width=bar_width)
+        pos_bottoms += pos
+        neg_bottoms += neg
+
+    ax.axhline(0, color='black', linewidth=0.8)
+    ax.set_xticks(x)
+    ax.set_xticklabels(year_cols, rotation=45, ha='right', fontsize=11)
+    ax.set_xlabel("Year", fontsize=13)
+    ax.set_ylabel("Scenario \u2212 Baseline (EJ)", fontsize=13)
+    ax.set_title("Energy volume gap: SCAF scenario \u2212 SCAF baseline, decomposed by energy type", fontsize=15)
+    ax.legend(loc='upper right', fontsize=11)
+    plt.tight_layout()
+
+    subdir = os.path.join(output_dir, "E_vol") if output_dir is not None else None
+    if subdir is not None:
+        os.makedirs(subdir, exist_ok=True)
+        fig.savefig(os.path.join(subdir, "E_vol_diverging_stacked_scaf_diff.png"), bbox_inches='tight')
+        plt.close(fig)
+    else:
+        plt.show()
+
+
 def plot_energy_volumes_by_consumer(df, year_cols, output_dir=None):
     """One plot per energy consumer: total E_vol summed over all energy uses."""
     evol_rows = df.loc[df['variable_name'] == "E_vol"].reset_index(drop=True)
@@ -860,6 +975,41 @@ def plot_sector_Sj_Yj(df, year_cols, sector, output_dir=None):
         subdir = os.path.join(output_dir, "Sj_pSj_Yj_pYj")
         os.makedirs(subdir, exist_ok=True)
         plt.savefig(os.path.join(subdir, f"Sj_pSj_Yj_pYj_{sector}.png"), bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
+
+
+def plot_sector_Sj_Yj_diff(df, df_ref, year_cols, sector, output_dir=None):
+    x = np.array(year_cols).astype('int')
+
+    def _get(src, var_name):
+        row = src.loc[
+            (src['variable_name'] == var_name) & (src['row_label'] == sector),
+            year_cols
+        ]
+        return row.values[0].astype("float") if not row.empty else None
+
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    fig.suptitle(f"{sector} — Δ vs no-SC (relative change)", fontsize=18)
+
+    for ax, label in zip(axes.flat, ["Sj", "pSj", "Yj", "pYj"]):
+        v_sc = _get(df, label)
+        v_ref = _get(df_ref, label)
+        if v_sc is not None and v_ref is not None:
+            diff = v_sc / v_sc[0] - v_ref / v_ref[0]
+            ax.plot(x, diff, marker='o', markersize=3, linewidth=1.5)
+            ax.axhline(0, color='grey', linewidth=0.8, linestyle='--')
+        ax.set_title(label, fontsize=14)
+        ax.set_xlabel("Year", fontsize=12)
+        ax.set_ylabel("Δ relative change (2020 = 1)", fontsize=12)
+
+    plt.tight_layout()
+
+    if output_dir is not None:
+        subdir = os.path.join(output_dir, "Sj_pSj_Yj_pYj_diff")
+        os.makedirs(subdir, exist_ok=True)
+        plt.savefig(os.path.join(subdir, f"Sj_pSj_Yj_pYj_diff_{sector}.png"), bbox_inches='tight')
         plt.close()
     else:
         plt.show()
@@ -1119,6 +1269,55 @@ def plot_real_export_share_of_output(df, year_cols, output_dir=None):
 
         if subdir is not None:
             plt.savefig(os.path.join(subdir, f"real_export_share_of_output_{sector}.png"), bbox_inches='tight')
+            plt.close(fig)
+        else:
+            plt.show()
+
+
+def plot_export_share_of_output_diff(df, df_ref, year_cols, output_dir=None):
+    """One plot per sector: Δ(pXj₀·Xj_t / pYj₀·Yj_t) between df and df_ref, using base-year prices from df_ref."""
+    x = np.array(year_cols).astype('int')
+
+    Xj_rows   = df.loc[df['variable_name']         == "Xj"].reset_index(drop=True)
+    Yj_rows   = df.loc[df['variable_name']         == "Yj"].reset_index(drop=True)
+    Xj_rows_r = df_ref.loc[df_ref['variable_name'] == "Xj"].reset_index(drop=True)
+    Yj_rows_r = df_ref.loc[df_ref['variable_name'] == "Yj"].reset_index(drop=True)
+    pXj_rows_r = df_ref.loc[df_ref['variable_name'] == "pXj"].reset_index(drop=True)
+    pYj_rows_r = df_ref.loc[df_ref['variable_name'] == "pYj"].reset_index(drop=True)
+
+    subdir = os.path.join(output_dir, "export_share_of_output_diff") if output_dir is not None else None
+    if subdir is not None:
+        os.makedirs(subdir, exist_ok=True)
+
+    sectors = Xj_rows['row_label'].values
+    for j, sector in enumerate(sectors):
+        Xj    = Xj_rows.loc[Xj_rows['row_label']       == sector, year_cols].values
+        Yj    = Yj_rows.loc[Yj_rows['row_label']       == sector, year_cols].values
+        Xj_r  = Xj_rows_r.loc[Xj_rows_r['row_label']  == sector, year_cols].values
+        Yj_r  = Yj_rows_r.loc[Yj_rows_r['row_label']  == sector, year_cols].values
+        pXj0  = pXj_rows_r.loc[pXj_rows_r['row_label'] == sector, year_cols[0]].values
+        pYj0  = pYj_rows_r.loc[pYj_rows_r['row_label'] == sector, year_cols[0]].values
+
+        if any(arr.size == 0 for arr in (Xj, Yj, Xj_r, Yj_r, pXj0, pYj0)):
+            continue
+
+        pXj0 = float(pXj0[0])
+        pYj0 = float(pYj0[0])
+        ratio_df  = (pXj0 * Xj[0].astype("float"))  / (pYj0 * Yj[0].astype("float"))
+        ratio_ref = (pXj0 * Xj_r[0].astype("float")) / (pYj0 * Yj_r[0].astype("float"))
+        diff = ratio_df - ratio_ref
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.plot(x, diff, color=my_cmap(j), linewidth=1.5, marker='o', markersize=3)
+        ax.axhline(0, color='grey', linewidth=0.8, linestyle='--')
+        ax.set_title(f"Δ real export share of output — {sector}", fontsize=16)
+        ax.set_xlabel("Year", fontsize=13)
+        ax.set_ylabel("Δ(pXj₀·Xj_t / pYj₀·Yj_t)", fontsize=12)
+        plt.xlim(x[0] - 0.01, x[-1] + 0.01)
+        plt.tight_layout()
+
+        if subdir is not None:
+            plt.savefig(os.path.join(subdir, f"export_share_of_output_diff_{sector}.png"), bbox_inches='tight')
             plt.close(fig)
         else:
             plt.show()
