@@ -77,6 +77,7 @@ def exploratory_plots(results_path):
             plot_sector_Sj_Yj_diff(SCAF_results, no_SC_df, year_cols, sector, output_dir=output_dir)
     ###############################################################################
 
+    plot_variable_1D(SCAF_results, "GDPPI", "q", diff=False, output_dir=output_dir)
 
 
     if no_SC_df is not None:

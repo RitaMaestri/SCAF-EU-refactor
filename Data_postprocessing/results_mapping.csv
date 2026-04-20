@@ -6,3 +6,4 @@ results_2026-03-30_17-18, tagged, KL, KL elasticities, one_driver, data_SC,endog
 results_2026-03-30_12-07, tagged, PIK-TFP_CDES_KL, All structural change drivers, all_drivers, data_SC,endogenous
 results_2026-03-31_15-20, drafts, tech-coeff, Services technical coefficients ,one_driver, hypothesis_SC,endogenous
 results_2026-03-31_18-18, drafts, trade, Changes in comparative advantage,one_driver, hypothesis_SC,endogenous
+results_2026-04-17_17-54, drafts, EUKLEMS-TFP_CDES_KL,All structural change drivers, all_drivers, data_SC, endogenous
