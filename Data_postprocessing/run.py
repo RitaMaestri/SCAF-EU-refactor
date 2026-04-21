@@ -10,9 +10,9 @@ from scipy.ndimage.interpolation import shift
 import sys
 import matplotlib.colors as mcolors
 from scipy import stats
-from lib import extract_var_df, plot_varj_evol, plot_varj_evol_absolute, plot_variable_1D, plot_KL_GDP_evolution, plot_VA_share_vs_log_gdp_per_capita, plot_variable_share_vs_log_gdp_per_capita, plot_variable_diff_by_sector, plot_aggregate_diff, plot_structural_change_panel, plot_structural_change_panel_diff, plot_energy_volumes_comparison_by_use, plot_total_energy_volume_comparison, plot_energy_volumes_diverging_stacked, plot_energy_volumes_diverging_stacked_scaf_diff, plot_energy_volumes_by_consumer, plot_Yj_vs_REMIND_output, plot_sector_Sj_Yj, plot_sector_Sj_Yj_diff, sectors_names_eng, plot_energy_expenditure_by_sector, plot_energy_expenditure_share, plot_export_share_of_output, plot_export_share_of_output_diff, plot_real_export_share_of_output, plot_nominal_demand_evolutions, plot_energy_sector_inputs, plot_pY_Ej, plot_demand_components_stacked
+from lib import extract_var_df, plot_varj_evol, plot_varj_evol_absolute, plot_variable_1D, plot_KL_GDP_evolution, plot_VA_share_vs_log_gdp_per_capita, plot_variable_share_vs_log_gdp_per_capita, plot_variable_diff_by_sector, plot_aggregate_diff, plot_structural_change_panel, plot_structural_change_panel_diff, plot_energy_volumes_comparison_by_use, plot_total_energy_volume_comparison, plot_energy_volumes_diverging_stacked, plot_energy_volumes_diverging_stacked_scaf_diff, plot_energy_volumes_by_consumer, plot_Yj_vs_REMIND_output, plot_sector_Sj_Yj, plot_sector_Sj_Yj_diff, sectors_names_eng, plot_energy_expenditure_by_sector, plot_energy_expenditure_share, plot_export_share_of_output, plot_export_share_of_output_diff, plot_real_export_share_of_output, plot_nominal_demand_evolutions, plot_energy_sector_inputs, plot_pY_Ej, plot_demand_components_stacked, plot_KL_shares_by_sector
 
-no_SC_path = "Solver/results/tagged/results_2026-03-30_19-03/results_2026-03-30_19-03.csv"
+no_SC_path = "Solver/results/tagged/results_2026-04-14_17-45/results_2026-04-14_17-45.csv"
 # Set to a specific CSV path to plot a single run, or None to plot all tagged results
 results_path = "Solver/results/tagged/results_2026-04-14_17-45/results_2026-04-14_17-45.csv"
 #results_path = None
@@ -33,7 +33,7 @@ if no_SC_path:
     no_SC_df = _no_sc_raw[_meta + _ycols]
 
 
-def presentation_plots(results_path, subtitle="", output_name=None):
+def presentation_plots(results_path, subtitle="", output_name=None, no_sc_df=None):
     csv_stem = os.path.splitext(os.path.basename(results_path))[0]
     output_dir = os.path.join("Data_postprocessing", "plots", output_name if output_name else csv_stem)
     os.makedirs(output_dir, exist_ok=True)
@@ -52,12 +52,15 @@ def presentation_plots(results_path, subtitle="", output_name=None):
     ################# structural change panel #######################################
     plot_structural_change_panel(SCAF_results, year_cols, fix_ylim=True,  subtitle=subtitle, output_dir=output_dir)
     plot_structural_change_panel(SCAF_results, year_cols, fix_ylim=False, subtitle=subtitle, output_dir=output_dir)
-    if no_SC_df is not None:
-        plot_structural_change_panel_diff(SCAF_results, no_SC_df, year_cols, subtitle=subtitle, output_dir=output_dir)
+    plot_structural_change_panel(SCAF_results, year_cols, fix_ylim=True,  subtitle=subtitle, include_real_va=False, output_dir=output_dir)
+    plot_structural_change_panel(SCAF_results, year_cols, fix_ylim=False, subtitle=subtitle, include_real_va=False, output_dir=output_dir)
+    if no_sc_df is not None:
+        plot_structural_change_panel_diff(SCAF_results, no_sc_df, year_cols, subtitle=subtitle, output_dir=output_dir)
+        plot_structural_change_panel_diff(SCAF_results, no_sc_df, year_cols, subtitle=subtitle, include_real_va=False, output_dir=output_dir)
     ###############################################################################
 
-    if no_SC_df is not None:
-        plot_energy_volumes_diverging_stacked_scaf_diff(SCAF_results, no_SC_df, year_cols, output_dir=output_dir)
+    if no_sc_df is not None:
+        plot_energy_volumes_diverging_stacked_scaf_diff(SCAF_results, no_sc_df, year_cols, output_dir=output_dir)
 
     plot_energy_volumes_diverging_stacked(SCAF_results, REMIND_E_volumes, year_cols,
                                           scaf_label=subtitle, output_dir=output_dir)
@@ -66,9 +69,41 @@ def presentation_plots(results_path, subtitle="", output_name=None):
         SCAF_results, REMIND_E_volumes, year_cols,
         include_PE=True,
         scaf_label=subtitle,
-        df_no_sc=no_SC_df,
+        df_no_sc=no_sc_df,
         output_dir=output_dir,
     )
+
+
+
+def narrow_presentation_plots(results_path, subtitle="", key="", no_sc_df=None):
+    output_dir = os.path.join("Data_postprocessing", "plots", "presentation", key)
+    os.makedirs(output_dir, exist_ok=True)
+
+    SCAF_results = pd.read_csv(results_path)
+    meta_cols = ['variable_name', 'row_label', 'col_label', 'status']
+    year_cols = [c for c in SCAF_results.columns if c not in meta_cols and int(c) <= 2050]
+    SCAF_results = SCAF_results[meta_cols + year_cols]
+
+    if no_sc_df is not None:
+        plot_energy_volumes_diverging_stacked_scaf_diff(
+            SCAF_results, no_sc_df, year_cols,
+            output_path=os.path.join(output_dir, "E_bar.png"))
+
+    plot_total_energy_volume_comparison(
+        SCAF_results, REMIND_E_volumes, year_cols,
+        include_PE=True, scaf_label=subtitle, df_no_sc=no_sc_df,
+        output_path=os.path.join(output_dir, "E_tot.png"))
+
+    plot_structural_change_panel(
+        SCAF_results, year_cols, fix_ylim=True, subtitle=subtitle,
+        include_real_va=False,
+        output_path=os.path.join(output_dir, "SC_ind.png"))
+
+    if no_sc_df is not None:
+        plot_structural_change_panel_diff(
+            SCAF_results, no_sc_df, year_cols, subtitle=subtitle,
+            include_real_va=False,
+            output_path=os.path.join(output_dir, "SC_diff.png"))
 
 
 def exploratory_plots(results_path, subtitle=""):
@@ -81,15 +116,11 @@ def exploratory_plots(results_path, subtitle=""):
     year_cols = [c for c in SCAF_results.columns if c not in meta_cols and int(c) <= 2050]
     SCAF_results = SCAF_results[meta_cols + year_cols]
 
-    ################# Sj, pSj, Yj, pYj per sector #################################
-    for sector in sectors_names_eng:
-        plot_sector_Sj_Yj(SCAF_results, year_cols, sector, output_dir=output_dir)
-        if no_SC_df is not None:
-            plot_sector_Sj_Yj_diff(SCAF_results, no_SC_df, year_cols, sector, output_dir=output_dir)
-    ###############################################################################
-
     plot_variable_1D(SCAF_results, "GDPPI", "q", diff=False, output_dir=output_dir)
 
+    ################# capital/labour income shares (year 0) ########################
+    plot_KL_shares_by_sector(SCAF_results, year_cols, output_dir=output_dir)
+    ###############################################################################
 
     if no_SC_df is not None:
         plot_variable_diff_by_sector(SCAF_results, no_SC_df, year_cols, "Yj", "pYj", is_nominal=False, y_label="Δ real output (pYj₀·Yj)", output_dir=output_dir)
@@ -127,6 +158,7 @@ def exploratory_plots(results_path, subtitle=""):
     ################# demand components stacked bar charts ########################
     plot_demand_components_stacked(SCAF_results, year_cols, output_dir=output_dir)
     ###############################################################################
+
 
 
     plot_varj_evol_absolute(df=SCAF_results, var="KLj", pq="pq", display_top_names=7, mytitle="Absolute evolution of the value added per sector (value)", output_dir=output_dir)
@@ -221,16 +253,88 @@ def plot_run(results_path, subtitle=""):
     presentation_plots(results_path, subtitle=subtitle)
     exploratory_plots(results_path, subtitle=subtitle)
 
-exploratory_plots(results_path)
+#exploratory_plots(results_path)
 
 mapping = pd.read_csv("Data_postprocessing/results_mapping.csv", skipinitialspace=True)
+
 for _, row in mapping.iterrows():
     run_id = row["ID"].strip()
     origin_folder = row["origin_folder"].strip()
     key = row["key"].strip()
     subtitle = str(row["plot_subtitle"]).strip() if pd.notna(row["plot_subtitle"]) else ""
+    energy_import = str(row["energy_import"]).strip()
+    me_folder = "exo_ME" if energy_import == "exogenous" else "endo_ME"
     path = os.path.join("Solver", "results", origin_folder, run_id, f"{run_id}.csv")
-    print(f"Plotting {run_id} -> {key}...")
-    presentation_plots(path, subtitle=subtitle, output_name=key)
 
+    no_sc_match = mapping[
+        (mapping["number_of_drivers"].str.strip() == "baseline") &
+        (mapping["energy_import"].str.strip() == energy_import)
+    ]
+    if not no_sc_match.empty:
+        _r = no_sc_match.iloc[0]
+        _rid = _r["ID"].strip()
+        _no_sc_raw = pd.read_csv(os.path.join("Solver", "results", _r["origin_folder"].strip(), _rid, f"{_rid}.csv"))
+        _meta = ['variable_name', 'row_label', 'col_label', 'status']
+        _ycols = [c for c in _no_sc_raw.columns if c not in _meta and int(c) <= 2050]
+        no_sc_df_run = _no_sc_raw[_meta + _ycols]
+    else:
+        no_sc_df_run = None
+
+    #print(f"Plotting {run_id} -> {key}...")
+    #presentation_plots(path, subtitle=subtitle, output_name=os.path.join(me_folder, key), no_sc_df=no_sc_df_run)
+
+for _, row in mapping.iterrows():
+    if str(row["energy_import"]).strip() != "exogenous":
+        continue
+    run_id = row["ID"].strip()
+    origin_folder = row["origin_folder"].strip()
+    key = row["key"].strip()
+    subtitle = str(row["plot_subtitle"]).strip() if pd.notna(row["plot_subtitle"]) else ""
+    path = os.path.join("Solver", "results", origin_folder, run_id, f"{run_id}.csv")
+
+    no_sc_match = mapping[
+        (mapping["number_of_drivers"].str.strip() == "baseline") &
+        (mapping["energy_import"].str.strip() == "exogenous")
+    ]
+    if not no_sc_match.empty:
+        _r = no_sc_match.iloc[0]
+        _rid = _r["ID"].strip()
+        _no_sc_raw = pd.read_csv(os.path.join("Solver", "results", _r["origin_folder"].strip(), _rid, f"{_rid}.csv"))
+        _meta = ['variable_name', 'row_label', 'col_label', 'status']
+        _ycols = [c for c in _no_sc_raw.columns if c not in _meta and int(c) <= 2050]
+        no_sc_df_run = _no_sc_raw[_meta + _ycols]
+    else:
+        no_sc_df_run = None
+
+    print(f"Narrow plots {run_id} -> {key}...")
+    narrow_presentation_plots(path, subtitle=subtitle, key=key, no_sc_df=no_sc_df_run)
+
+    #print(f"Plotting {run_id} -> {key}...")
+    #presentation_plots(path, subtitle=subtitle, output_name=os.path.join(me_folder, key), no_sc_df=no_sc_df_run)
+
+for _, row in mapping.iterrows():
+    if str(row["energy_import"]).strip() != "exogenous":
+        continue
+    run_id = row["ID"].strip()
+    origin_folder = row["origin_folder"].strip()
+    key = row["key"].strip()
+    subtitle = str(row["plot_subtitle"]).strip() if pd.notna(row["plot_subtitle"]) else ""
+    path = os.path.join("Solver", "results", origin_folder, run_id, f"{run_id}.csv")
+
+    no_sc_match = mapping[
+        (mapping["number_of_drivers"].str.strip() == "baseline") &
+        (mapping["energy_import"].str.strip() == "exogenous")
+    ]
+    if not no_sc_match.empty:
+        _r = no_sc_match.iloc[0]
+        _rid = _r["ID"].strip()
+        _no_sc_raw = pd.read_csv(os.path.join("Solver", "results", _r["origin_folder"].strip(), _rid, f"{_rid}.csv"))
+        _meta = ['variable_name', 'row_label', 'col_label', 'status']
+        _ycols = [c for c in _no_sc_raw.columns if c not in _meta and int(c) <= 2050]
+        no_sc_df_run = _no_sc_raw[_meta + _ycols]
+    else:
+        no_sc_df_run = None
+
+    print(f"Narrow plots {run_id} -> {key}...")
+    narrow_presentation_plots(path, subtitle=subtitle, key=key, no_sc_df=no_sc_df_run)
 

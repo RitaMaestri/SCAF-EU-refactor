@@ -513,7 +513,7 @@ def plot_aggregate_diff(df, df_ref, year_cols, variable_name, y_label, output_di
         plt.show()
 
 
-def plot_structural_change_panel(df, year_cols, fix_ylim=True, subtitle="", output_dir=None):
+def plot_structural_change_panel(df, year_cols, fix_ylim=True, subtitle="", include_real_va=True, output_dir=None, output_path=None):
     """3×3 panel: VA share, real VA share, Cj share for AGRICULTURE / MANUFACTURE / SERVICES.
 
     Rows:
@@ -561,8 +561,11 @@ def plot_structural_change_panel(df, year_cols, fix_ylim=True, subtitle="", outp
         (rva_shares, rva_names, "Real VA share\n(Lj·pL₀+Kj·pK₀)"),
         (cj_shares,  cj_names,  "Cj share\n(pCj·Cj)"),
     ]
+    if not include_real_va:
+        row_data = [row_data[0], row_data[2]]
 
-    fig, axes = plt.subplots(3, 3, figsize=(18, 14))
+    n_rows = len(row_data)
+    fig, axes = plt.subplots(n_rows, 3, figsize=(18, 5 * n_rows))
     top_margin = 0.91 if subtitle else 0.94
     fig.subplots_adjust(top=top_margin, hspace=0.35, wspace=0.3)
     fig.suptitle("Structural change indicators", fontsize=18, fontweight='bold', y=0.99)
@@ -576,7 +579,7 @@ def plot_structural_change_panel(df, year_cols, fix_ylim=True, subtitle="", outp
             if idx.size > 0:
                 ax.plot(log_gdp_pc, shares[idx[0]], marker='o', markersize=4, linewidth=1.5)
             if fix_ylim:
-                ax.set_ylim(0, 1)
+                ax.set_ylim(0, 0.85)
             # column title on top row only
             if row_idx == 0:
                 ax.set_title(sector, fontsize=14)
@@ -584,20 +587,25 @@ def plot_structural_change_panel(df, year_cols, fix_ylim=True, subtitle="", outp
             if col_idx == 0:
                 ax.set_ylabel(row_label, fontsize=12)
             # x-label on bottom row only
-            if row_idx == 2:
+            if row_idx == n_rows - 1:
                 ax.set_xlabel("log(GDP per capita)", fontsize=11)
 
-    if output_dir is not None:
+    if output_path is not None:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        plt.savefig(output_path, bbox_inches='tight')
+        plt.close(fig)
+    elif output_dir is not None:
         subdir = os.path.join(output_dir, "structural_change_panel")
         os.makedirs(subdir, exist_ok=True)
-        fname = "structural_change_panel.png" if fix_ylim else "structural_change_panel_free_ylim.png"
+        suffix = "" if include_real_va else "_no_real_va"
+        fname = f"structural_change_panel{suffix}.png" if fix_ylim else f"structural_change_panel_free_ylim{suffix}.png"
         plt.savefig(os.path.join(subdir, fname), bbox_inches='tight')
         plt.close(fig)
     else:
         plt.show()
 
 
-def plot_structural_change_panel_diff(df, df_ref, year_cols, subtitle="", output_dir=None):
+def plot_structural_change_panel_diff(df, df_ref, year_cols, subtitle="", include_real_va=True, output_dir=None, output_path=None):
     """3×3 panel of *differences* (df minus df_ref) for the three structural-change
     indicators across AGRICULTURE / MANUFACTURE / SERVICES.
 
@@ -651,8 +659,11 @@ def plot_structural_change_panel_diff(df, df_ref, year_cols, subtitle="", output
         (rva_shares_df - rva_shares_ref, rva_names, "Δ real VA share"),
         (cj_shares_df  - cj_shares_ref,  cj_names,  "Δ households consumption share"),
     ]
+    if not include_real_va:
+        row_data = [row_data[0], row_data[2]]
 
-    fig, axes = plt.subplots(3, 3, figsize=(18, 14))
+    n_rows = len(row_data)
+    fig, axes = plt.subplots(n_rows, 3, figsize=(18, 5 * n_rows))
     top_margin = 0.91 if subtitle else 0.94
     fig.subplots_adjust(top=top_margin, hspace=0.35, wspace=0.3)
     fig.suptitle("Structural change indicators — difference vs. no-SC baseline",
@@ -673,13 +684,18 @@ def plot_structural_change_panel_diff(df, df_ref, year_cols, subtitle="", output
                 ax.set_title(sector, fontsize=14)
             if col_idx == 0:
                 ax.set_ylabel(row_label, fontsize=12)
-            if row_idx == 2:
+            if row_idx == n_rows - 1:
                 ax.set_xlabel("log(GDP per capita)", fontsize=11)
 
-    if output_dir is not None:
+    if output_path is not None:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        plt.savefig(output_path, bbox_inches='tight')
+        plt.close(fig)
+    elif output_dir is not None:
         subdir = os.path.join(output_dir, "structural_change_panel")
         os.makedirs(subdir, exist_ok=True)
-        plt.savefig(os.path.join(subdir, "structural_change_panel_diff.png"), bbox_inches='tight')
+        suffix = "" if include_real_va else "_no_real_va"
+        plt.savefig(os.path.join(subdir, f"structural_change_panel_diff{suffix}.png"), bbox_inches='tight')
         plt.close(fig)
     else:
         plt.show()
@@ -737,7 +753,7 @@ def plot_energy_volumes_comparison_by_use(df, REMIND_E_volumes, year_cols, scaf_
         _save_or_show(fig, f"E_vol_{safe_use}.png")
 
 
-def plot_total_energy_volume_comparison(df, REMIND_E_volumes, year_cols, include_PE=False, scaf_label="SCAF", df_no_sc=None, output_dir=None):
+def plot_total_energy_volume_comparison(df, REMIND_E_volumes, year_cols, include_PE=False, scaf_label="SCAF", df_no_sc=None, output_dir=None, output_path=None):
     evol_rows = df.loc[df['variable_name'] == "E_vol"].reset_index(drop=True)
     remind_year_cols = [c for c in year_cols if c in REMIND_E_volumes.columns]
 
@@ -789,7 +805,12 @@ def plot_total_energy_volume_comparison(df, REMIND_E_volumes, year_cols, include
     ax.set_xlabel("Year", fontsize=14)
     ax.set_ylabel("Energy volume (EJ)", fontsize=14)
     ax.legend(loc='upper right', fontsize=13)
-    _save_or_show(fig, "E_vol_total.png")
+    if output_path is not None:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        plt.savefig(output_path, bbox_inches='tight')
+        plt.close(fig)
+    else:
+        _save_or_show(fig, "E_vol_total.png")
 
 
 def plot_energy_volumes_diverging_stacked(df, REMIND_E_volumes, year_cols, scaf_label="SCAF", output_dir=None):
@@ -854,7 +875,7 @@ def plot_energy_volumes_diverging_stacked(df, REMIND_E_volumes, year_cols, scaf_
         plt.show()
 
 
-def plot_energy_volumes_diverging_stacked_scaf_diff(df, df_baseline, year_cols, output_dir=None):
+def plot_energy_volumes_diverging_stacked_scaf_diff(df, df_baseline, year_cols, output_dir=None, output_path=None):
     """Diverging stacked bar chart of the SCAF scenario − SCAF baseline energy volume gap, decomposed by energy type.
 
     One bar per year. Positive contributions (scenario > baseline) stack upward from zero,
@@ -907,8 +928,12 @@ def plot_energy_volumes_diverging_stacked_scaf_diff(df, df_baseline, year_cols, 
     ax.legend(loc='upper right', fontsize=11)
     plt.tight_layout()
 
-    subdir = os.path.join(output_dir, "E_vol") if output_dir is not None else None
-    if subdir is not None:
+    if output_path is not None:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        fig.savefig(output_path, bbox_inches='tight')
+        plt.close(fig)
+    elif output_dir is not None:
+        subdir = os.path.join(output_dir, "E_vol")
         os.makedirs(subdir, exist_ok=True)
         fig.savefig(os.path.join(subdir, "E_vol_diverging_stacked_scaf_diff.png"), bbox_inches='tight')
         plt.close(fig)
@@ -1446,6 +1471,57 @@ def plot_energy_sector_inputs(df, year_cols, output_dir=None):
         os.makedirs(subdir, exist_ok=True)
         plt.savefig(os.path.join(subdir, "energy_sector_inputs.png"), bbox_inches='tight')
         plt.close()
+    else:
+        plt.show()
+
+
+def plot_KL_shares_by_sector(df, year_cols, output_dir=None):
+    """Stacked bar chart of capital and labour income shares for year 0.
+
+    For each of AGRICULTURE, MANUFACTURE, SERVICES:
+      capital share = pK * Kj / (pK * Kj + pL * Lj)
+      labour  share = pL * Lj / (pK * Kj + pL * Lj)
+    """
+    year = year_cols[0]
+    target_sectors = ["AGRICULTURE", "MANUFACTURE", "SERVICES"]
+
+    pK = df.loc[df['variable_name'] == "pK", year].values[0].astype("float")
+    pL = df.loc[df['variable_name'] == "pL", year].values[0].astype("float")
+
+    Kj_rows = df.loc[df['variable_name'] == "Kj"].reset_index(drop=True)
+    Lj_rows = df.loc[df['variable_name'] == "Lj"].reset_index(drop=True)
+
+    capital_shares = []
+    labour_shares  = []
+    for sector in target_sectors:
+        Kj = Kj_rows.loc[Kj_rows['row_label'] == sector, year].values[0].astype("float")
+        Lj = Lj_rows.loc[Lj_rows['row_label'] == sector, year].values[0].astype("float")
+        total = pK * Kj + pL * Lj
+        capital_shares.append(pK * Kj / total)
+        labour_shares.append(pL * Lj / total)
+
+    x = np.arange(len(target_sectors))
+    capital_color = "#4C72B0"
+    labour_color  = "#DD8452"
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.bar(x, capital_shares, color=capital_color, label="Capital share  pK·Kj / (pK·Kj + pL·Lj)")
+    ax.bar(x, labour_shares,  bottom=capital_shares, color=labour_color,
+           label="Labour share  pL·Lj / (pK·Kj + pL·Lj)")
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(target_sectors, fontsize=12)
+    ax.set_ylim(0, 1)
+    ax.set_ylabel("Share", fontsize=13)
+    ax.set_title(f"Capital and labour income shares by sector (year {year})", fontsize=14)
+    ax.legend(loc='upper right', fontsize=11)
+    plt.tight_layout()
+
+    if output_dir is not None:
+        subdir = os.path.join(output_dir, "KL_shares_by_sector")
+        os.makedirs(subdir, exist_ok=True)
+        plt.savefig(os.path.join(subdir, f"KL_shares_by_sector_{year}.png"), bbox_inches='tight')
+        plt.close(fig)
     else:
         plt.show()
 

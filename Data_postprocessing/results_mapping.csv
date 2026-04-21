@@ -8,6 +8,8 @@ results_2026-03-31_15-20, drafts, tech-coeff, Services technical coefficients ,o
 results_2026-03-31_18-18, drafts, trade, Changes in comparative advantage,one_driver, hypothesis_SC,endogenous
 results_2026-04-17_17-54, drafts, EUKLEMS-TFP_CDES_KL,All structural change drivers, all_drivers, data_SC, endogenous
 results_2026-04-20_15-33, tagged, EUKLEMS-TFP, Heterogeneous TFP growth rates, one_driver, data_SC, endogenous
-results_2026-04-14_17-45, drafts, no_SC, No structural change, baseline, baseline, exogenous
-results_2026-04-15_14-57, drafts, CDES, CDES consumption function, one_driver, data_SC, exogenous
+results_2026-04-14_17-45, tagged, no_SC, No structural change, baseline, baseline, exogenous
+results_2026-04-15_14-57, tagged, CDES, CDES consumption function, one_driver, data_SC, exogenous
 results_2026-04-20_17-06, tagged, EUKLEMS-TFP, Heterogeneous TFP growth rates, one_driver, data_SC, exogenous
+results_2026-04-20_17-22, tagged, KL, KL elasticities, one_driver, data_SC,exogenous
+results_2026-04-20_17-26, tagged, EUKLEMS-TFP_CDES_KL, All structural change drivers, all_drivers, data_SC, exogenous

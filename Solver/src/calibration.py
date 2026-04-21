@@ -337,13 +337,13 @@ class calibrationVariables:
         # #this is 1 by default for the E sector so calibrate accordingly
         
         self.bKL=float(_av["bKL"])
-        #self.bKLj = (cp(self.KLj0)/(
-        #             cp(self.bKL)*
-        #             np.float_power(cp(self.Lj0),cp(self.alphaLj_CobbDouglas))*
-        #             np.float_power(cp(self.Kj0),cp(self.alphaKj_CobbDouglas))
-        #             ))
+        self.bKLj = (cp(self.KLj0)/(
+                     cp(self.bKL)*
+                     np.float_power(cp(self.Lj0),cp(self.alphaLj_CobbDouglas))*
+                     np.float_power(cp(self.Kj0),cp(self.alphaKj_CobbDouglas))
+                     ))
         
-        self.bKLj = cp(self.KLj0)*cp(self.bKL)/np.float_power(cp(self.alphaLj)*np.float_power(cp(self.Lj0),cp(self.etaKLj)) + cp(self.alphaKj) * np.float_power(cp(self.Kj0),cp(self.etaKLj)), 1/ cp(self.etaKLj))
+        #self.bKLj = cp(self.KLj0)*cp(self.bKL)/np.float_power(cp(self.alphaLj)*np.float_power(cp(self.Lj0),cp(self.etaKLj)) + cp(self.alphaKj) * np.float_power(cp(self.Kj0),cp(self.etaKLj)), 1/ cp(self.etaKLj))
         
         self.target_ni_j  = compensated_price_elasticities_df.squeeze().reindex(sectors).to_numpy()
         self.target_etaCj = income_elasticities_df.squeeze().reindex(sectors).to_numpy()
