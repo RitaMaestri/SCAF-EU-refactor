@@ -13,3 +13,5 @@ results_2026-04-15_14-57, tagged, CDES, CDES consumption function, one_driver, d
 results_2026-04-20_17-06, tagged, EUKLEMS-TFP, Heterogeneous TFP growth rates, one_driver, data_SC, exogenous
 results_2026-04-20_17-22, tagged, KL, KL elasticities, one_driver, data_SC,exogenous
 results_2026-04-20_17-26, tagged, EUKLEMS-TFP_CDES_KL, All structural change drivers, all_drivers, data_SC, exogenous
+results_2026-04-21_13-58, tagged, trade, Changes in comparative advantage,one_driver, hypothesis_SC,exogenous
+results_2026-04-21_14-00, tagged, tech-coeff, Services technical coefficients ,one_driver, hypothesis_SC,exogenous
