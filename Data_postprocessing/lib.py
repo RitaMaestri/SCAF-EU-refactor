@@ -1085,6 +1085,129 @@ def plot_sector_Sj_Yj_diff(df, df_ref, year_cols, sector, output_dir=None):
         plt.show()
 
 
+def plot_real_va_output_diff(df, df_ref, year_cols, output_dir=None):
+    x = [int(c) for c in year_cols]
+
+    pL_base = df.loc[df['variable_name'] == "pL", year_cols[0]].values[0].astype("float")
+    pK_base = df.loc[df['variable_name'] == "pK", year_cols[0]].values[0].astype("float")
+
+    Lj_sc  = df.loc[df['variable_name']     == "Lj"].reset_index(drop=True)
+    Kj_sc  = df.loc[df['variable_name']     == "Kj"].reset_index(drop=True)
+    Yj_sc  = df.loc[df['variable_name']     == "Yj"].reset_index(drop=True)
+    pYj_sc = df.loc[df['variable_name']     == "pYj"].reset_index(drop=True)
+    Lj_ref = df_ref.loc[df_ref['variable_name'] == "Lj"].reset_index(drop=True)
+    Kj_ref = df_ref.loc[df_ref['variable_name'] == "Kj"].reset_index(drop=True)
+    Yj_ref = df_ref.loc[df_ref['variable_name'] == "Yj"].reset_index(drop=True)
+
+    sector_names = Lj_sc['row_label'].values
+
+    real_va_sc  = (Lj_sc[year_cols].values.astype("float")  * pL_base
+                 + Kj_sc[year_cols].values.astype("float")  * pK_base)
+    real_va_ref = (Lj_ref[year_cols].values.astype("float") * pL_base
+                 + Kj_ref[year_cols].values.astype("float") * pK_base)
+    diff_va = real_va_sc - real_va_ref
+
+    pYj0 = pYj_sc[year_cols[0]].values.astype("float")[:, np.newaxis]
+    real_out_sc  = Yj_sc[year_cols].values.astype("float")  * pYj0
+    real_out_ref = Yj_ref[year_cols].values.astype("float") * pYj0
+    diff_out = real_out_sc - real_out_ref
+
+    subdir = os.path.join(output_dir, "diff_real_va_output") if output_dir is not None else None
+    if subdir is not None:
+        os.makedirs(subdir, exist_ok=True)
+
+    for j, sector in enumerate(sector_names):
+        fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+        fig.suptitle(f"{sector} — Δ real VA and output vs no-SC", fontsize=18)
+
+        ax = axes[0]
+        ax.plot(x, diff_va[j], marker='o', markersize=4, linewidth=1.5)
+        ax.axhline(0, color='grey', linewidth=0.8, linestyle='--')
+        ax.set_title("Real VA (pL₀·Lj + pK₀·Kj)", fontsize=14)
+        ax.set_xlabel("Year", fontsize=14)
+        ax.set_ylabel("Δ real value added", fontsize=14)
+
+        ax = axes[1]
+        ax.plot(x, diff_out[j], marker='o', markersize=4, linewidth=1.5)
+        ax.axhline(0, color='grey', linewidth=0.8, linestyle='--')
+        ax.set_title("Real output (pYj₀·Yj)", fontsize=14)
+        ax.set_xlabel("Year", fontsize=14)
+        ax.set_ylabel("Δ real output", fontsize=14)
+
+        plt.tight_layout()
+        if subdir is not None:
+            fname = f"diff_real_va_output_{sector.replace(' ', '_')}.png"
+            plt.savefig(os.path.join(subdir, fname), bbox_inches='tight')
+            plt.close()
+        else:
+            plt.show()
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    fig.suptitle("Total economy — Δ real VA and output vs no-SC", fontsize=18)
+
+    ax = axes[0]
+    ax.plot(x, diff_va.sum(axis=0), marker='o', markersize=4, linewidth=1.5)
+    ax.axhline(0, color='grey', linewidth=0.8, linestyle='--')
+    ax.set_title("Σ Real VA (Σ pL₀·Lj + pK₀·Kj)", fontsize=14)
+    ax.set_xlabel("Year", fontsize=14)
+    ax.set_ylabel("Δ total real value added", fontsize=14)
+
+    ax = axes[1]
+    ax.plot(x, diff_out.sum(axis=0), marker='o', markersize=4, linewidth=1.5)
+    ax.axhline(0, color='grey', linewidth=0.8, linestyle='--')
+    ax.set_title("Σ Real output (Σ pYj₀·Yj)", fontsize=14)
+    ax.set_xlabel("Year", fontsize=14)
+    ax.set_ylabel("Δ total real output", fontsize=14)
+
+    plt.tight_layout()
+    if subdir is not None:
+        plt.savefig(os.path.join(subdir, "diff_real_va_output_total.png"), bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
+
+
+def plot_real_va_vs_gdp(df, year_cols, output_dir=None):
+    x = [int(c) for c in year_cols]
+
+    pL_base = df.loc[df['variable_name'] == "pL", year_cols[0]].values[0].astype("float")
+    pK_base = df.loc[df['variable_name'] == "pK", year_cols[0]].values[0].astype("float")
+
+    Lj = df.loc[df['variable_name'] == "Lj"][year_cols].values.astype("float")
+    Kj = df.loc[df['variable_name'] == "Kj"][year_cols].values.astype("float")
+    real_va  = (pL_base * Lj + pK_base * Kj).sum(axis=0)
+
+    gdp_real = df.loc[df['variable_name'] == "GDPreal", year_cols].values[0].astype("float")
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    fig.suptitle("Total real VA vs real GDP", fontsize=18)
+
+    ax = axes[0]
+    ax.plot(x, real_va  / real_va[0],  marker='o', markersize=4, linewidth=1.5, label="Total real VA")
+    ax.plot(x, gdp_real / gdp_real[0], marker='o', markersize=4, linewidth=1.5, linestyle='--', label="Real GDP")
+    ax.set_title("Normalized trajectories (year₀ = 1)", fontsize=14)
+    ax.set_xlabel("Year", fontsize=14)
+    ax.set_ylabel("Index (year₀ = 1)", fontsize=14)
+    ax.legend()
+
+    ax = axes[1]
+    ax.plot(x, real_va - gdp_real, marker='o', markersize=4, linewidth=1.5)
+    ax.axhline(0, color='grey', linewidth=0.8, linestyle='--')
+    ax.set_title("Difference (real VA − real GDP)", fontsize=14)
+    ax.set_xlabel("Year", fontsize=14)
+    ax.set_ylabel("Real VA − real GDP", fontsize=14)
+
+    plt.tight_layout()
+
+    if output_dir is not None:
+        subdir = os.path.join(output_dir, "real_va_vs_gdp")
+        os.makedirs(subdir, exist_ok=True)
+        plt.savefig(os.path.join(subdir, "real_va_vs_gdp.png"), bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
+
+
 def plot_energy_expenditure_by_sector(df, year_cols, normalise=True, output_dir=None):
     """Plot pY_Ej * Yij(ENERGY -> j) for each sector j.
 
@@ -1626,3 +1749,138 @@ def plot_demand_components_stacked(df, year_cols, year=None, output_dir=None):
         plt.close(fig2)
     else:
         plt.show()
+
+
+def compute_IO_monetary(df, year_cols, nominal):
+    """Convert Yij volume flows to monetary flows using gross prices.
+
+    nominal=True  → each Yij[i,j,t] multiplied by the gross price of year t.
+    nominal=False → each Yij[i,j,t] multiplied by the gross price of the first year (t0).
+
+    Gross prices:
+      Non-energy rows: pSj[row_label, t] * (1 + tauSj[row_label, t])
+      Energy row:      pY_Ej[col_label, t] * (1 + tauSj[ENERGY, t])
+
+    Returns a dataframe with the same structure as SCAF_results, preserving
+    row_label, col_label, and year columns. variable_name is set to
+    'IO_monetary_nominal' or 'IO_monetary_real'.
+    """
+    var_name = "IO_monetary_nominal" if nominal else "IO_monetary_real"
+    t0 = year_cols[0]
+
+    Yij_rows    = df.loc[df['variable_name'] == "Yij"].reset_index(drop=True)
+    pSj_rows    = df.loc[df['variable_name'] == "pSj"].reset_index(drop=True)
+    tauSj_rows  = df.loc[df['variable_name'] == "tauSj"].reset_index(drop=True)
+    pY_Ej_rows  = df.loc[df['variable_name'] == "pY_Ej"].reset_index(drop=True)
+
+    # tauSj[ENERGY] used as the tax factor for all energy prices
+    tauSj_E_match = tauSj_rows.loc[tauSj_rows['row_label'] == "ENERGY", year_cols]
+
+    result_records = []
+    for _, row in Yij_rows.iterrows():
+        row_lbl = row['row_label']
+        col_lbl = row['col_label']
+        Y_vals  = row[year_cols].values.astype("float")
+
+        if row_lbl != "ENERGY":
+            p_match    = pSj_rows.loc[pSj_rows['row_label'] == row_lbl, year_cols]
+            tau_match  = tauSj_rows.loc[tauSj_rows['row_label'] == row_lbl, year_cols]
+            if p_match.empty or tau_match.empty:
+                continue
+            if nominal:
+                price = p_match.values[0].astype("float") * (1 + tau_match.values[0].astype("float"))
+            else:
+                price = float(p_match[t0].values[0]) * (1 + float(tau_match[t0].values[0]))
+        else:
+            p_match = pY_Ej_rows.loc[pY_Ej_rows['row_label'] == col_lbl, year_cols]
+            if p_match.empty or tauSj_E_match.empty:
+                continue
+            if nominal:
+                price = p_match.values[0].astype("float") * (1 + tauSj_E_match.values[0].astype("float"))
+            else:
+                price = float(p_match[t0].values[0]) * (1 + float(tauSj_E_match[t0].values[0]))
+
+        monetary_vals = Y_vals * price
+        record = {
+            'variable_name': var_name,
+            'row_label':     row_lbl,
+            'col_label':     col_lbl,
+            'status':        row['status'],
+        }
+        for col, val in zip(year_cols, monetary_vals):
+            record[col] = val
+        result_records.append(record)
+
+    meta_cols = ['variable_name', 'row_label', 'col_label', 'status']
+    return pd.DataFrame(result_records, columns=meta_cols + year_cols)
+
+
+def real_GDP_decomposed(df, year_cols, Yijpij_nom=None):
+    """Compute a real GDP aggregate for all years.
+
+    Formula:
+        (1/GDPPI) * (comp1 + comp2 - comp3)
+
+    where:
+        comp1 = sum_j pYj[j,t] * Yj[j,t]
+        comp2 = sum_j tauSj[j,t] * Sj[j,t] * pSj[j,t]
+        comp3 = sum_{j,i} Yijpij[j,i,t]   (total sum of all monetary IO flows)
+
+    Parameters
+    ----------
+    df         : SCAF_results dataframe
+    year_cols  : list of year column strings
+    Yijpij_nom : optional pre-computed nominal IO monetary dataframe (from
+                 compute_IO_monetary with nominal=True); computed internally if None.
+
+    Returns a single-row dataframe with variable_name='real_GDP_decomposed'
+    and one value per year column.
+    """
+    if Yijpij_nom is None:
+        Yijpij_nom = compute_IO_monetary(df, year_cols, nominal=True)
+
+    def _vec(var):
+        rows = df.loc[df['variable_name'] == var].reset_index(drop=True)
+        return rows.set_index('row_label')[year_cols].astype("float")
+
+    pYj   = _vec("pYj")
+    Yj    = _vec("Yj")
+    pSj   = _vec("pSj")
+    tauSj = _vec("tauSj")
+    Sj    = _vec("Sj")
+
+    GDPPI = df.loc[df['variable_name'] == "GDPPI", year_cols].values[0].astype("float")
+
+    # -- comp1: sum_j pYj[j] * Yj[j] ----------------------------------------
+    comp1 = (pYj * Yj).sum(axis=0).values  # shape (n_years,)
+
+    # -- comp2: sum_j tauSj[j] * Sj[j] * pSj[j] -----------------------------
+    comp2 = (tauSj * Sj * pSj).sum(axis=0).values
+
+    # -- comp3: sum_{j,i} Yijpij[j, i] ---------------------------------------
+    comp3 = Yijpij_nom[year_cols].values.astype("float").sum(axis=0)
+
+    # -- final result ---------------------------------------------------------
+    result = (comp1 + comp2 - comp3) / GDPPI
+
+    record = {'variable_name': 'real_GDP_decomposed', 'row_label': '', 'col_label': '', 'status': ''}
+    for col, val in zip(year_cols, result):
+        record[col] = val
+    meta_cols = ['variable_name', 'row_label', 'col_label', 'status']
+    return pd.DataFrame([record], columns=meta_cols + year_cols)
+
+
+def check_GDP_decomposed_vs_GDPreal(df, year_cols):
+    """Print a comparison of real_GDP_decomposed against the GDPreal time series."""
+    gdp_dec   = real_GDP_decomposed(df, year_cols)
+    dec_vals  = gdp_dec[year_cols].values[0].astype("float")
+    GDPreal   = df.loc[df['variable_name'] == "GDPreal", year_cols].values[0].astype("float")
+    rel_diff  = (dec_vals - GDPreal) / GDPreal * 100
+
+    print("\n=== real_GDP_decomposed vs GDPreal ===")
+    print(f"  Years:        {year_cols}")
+    print(f"  Decomposed:   {dec_vals}")
+    print(f"  GDPreal:      {GDPreal}")
+    print(f"  Difference:   {dec_vals - GDPreal}")
+    print(f"  Rel diff (%): {rel_diff}")
+    print("======================================\n")

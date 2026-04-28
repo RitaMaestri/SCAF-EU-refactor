@@ -10,11 +10,11 @@ from scipy.ndimage.interpolation import shift
 import sys
 import matplotlib.colors as mcolors
 from scipy import stats
-from lib import extract_var_df, plot_varj_evol, plot_varj_evol_absolute, plot_variable_1D, plot_KL_GDP_evolution, plot_VA_share_vs_log_gdp_per_capita, plot_variable_share_vs_log_gdp_per_capita, plot_variable_diff_by_sector, plot_aggregate_diff, plot_structural_change_panel, plot_structural_change_panel_diff, plot_energy_volumes_comparison_by_use, plot_total_energy_volume_comparison, plot_energy_volumes_diverging_stacked, plot_energy_volumes_diverging_stacked_scaf_diff, plot_energy_volumes_by_consumer, plot_Yj_vs_REMIND_output, plot_sector_Sj_Yj, plot_sector_Sj_Yj_diff, sectors_names_eng, plot_energy_expenditure_by_sector, plot_energy_expenditure_share, plot_export_share_of_output, plot_export_share_of_output_diff, plot_real_export_share_of_output, plot_nominal_demand_evolutions, plot_energy_sector_inputs, plot_pY_Ej, plot_demand_components_stacked, plot_KL_shares_by_sector
+from lib import extract_var_df, plot_varj_evol, plot_varj_evol_absolute, plot_variable_1D, plot_KL_GDP_evolution, plot_VA_share_vs_log_gdp_per_capita, plot_variable_share_vs_log_gdp_per_capita, plot_variable_diff_by_sector, plot_aggregate_diff, plot_structural_change_panel, plot_structural_change_panel_diff, plot_energy_volumes_comparison_by_use, plot_total_energy_volume_comparison, plot_energy_volumes_diverging_stacked, plot_energy_volumes_diverging_stacked_scaf_diff, plot_energy_volumes_by_consumer, plot_Yj_vs_REMIND_output, plot_sector_Sj_Yj, plot_sector_Sj_Yj_diff, plot_real_va_output_diff, plot_real_va_vs_gdp, sectors_names_eng, plot_energy_expenditure_by_sector, plot_energy_expenditure_share, plot_export_share_of_output, plot_export_share_of_output_diff, plot_real_export_share_of_output, plot_nominal_demand_evolutions, plot_energy_sector_inputs, plot_pY_Ej, plot_demand_components_stacked, plot_KL_shares_by_sector, check_GDP_decomposed_vs_GDPreal
 
 no_SC_path = "Solver/results/tagged/results_2026-04-14_17-45/results_2026-04-14_17-45.csv"
 # Set to a specific CSV path to plot a single run, or None to plot all tagged results
-results_path = "Solver/results/tagged/results_2026-04-14_17-45/results_2026-04-14_17-45.csv"
+results_path = "Solver/results/tagged/results_2026-04-20_15-33/results_2026-04-20_15-33.csv"
 #results_path = None
 
 # Load shared data once
@@ -116,6 +116,8 @@ def exploratory_plots(results_path, subtitle=""):
     year_cols = [c for c in SCAF_results.columns if c not in meta_cols and int(c) <= 2050]
     SCAF_results = SCAF_results[meta_cols + year_cols]
 
+    check_GDP_decomposed_vs_GDPreal(SCAF_results, year_cols)
+
     plot_variable_1D(SCAF_results, "GDPPI", "q", diff=False, output_dir=output_dir)
 
     ################# capital/labour income shares (year 0) ########################
@@ -131,7 +133,14 @@ def exploratory_plots(results_path, subtitle=""):
 
         plot_aggregate_diff(SCAF_results, no_SC_df, year_cols, "GDP",   y_label="Δ GDP (%)",   output_dir=output_dir)
         plot_aggregate_diff(SCAF_results, no_SC_df, year_cols, "GDPPI", y_label="Δ GDPPI (%)", output_dir=output_dir)
+        plot_aggregate_diff(SCAF_results, no_SC_df, year_cols, "pL",    y_label="Δ pL (%)",    output_dir=output_dir)
+        plot_aggregate_diff(SCAF_results, no_SC_df, year_cols, "pK",    y_label="Δ pK (%)",    output_dir=output_dir)
+        plot_real_va_output_diff(SCAF_results, no_SC_df, year_cols, output_dir=output_dir)
 
+    ################# plot GDP growth, capital and labour growth #######################
+    plot_KL_GDP_evolution(SCAF_results, year_cols, output_dir=output_dir)
+    plot_real_va_vs_gdp(SCAF_results, year_cols, output_dir=output_dir)
+    ###############################################################################
 
     ################# compare SCAF vs REMIND energy volumes #######################
     plot_energy_volumes_comparison_by_use(SCAF_results, REMIND_E_volumes, year_cols, scaf_label=subtitle, output_dir=output_dir)
@@ -213,9 +222,6 @@ def exploratory_plots(results_path, subtitle=""):
     ###############################################################################
     plot_variable_1D(SCAF_results, "K", "p", diff=False, output_dir=output_dir)
 
-    ################# plot GDP growth, capital and labour growth #######################
-    plot_KL_GDP_evolution(SCAF_results, year_cols, output_dir=output_dir)
-    ###############################################################################
 
     ################# plot sectoral VA share vs log GDP per capita #################
     plot_VA_share_vs_log_gdp_per_capita(SCAF_results, year_cols, output_dir=output_dir)
@@ -247,13 +253,21 @@ def exploratory_plots(results_path, subtitle=""):
     plot_Yj_vs_REMIND_output(SCAF_results, REMIND_output, year_cols, output_dir=output_dir)
     ###############################################################################
 
+    ################# Sj, pSj, Yj, pYj per sector #################################
+    for sector in sectors_names_eng:
+        plot_sector_Sj_Yj(SCAF_results, year_cols, sector, output_dir=output_dir)
+        if no_SC_df is not None:
+            plot_sector_Sj_Yj_diff(SCAF_results, no_SC_df, year_cols, sector, output_dir=output_dir)
+    ###############################################################################
+
 
 
 def plot_run(results_path, subtitle=""):
     presentation_plots(results_path, subtitle=subtitle)
     exploratory_plots(results_path, subtitle=subtitle)
 
-#exploratory_plots(results_path)
+exploratory_plots(results_path)
+#narrow_presentation_plots(results_path, subtitle="Sensitivity analysis CDES", key="sens_CDES", no_sc_df=no_SC_df)
 
 mapping = pd.read_csv("Data_postprocessing/results_mapping.csv", skipinitialspace=True)
 
@@ -281,7 +295,7 @@ for _, row in mapping.iterrows():
         no_sc_df_run = None
 
     #print(f"Plotting {run_id} -> {key}...")
-    #presentation_plots(path, subtitle=subtitle, output_name=os.path.join(me_folder, key), no_sc_df=no_sc_df_run)
+    presentation_plots(path, subtitle=subtitle, output_name=os.path.join(me_folder, key), no_sc_df=no_sc_df_run)
 
 for _, row in mapping.iterrows():
     if str(row["energy_import"]).strip() != "exogenous":
@@ -307,10 +321,10 @@ for _, row in mapping.iterrows():
         no_sc_df_run = None
 
     print(f"Narrow plots {run_id} -> {key}...")
-    narrow_presentation_plots(path, subtitle=subtitle, key=key, no_sc_df=no_sc_df_run)
+    #narrow_presentation_plots(path, subtitle=subtitle, key=key, no_sc_df=no_sc_df_run)
 
     #print(f"Plotting {run_id} -> {key}...")
-    #presentation_plots(path, subtitle=subtitle, output_name=os.path.join(me_folder, key), no_sc_df=no_sc_df_run)
+    presentation_plots(path, subtitle=subtitle, output_name=os.path.join(me_folder, key), no_sc_df=no_sc_df_run)
 
 for _, row in mapping.iterrows():
     if str(row["energy_import"]).strip() != "exogenous":
@@ -336,5 +350,5 @@ for _, row in mapping.iterrows():
         no_sc_df_run = None
 
     print(f"Narrow plots {run_id} -> {key}...")
-    narrow_presentation_plots(path, subtitle=subtitle, key=key, no_sc_df=no_sc_df_run)
+    #narrow_presentation_plots(path, subtitle=subtitle, key=key, no_sc_df=no_sc_df_run)
 
