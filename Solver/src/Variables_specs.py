@@ -115,6 +115,13 @@ VARIABLES_SPECS = {
 				  bounds=(-np.inf,np.inf),
 				  status="endo"),
 
+    'prodGDPPI':Variable(name= "prodGDPPI",
+				  dimension='scalar',
+				  idx_labels=[],
+				  is_t_minus_one=False,
+				  bounds=(-np.inf,np.inf),
+				  status="endo"),
+
     'GDP':Variable(name= "GDP",
 				  dimension='scalar',
 				  idx_labels=[],
@@ -364,6 +371,13 @@ VARIABLES_SPECS = {
 				  bounds=(0, np.inf),
 				  status="exo"),
 
+    'prodGDPPI_tp':Variable(name="prodGDPPI_tp",
+				  dimension='scalar',
+				  idx_labels=[],
+				  is_t_minus_one="prodGDPPI",
+				  bounds=(-np.inf, np.inf),
+				  status="exo"),
+
     'Ctp':Variable(name="Ctp",
 				  dimension='vector',
 				  idx_labels=sectors,
@@ -585,7 +599,7 @@ VARIABLES_SPECS = {
 				  idx_labels=[],
 				  is_t_minus_one=False,
 				  bounds=(-np.inf,np.inf),
-				  status="endo"),
+				  status="exo"),
 
     "gammaCj_nE":Variable(name="gammaCj_nE",
 				  dimension='vector',
@@ -626,6 +640,8 @@ CALIBRATION_MAPPING = {
     'Rg':                  'Rg0',
     'bKL':                 'bKL',
     'GDPPI':               'GDPPI',
+    'prodGDPPI':           'prodGDPPI',
+    'prodGDPPI_tp':        'prodGDPPI_tp',
     'GDP':                 'GDPreal',
     'Kj':                  'Kj0',
     'Lj':                  'Lj0',

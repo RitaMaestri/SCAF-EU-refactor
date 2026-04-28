@@ -332,14 +332,16 @@ class calibrationVariables:
         self.alphaLj_CobbDouglas= imp.pLLj / imp.pKLjKLj
         self.alphaKj_CobbDouglas= imp.pKKj / imp.pKLjKLj
         self.GDPPI=float(_av["GDPPI"])
+        self.prodGDPPI    = float(_av["GDPPI"])
+        self.prodGDPPI_tp = float(_av["GDPPI"])
         self.alphaLj= compute_alphas_CES(Q1j= cp(self.Lj0),Q2j= cp(self.Kj0),p1j= cp(self.pL0),p2j= cp(self.pK0),etaj= cp(self.etaKLj))
         self.alphaKj= compute_alphas_CES(Q1j= cp(self.Kj0),Q2j= cp(self.Lj0),p1j= cp(self.pK0),p2j= cp(self.pL0),etaj= cp(self.etaKLj))
         # #this is 1 by default for the E sector so calibrate accordingly
         
         self.bKL=float(_av["bKL"])
-        #self.bKLj = (cp(self.KLj0)/(cp(self.bKL)*np.float_power(cp(self.Lj0),cp(self.alphaLj_CobbDouglas))*np.float_power(cp(self.Kj0),cp(self.alphaKj_CobbDouglas))))
+        self.bKLj = (cp(self.KLj0)/(cp(self.bKL)*np.float_power(cp(self.Lj0),cp(self.alphaLj_CobbDouglas))*np.float_power(cp(self.Kj0),cp(self.alphaKj_CobbDouglas))))
         
-        self.bKLj = cp(self.KLj0)*cp(self.bKL)/np.float_power(cp(self.alphaLj)*np.float_power(cp(self.Lj0),cp(self.etaKLj)) + cp(self.alphaKj) * np.float_power(cp(self.Kj0),cp(self.etaKLj)), 1/ cp(self.etaKLj))
+        #self.bKLj = cp(self.KLj0)*cp(self.bKL)/np.float_power(cp(self.alphaLj)*np.float_power(cp(self.Lj0),cp(self.etaKLj)) + cp(self.alphaKj) * np.float_power(cp(self.Kj0),cp(self.etaKLj)), 1/ cp(self.etaKLj))
         
         self.target_ni_j  = compensated_price_elasticities_df.squeeze().reindex(sectors).to_numpy()
         self.target_etaCj = income_elasticities_df.squeeze().reindex(sectors).to_numpy()

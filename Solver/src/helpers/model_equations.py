@@ -324,15 +324,26 @@ def eqCPI(CPI,pCj,pCtp,Cj,Ctp):
 
 ###############################################################################################################
 
-#GDPPI is the GDPPI time series
-def eqGDPreal(GDPreal, GDP, GDPPI):
+def eqGDPreal(GDPreal, GDP, prodGDPPI):
    
     zero=-1 + GDPreal /(
-        GDP / np.prod(GDPPI)
+        GDP / prodGDPPI
     )
     return zero
 
 ###############################################################################################################
+
+
+
+def eqprodGDPPI(prodGDPPI, GDPPI, prodGDPPI_tp):
+   
+    zero=-1 + prodGDPPI /(
+        GDPPI * prodGDPPI_tp
+    )
+    return zero
+
+###############################################################################################################
+
 
 def eqRreal(Rreal, R, CPI):
    
