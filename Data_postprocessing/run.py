@@ -10,17 +10,17 @@ from scipy.ndimage.interpolation import shift
 import sys
 import matplotlib.colors as mcolors
 from scipy import stats
-from lib import extract_var_df, plot_varj_evol, plot_varj_evol_absolute, plot_variable_1D, plot_KL_GDP_evolution, plot_VA_share_vs_log_gdp_per_capita, plot_variable_share_vs_log_gdp_per_capita, plot_variable_diff_by_sector, plot_aggregate_diff, plot_structural_change_panel, plot_structural_change_panel_diff, plot_energy_volumes_comparison_by_use, plot_total_energy_volume_comparison, plot_energy_volumes_diverging_stacked, plot_energy_volumes_diverging_stacked_scaf_diff, plot_energy_volumes_by_consumer, plot_Yj_vs_REMIND_output, plot_sector_Sj_Yj, plot_sector_Sj_Yj_diff, plot_real_va_output_diff, plot_real_va_vs_gdp, sectors_names_eng, plot_energy_expenditure_by_sector, plot_energy_expenditure_share, plot_export_share_of_output, plot_export_share_of_output_diff, plot_real_export_share_of_output, plot_nominal_demand_evolutions, plot_energy_sector_inputs, plot_pY_Ej, plot_demand_components_stacked, plot_KL_shares_by_sector, check_GDP_decomposed_vs_GDPreal
+from lib import export_E_Demand_tot_csv, compute_IO_monetary, plot_varj_evol, plot_varj_evol_absolute, plot_variable_1D, plot_KL_GDP_evolution, plot_VA_share_vs_log_gdp_per_capita, plot_variable_share_vs_log_gdp_per_capita, plot_variable_diff_by_sector, plot_Yj_diff_diverging_stacked, plot_aggregate_diff, plot_structural_change_panel, plot_structural_change_panel_diff, plot_energy_volumes_comparison_by_use, plot_total_energy_volume_comparison, plot_energy_volumes_diverging_stacked, plot_energy_volumes_diverging_stacked_scaf_diff, plot_energy_volumes_by_consumer, plot_Yj_vs_REMIND_output, plot_sector_Sj_Yj, plot_sector_Sj_Yj_diff, plot_real_va_output_diff, plot_real_va_vs_gdp, sectors_names_eng, plot_energy_expenditure_by_sector, plot_energy_expenditure_share, plot_export_share_of_output, plot_export_share_of_output_diff, plot_real_export_share_of_output, plot_nominal_demand_evolutions, plot_net_exports, plot_energy_sector_inputs, plot_pY_Ej, plot_demand_components_stacked, plot_KL_shares_by_sector, check_GDP_decomposed_vs_GDPreal, plot_real_IO_monetary_diff, plot_GDP_diff_decomposed_2050, plot_pYj_composition_effect_diff_by_sector_2050, plot_real_aggregate_components_stacked, plot_real_aggregate_components_diff, plot_calibration_energy_consumer_shares, plot_calibration_energy_use_shares
 
 # =============================================================================
 # SETUP
 # =============================================================================
-PLOT_FUNCTION = "presentation_plots"  # "presentation_plots" | "exploratory_plots" | "narrow_presentation_plots"
+PLOT_FUNCTION = "narrow_presentation_plots"  # "presentation_plots" | "exploratory_plots" | "narrow_presentation_plots"
 DATA_SOURCE   = "mapping"             # "single" | "mapping"
 
 # --- single mode: paths, subtitle and key set manually ---
-SINGLE_RESULTS_PATH = "Solver/results/tagged/results_2026-04-28_14-49/results_2026-04-28_14-49.csv"
-SINGLE_NO_SC_PATH   = "Solver/results/tagged/results_2026-04-14_17-45/results_2026-04-14_17-45.csv"  # or None
+SINGLE_RESULTS_PATH = "Solver/results/tagged/results_2026-04-28_15-32/results_2026-04-28_15-32.csv"
+SINGLE_NO_SC_PATH   = "Solver/results/tagged/results_2026-04-28_14-49/results_2026-04-28_14-49.csv"  # or None
 SINGLE_SUBTITLE     = "No structural change"
 SINGLE_KEY          = "no_SC"
 
@@ -46,6 +46,14 @@ def load_no_sc_df(path):
     return raw[meta + ycols]
 
 
+
+########################################################################################
+########################################################################################
+########################################################################################
+
+
+
+
 def presentation_plots(results_path, subtitle="", output_name=None, no_sc_df=None):
     csv_stem = os.path.splitext(os.path.basename(results_path))[0]
     output_dir = os.path.join("Data_postprocessing", "plots", output_name if output_name else csv_stem)
@@ -62,6 +70,15 @@ def presentation_plots(results_path, subtitle="", output_name=None, no_sc_df=Non
     year_cols = [c for c in SCAF_results.columns if c not in meta_cols and int(c) <= 2050]
     SCAF_results = SCAF_results[meta_cols + year_cols]
 
+
+    plot_calibration_energy_consumer_shares(
+        REMIND_E_volumes,
+        output_dir=os.path.join("Data_postprocessing", "plots", "calibration"),
+    )
+    plot_calibration_energy_use_shares(
+        REMIND_E_volumes,
+        output_dir=os.path.join("Data_postprocessing", "plots", "calibration"),
+    )
     ################# structural change panel #######################################
     plot_structural_change_panel(SCAF_results, year_cols, fix_ylim=True,  subtitle=subtitle, output_dir=output_dir)
     plot_structural_change_panel(SCAF_results, year_cols, fix_ylim=False, subtitle=subtitle, output_dir=output_dir)
@@ -69,7 +86,7 @@ def presentation_plots(results_path, subtitle="", output_name=None, no_sc_df=Non
     plot_structural_change_panel(SCAF_results, year_cols, fix_ylim=False, subtitle=subtitle, include_real_va=False, output_dir=output_dir)
     if no_sc_df is not None:
         plot_structural_change_panel_diff(SCAF_results, no_sc_df, year_cols, subtitle=subtitle, output_dir=output_dir)
-        plot_structural_change_panel_diff(SCAF_results, no_sc_df, year_cols, subtitle=subtitle, include_real_va=False, output_dir=output_dir)
+        plot_structural_change_panel_diff(SCAF_results, no_sc_df, year_cols, subtitle=subtitle, output_dir=output_dir)
     ###############################################################################
 
     if no_sc_df is not None:
@@ -86,9 +103,15 @@ def presentation_plots(results_path, subtitle="", output_name=None, no_sc_df=Non
         output_dir=output_dir,
     )
 
+########################################################################################
+########################################################################################
+########################################################################################
 
-def narrow_presentation_plots(results_path, subtitle="", key="", no_sc_df=None):
-    output_dir = os.path.join("Data_postprocessing", "plots", "presentation", key)
+
+
+
+def narrow_presentation_plots(results_path, subtitle="", run_set="", key="", nominal_consumption=False, no_sc_df=None):
+    output_dir = os.path.join("Data_postprocessing", "plots", "presentation", run_set, key)
     os.makedirs(output_dir, exist_ok=True)
 
     SCAF_results = pd.read_csv(results_path)
@@ -99,23 +122,47 @@ def narrow_presentation_plots(results_path, subtitle="", key="", no_sc_df=None):
     if no_sc_df is not None:
         plot_energy_volumes_diverging_stacked_scaf_diff(
             SCAF_results, no_sc_df, year_cols,
+            subtitle=subtitle,
             output_path=os.path.join(output_dir, "E_bar.png"))
+        plot_Yj_diff_diverging_stacked(
+            SCAF_results, no_sc_df, year_cols,
+            subtitle=subtitle,
+            output_path=os.path.join(output_dir, "Yj_diff_stacked.png"))
 
-    plot_total_energy_volume_comparison(
-        SCAF_results, REMIND_E_volumes, year_cols,
-        include_PE=True, scaf_label=subtitle, df_no_sc=no_sc_df,
-        output_path=os.path.join(output_dir, "E_tot.png"))
+    if key == "no_SC":
+        plot_energy_volumes_diverging_stacked(
+            SCAF_results, REMIND_E_volumes, year_cols,
+            scaf_label=subtitle,
+            output_path=os.path.join(output_dir, "E_vol.png"))
+    else:
+        plot_total_energy_volume_comparison(
+            SCAF_results, REMIND_E_volumes, year_cols,
+            include_PE=True, scaf_label=subtitle, df_no_sc=no_sc_df,
+            output_path=os.path.join(output_dir, "E_tot.png"))
+        if no_sc_df is not None:
+            export_E_Demand_tot_csv(
+                SCAF_results, year_cols,
+                scaf_label=subtitle, df_no_sc=no_sc_df,
+                output_dir=output_dir)
 
     plot_structural_change_panel(
         SCAF_results, year_cols, fix_ylim=True, subtitle=subtitle,
-        include_real_va=False,
+        nominal_consumption=(nominal_consumption or key == "no_SC"), include_output=False,
         output_path=os.path.join(output_dir, "SC_ind.png"))
 
     if no_sc_df is not None:
         plot_structural_change_panel_diff(
             SCAF_results, no_sc_df, year_cols, subtitle=subtitle,
-            include_real_va=False,
+            nominal_consumption=nominal_consumption, include_output=False,
             output_path=os.path.join(output_dir, "SC_diff.png"))
+
+
+
+########################################################################################
+########################################################################################
+########################################################################################
+
+
 
 
 def exploratory_plots(results_path, subtitle="", no_sc_df=None):
@@ -135,19 +182,36 @@ def exploratory_plots(results_path, subtitle="", no_sc_df=None):
     ################# capital/labour income shares (year 0) ########################
     plot_KL_shares_by_sector(SCAF_results, year_cols, output_dir=output_dir)
     ###############################################################################
+    plot_real_aggregate_components_stacked(SCAF_results, year_cols, output_dir=output_dir)
+    plot_real_aggregate_components_stacked(SCAF_results, year_cols, normalized=True, output_dir=output_dir)
+    plot_real_aggregate_components_stacked(SCAF_results, year_cols, by_sector=True, output_dir=output_dir)
+    plot_real_aggregate_components_stacked(SCAF_results, year_cols, by_sector=True, normalized=True, output_dir=output_dir)
 
     if no_sc_df is not None:
+        plot_real_IO_monetary_diff(SCAF_results, no_sc_df, year_cols, output_dir=output_dir)
+        plot_GDP_diff_decomposed_2050(no_sc_df, SCAF_results, year_cols, subtitle=subtitle, output_dir=output_dir)
+        plot_pYj_composition_effect_diff_by_sector_2050(SCAF_results, no_sc_df, year_cols, subtitle=subtitle, output_dir=output_dir)
+        plot_net_exports(SCAF_results, year_cols, df_ref=no_sc_df, output_dir=output_dir)
+
+        plot_real_va_output_diff(SCAF_results, no_sc_df, year_cols, output_dir=output_dir)
+        plot_variable_diff_by_sector(SCAF_results, no_sc_df, year_cols, "Cj", "pCj", is_nominal=False, y_label="Δ real total supply (pCj₀·Cj)", output_dir=output_dir)
         plot_variable_diff_by_sector(SCAF_results, no_sc_df, year_cols, "Yj", "pYj", is_nominal=False, y_label="Δ real output (pYj₀·Yj)", output_dir=output_dir)
         plot_variable_diff_by_sector(SCAF_results, no_sc_df, year_cols, "Yj", "pYj", is_nominal=True, y_label="Δ nominal output (pYj₀·Yj)", output_dir=output_dir)
         plot_variable_diff_by_sector(SCAF_results, no_sc_df, year_cols, "Xj", "pXj", is_nominal=False, y_label="Δ real export (pXj₀·Xj)", output_dir=output_dir)
         plot_variable_diff_by_sector(SCAF_results, no_sc_df, year_cols, "Mj", "pMj", is_nominal=False, y_label="Δ real import (pMj₀·Mj)", output_dir=output_dir)
         plot_variable_diff_by_sector(SCAF_results, no_sc_df, year_cols, "Sj", "pSj", is_nominal=False, y_label="Δ real total supply (pSj₀·Sj)", output_dir=output_dir)
+        plot_variable_diff_by_sector(SCAF_results, no_sc_df, year_cols, "KLj", "pKLj", is_nominal=False, y_label="Δ real total supply (pKLj₀·KLj)", output_dir=output_dir)
+        plot_variable_diff_by_sector(SCAF_results, no_sc_df, year_cols, "pKLj", "KLj", is_nominal=False, y_label="Δ real total supply (pKLj·KLj₀)", output_dir=output_dir)
+        plot_variable_diff_by_sector(SCAF_results, no_sc_df, year_cols, "pYj", "Yj", is_nominal=False, y_label="Δ real total supply (pYj·Yj₀)", output_dir=output_dir)
+        plot_variable_diff_by_sector(SCAF_results, no_sc_df, year_cols, "pSj", "Sj", is_nominal=False, y_label="Δ real total supply (pSj·Sj₀)", output_dir=output_dir)
 
         plot_aggregate_diff(SCAF_results, no_sc_df, year_cols, "GDP",   y_label="Δ GDP (%)",   output_dir=output_dir)
         plot_aggregate_diff(SCAF_results, no_sc_df, year_cols, "GDPPI", y_label="Δ GDPPI (%)", output_dir=output_dir)
         plot_aggregate_diff(SCAF_results, no_sc_df, year_cols, "pL",    y_label="Δ pL (%)",    output_dir=output_dir)
         plot_aggregate_diff(SCAF_results, no_sc_df, year_cols, "pK",    y_label="Δ pK (%)",    output_dir=output_dir)
-        plot_real_va_output_diff(SCAF_results, no_sc_df, year_cols, output_dir=output_dir)
+
+        plot_real_aggregate_components_diff(SCAF_results, no_sc_df, year_cols, output_dir=output_dir)
+        plot_real_aggregate_components_diff(SCAF_results, no_sc_df, year_cols, by_sector=True, output_dir=output_dir)
 
     ################# plot GDP growth, capital and labour growth #######################
     plot_KL_GDP_evolution(SCAF_results, year_cols, output_dir=output_dir)
@@ -267,13 +331,13 @@ def exploratory_plots(results_path, subtitle="", no_sc_df=None):
     ###############################################################################
 
 
-def run_plots(results_path, subtitle="", output_name=None, no_sc_df=None):
+def run_plots(results_path, subtitle="", output_name=None, run_set=None, key=None, nominal_consumption=False, no_sc_df=None):
     if PLOT_FUNCTION == "presentation_plots":
         presentation_plots(results_path, subtitle=subtitle, output_name=output_name, no_sc_df=no_sc_df)
     elif PLOT_FUNCTION == "exploratory_plots":
         exploratory_plots(results_path, subtitle=subtitle, no_sc_df=no_sc_df)
     elif PLOT_FUNCTION == "narrow_presentation_plots":
-        narrow_presentation_plots(results_path, subtitle=subtitle, key=output_name or "", no_sc_df=no_sc_df)
+        narrow_presentation_plots(results_path, subtitle=subtitle, run_set=run_set or "", key=key or "", nominal_consumption=nominal_consumption, no_sc_df=no_sc_df)
 
 
 # =============================================================================
@@ -306,4 +370,4 @@ elif DATA_SOURCE == "mapping":
             _rid = _r["ID"].strip()
             no_sc_path = os.path.join("Solver", "results", _r["origin_folder"].strip(), _rid, f"{_rid}.csv")
 
-        run_plots(path, subtitle=subtitle, output_name=os.path.join(run_set, key), no_sc_df=load_no_sc_df(no_sc_path))
+        run_plots(path, subtitle=subtitle, output_name=os.path.join(run_set, key), run_set=run_set, key=key, nominal_consumption=(key == "CDES"), no_sc_df=load_no_sc_df(no_sc_path))

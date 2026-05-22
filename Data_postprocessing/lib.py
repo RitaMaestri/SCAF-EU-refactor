@@ -61,6 +61,8 @@ cmap=["#E06969",
 
 my_cmap=mcolors.ListedColormap(cmap)
 
+ENERGY_USE_PALETTE = ["#f79380","#9380f7","#2ac7a5","#bcc82a","#278699","#914060","#1a4a35"]
+
 sectors_names_eng=[
 "AGRICULTURE",
 "MANUFACTURE",
@@ -489,6 +491,96 @@ def plot_variable_diff_by_sector(df, df_ref, year_cols, quantity, price, is_nomi
         else:
             plt.show()
 
+    total_diff = diff.sum(axis=0)
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.plot(years, total_diff, marker='o', markersize=4, linewidth=1.5)
+    ax.axhline(0, color='grey', linewidth=0.8, linestyle='--')
+    ax.set_title("Total (sum over sectors)", fontsize=17)
+    ax.set_xlabel("Year", fontsize=14)
+    ax.set_ylabel(y_label, fontsize=14)
+
+    if output_dir is not None:
+        plt.savefig(os.path.join(subdir, f"{fname_prefix}_TOTAL.png"), bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
+
+
+SECTOR_DIFF_PALETTE = [
+   "#b4bec5",
+   "#ffd7d6",
+   "#fa7f69",
+   "#2f4370",
+   "#3fa2ba",
+   "#c7b5ac",
+   "#947b85"
+]
+
+
+def plot_Yj_diff_diverging_stacked(df, df_ref, year_cols, subtitle="", output_dir=None, output_path=None):
+    """Diverging stacked bar chart of real output (Yj) difference by sector vs baseline.
+
+    X axis: year. Y axis: Δ real output (pYj₀·Yj). Positive sector contributions stack
+    upward, negative downward. One bar per year, stacked by sector.
+    """
+    q_df  = df.loc[df['variable_name']         == "Yj"].reset_index(drop=True)
+    q_ref = df_ref.loc[df_ref['variable_name'] == "Yj"].reset_index(drop=True)
+    p_base = df_ref.loc[df_ref['variable_name'] == "pYj", year_cols[0]].values[0].astype("float")
+
+    val_df  = q_df[year_cols].values.astype("float")  * p_base
+    val_ref = q_ref[year_cols].values.astype("float") * p_base
+    diff = val_df - val_ref  # shape: (n_sectors, n_years)
+
+    sector_names = q_df['row_label'].values
+    x = np.array(year_cols).astype("int")
+    bar_width = (x[1] - x[0]) * 0.8 if len(x) > 1 else 4
+
+    colors = [SECTOR_DIFF_PALETTE[i % len(SECTOR_DIFF_PALETTE)] for i in range(len(sector_names))]
+
+    fig, ax = plt.subplots(figsize=(14, 7))
+
+    pos_bottoms = np.zeros(len(year_cols))
+    neg_bottoms = np.zeros(len(year_cols))
+
+    for i, (sector, d) in enumerate(zip(sector_names, diff)):
+        pos = np.where(d > 0, d, 0.0)
+        neg = np.where(d < 0, d, 0.0)
+        ax.bar(x, pos, bottom=pos_bottoms, color=colors[i], label=sector,
+               edgecolor='white', linewidth=0.4, width=bar_width)
+        ax.bar(x, neg, bottom=neg_bottoms, color=colors[i],
+               edgecolor='white', linewidth=0.4, width=bar_width)
+        pos_bottoms += pos
+        neg_bottoms += neg
+
+    total_diff = diff.sum(axis=0)
+    ax.plot(x, total_diff, color='black', linestyle='dashed', linewidth=1.2,
+            marker='o', markersize=4, markerfacecolor='black', markeredgecolor='black',
+            label='Total', zorder=5)
+
+    ax.axhline(0, color='black', linewidth=0.8)
+    ax.set_xticks(x)
+    ax.set_xticklabels(year_cols, rotation=45, ha='right', fontsize=11)
+    ax.set_xlabel("Year", fontsize=13)
+    ax.set_ylabel("Δ Real output (EUR million, 2020 prices)", fontsize=13)
+    fig.suptitle("Real output difference between structural change and baseline scenarios, decomposed by sector", fontsize=15)
+    if subtitle:
+        fig.text(0.5, 0.92, subtitle, ha='center', va='top', fontsize=13)
+    ax.legend(loc='upper left', fontsize=11)
+    top_margin = 0.88 if subtitle else 0.93
+    plt.tight_layout(rect=[0, 0, 1, top_margin])
+
+    if output_path is not None:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        fig.savefig(output_path, bbox_inches='tight')
+        plt.close(fig)
+    elif output_dir is not None:
+        subdir = os.path.join(output_dir, "Yj_diff_stacked")
+        os.makedirs(subdir, exist_ok=True)
+        fig.savefig(os.path.join(subdir, "Yj_diff_diverging_stacked.png"), bbox_inches='tight')
+        plt.close(fig)
+    else:
+        plt.show()
+
 
 def plot_aggregate_diff(df, df_ref, year_cols, variable_name, y_label, output_dir=None):
     val_df  = df.loc[df['variable_name']         == variable_name, year_cols].values[0].astype("float")
@@ -513,7 +605,7 @@ def plot_aggregate_diff(df, df_ref, year_cols, variable_name, y_label, output_di
         plt.show()
 
 
-def plot_structural_change_panel(df, year_cols, fix_ylim=True, subtitle="", include_real_va=True, output_dir=None, output_path=None):
+def plot_structural_change_panel(df, year_cols, fix_ylim=True, subtitle="", include_real_va=True, nominal_consumption=True, include_output=True, output_dir=None, output_path=None):
     """3×3 panel: VA share, real VA share, Cj share for AGRICULTURE / MANUFACTURE / SERVICES.
 
     Rows:
@@ -556,13 +648,31 @@ def plot_structural_change_panel(df, year_cols, fix_ylim=True, subtitle="", incl
     cj_names  = pCj_rows['row_label'].values
     cj_shares = nom_cj / nom_cj.sum(axis=0)
 
+    # ---- Row 3: nominal output share (pYj * Yj) ----
+    pYj_rows = df.loc[df['variable_name'] == "pYj"].reset_index(drop=True)
+    Yj_rows  = df.loc[df['variable_name'] == "Yj"].reset_index(drop=True)
+    nom_out  = pYj_rows[year_cols].values.astype("float") * Yj_rows[year_cols].values.astype("float")
+    out_names = pYj_rows['row_label'].values
+    nom_out_shares = nom_out / nom_out.sum(axis=0)
+
+    # ---- Row 4: real output share (pYj₀ * Yj) ----
+    pYj0           = pYj_rows[year_cols[0]].values.astype("float")[:, np.newaxis]
+    real_out       = pYj0 * Yj_rows[year_cols].values.astype("float")
+    real_out_shares = real_out / real_out.sum(axis=0)
+
     row_data = [
-        (va_shares,  va_names,  "VA share\n(pKLj·KLj)"),
-        (rva_shares, rva_names, "Real VA share\n(Lj·pL₀+Kj·pK₀)"),
-        (cj_shares,  cj_names,  "Cj share\n(pCj·Cj)"),
+        (rva_shares, rva_names, "Real Value Added Share"),
+        (va_shares,  va_names,  "Nominal Value Added Share"),
     ]
     if not include_real_va:
-        row_data = [row_data[0], row_data[2]]
+        row_data = [row_data[1]]
+    if nominal_consumption:
+        row_data.append((cj_shares, cj_names, "Nominal Consumption Share"))
+    if include_output:
+        row_data += [
+            (nom_out_shares,  out_names, "Nominal output share\n(pYj·Yj)"),
+            (real_out_shares, out_names, "Real output share\n(pYj₀·Yj)"),
+        ]
 
     n_rows = len(row_data)
     fig, axes = plt.subplots(n_rows, 3, figsize=(18, 5 * n_rows))
@@ -605,7 +715,7 @@ def plot_structural_change_panel(df, year_cols, fix_ylim=True, subtitle="", incl
         plt.show()
 
 
-def plot_structural_change_panel_diff(df, df_ref, year_cols, subtitle="", include_real_va=True, output_dir=None, output_path=None):
+def plot_structural_change_panel_diff(df, df_ref, year_cols, subtitle="", nominal_consumption=False, include_output=True, output_dir=None, output_path=None):
     """3×3 panel of *differences* (df minus df_ref) for the three structural-change
     indicators across AGRICULTURE / MANUFACTURE / SERVICES.
 
@@ -643,31 +753,54 @@ def plot_structural_change_panel_diff(df, df_ref, year_cols, subtitle="", includ
         nom = pCj[year_cols].values.astype("float") * Cj[year_cols].values.astype("float")
         return nom / nom.sum(axis=0), pCj['row_label'].values
 
+    def _shares_out_nom(src):
+        pYj = src.loc[src['variable_name'] == "pYj"].reset_index(drop=True)
+        Yj  = src.loc[src['variable_name'] == "Yj"].reset_index(drop=True)
+        nom = pYj[year_cols].values.astype("float") * Yj[year_cols].values.astype("float")
+        return nom / nom.sum(axis=0), pYj['row_label'].values
+
+    def _shares_out_real(src, pYj0):
+        Yj   = src.loc[src['variable_name'] == "Yj"].reset_index(drop=True)
+        real = pYj0 * Yj[year_cols].values.astype("float")
+        return real / real.sum(axis=0), Yj['row_label'].values
+
     # base prices from df (calibration year)
     pL_base = df.loc[df['variable_name'] == "pL", year_cols[0]].values[0].astype("float")
     pK_base = df.loc[df['variable_name'] == "pK", year_cols[0]].values[0].astype("float")
+    pYj0    = df.loc[df['variable_name'] == "pYj"].reset_index(drop=True)[year_cols[0]].values.astype("float")[:, np.newaxis]
 
-    va_shares_df,  va_names  = _shares_va(df)
-    va_shares_ref, _         = _shares_va(df_ref)
+    va_shares_df,  va_names   = _shares_va(df)
+    va_shares_ref, _          = _shares_va(df_ref)
     rva_shares_df,  rva_names = _shares_rva(df,     pL_base, pK_base)
     rva_shares_ref, _         = _shares_rva(df_ref, pL_base, pK_base)
-    cj_shares_df,  cj_names  = _shares_cj(df)
-    cj_shares_ref, _         = _shares_cj(df_ref)
+    cj_shares_df,  cj_names   = _shares_cj(df)
+    cj_shares_ref, _          = _shares_cj(df_ref)
+    out_nom_df,  out_names    = _shares_out_nom(df)
+    out_nom_ref, _            = _shares_out_nom(df_ref)
+    out_real_df, _            = _shares_out_real(df,     pYj0)
+    out_real_ref, _           = _shares_out_real(df_ref, pYj0)
 
     row_data = [
-        (va_shares_df  - va_shares_ref,  va_names,  "Δ nominal VA share"),
-        (rva_shares_df - rva_shares_ref, rva_names, "Δ real VA share"),
-        (cj_shares_df  - cj_shares_ref,  cj_names,  "Δ households consumption share"),
+        (rva_shares_df - rva_shares_ref, rva_names, "Δ Real Value Added Share"),
+        (va_shares_df  - va_shares_ref,  va_names,  "Δ Nominal Value Added Share"),
     ]
-    if not include_real_va:
-        row_data = [row_data[0], row_data[2]]
+    if nominal_consumption:
+        row_data.append(
+            (cj_shares_df - cj_shares_ref, cj_names, "Δ Nominal Consumption Share")
+        )
+    if include_output:
+        row_data += [
+            (out_nom_df  - out_nom_ref,  out_names, "Δ nominal output share"),
+            (out_real_df - out_real_ref, out_names, "Δ real output share"),
+        ]
 
     n_rows = len(row_data)
     fig, axes = plt.subplots(n_rows, 3, figsize=(18, 5 * n_rows))
     top_margin = 0.91 if subtitle else 0.94
     fig.subplots_adjust(top=top_margin, hspace=0.35, wspace=0.3)
-    fig.suptitle("Structural change indicators — difference vs. no-SC baseline",
-                 fontsize=16, fontweight='bold', y=0.99)
+    fig.suptitle(
+        "Difference in structural change indicators between structural change scenario and baseline",
+        fontsize=16, fontweight='bold', y=0.99)
     if subtitle:
         fig.text(0.5, 0.955, subtitle, ha='center', va='top', fontsize=13)
 
@@ -742,12 +875,12 @@ def plot_energy_volumes_comparison_by_use(df, REMIND_E_volumes, year_cols, scaf_
                 color='red', linewidth=2, label=scaf_label)
         if df_no_sc is not None and use in no_sc_by_use.index:
             ax.plot(x, no_sc_by_use.loc[use, remind_year_cols].values,
-                    color='blue', linewidth=2, label='No structural change')
+                    color='blue', linewidth=2, label='Baseline')
         ax.plot(x, remind_by_use.loc[use].values,
                 color='grey', linestyle='--', linewidth=2, label='REMIND')
-        ax.set_title(f"Energy volume: {use}", fontsize=17)
+        ax.set_title(f"Energy demand volume: {use}", fontsize=17)
         ax.set_xlabel("Year", fontsize=14)
-        ax.set_ylabel("Energy volume (EJ)", fontsize=14)
+        ax.set_ylabel("Energy demand volume (EJ)", fontsize=14)
         ax.legend(loc='upper right', fontsize=13)
         safe_use = use.replace('&', 'and').replace(' ', '_')
         _save_or_show(fig, f"E_vol_{safe_use}.png")
@@ -791,7 +924,7 @@ def plot_total_energy_volume_comparison(df, REMIND_E_volumes, year_cols, include
     def _total(by_use):
         filtered = by_use if include_PE else by_use.drop(index="PE", errors="ignore")
         return filtered[remind_year_cols].sum(axis=0).values
-
+    
     scaf_total   = _total(scaf_by_use)
     remind_total = _total(remind_by_use)
 
@@ -799,11 +932,11 @@ def plot_total_energy_volume_comparison(df, REMIND_E_volumes, year_cols, include
     ax.plot(x, scaf_total, color='red', linewidth=2, label=scaf_label)
     if df_no_sc is not None:
         no_sc_total = _total(no_sc_by_use)
-        ax.plot(x, no_sc_total, color='blue', linewidth=2, label='No structural change')
+        ax.plot(x, no_sc_total, color='blue', linewidth=2, label='Baseline')
     ax.plot(x, remind_total, color='grey', linestyle='--', linewidth=2, label='REMIND')
-    ax.set_title("Total final energy volume", fontsize=17)
+    ax.set_title("Evolution of total energy demand by scenario", fontsize=17)
     ax.set_xlabel("Year", fontsize=14)
-    ax.set_ylabel("Energy volume (EJ)", fontsize=14)
+    ax.set_ylabel("Energy demand (EJ)", fontsize=14)
     ax.legend(loc='upper right', fontsize=13)
     if output_path is not None:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -813,7 +946,38 @@ def plot_total_energy_volume_comparison(df, REMIND_E_volumes, year_cols, include
         _save_or_show(fig, "E_vol_total.png")
 
 
-def plot_energy_volumes_diverging_stacked(df, REMIND_E_volumes, year_cols, scaf_label="SCAF", output_dir=None):
+def export_E_Demand_tot_csv(df, year_cols, scaf_label="SCAF", df_no_sc=None, output_dir=None):
+    evol_rows = df.loc[df['variable_name'] == "E_vol"].reset_index(drop=True)
+    scaf_by_use = evol_rows.groupby('col_label')[year_cols].sum().astype("float")
+    scaf_total = scaf_by_use.sum(axis=0)
+
+    no_sc_by_use = (
+        df_no_sc.loc[df_no_sc['variable_name'] == "E_vol"]
+        .groupby('col_label')[year_cols]
+        .sum()
+        .astype("float")
+    )
+    no_sc_total = no_sc_by_use.sum(axis=0)
+
+    diff = scaf_total - no_sc_total
+    ratio = diff / no_sc_total
+
+    result = pd.DataFrame({
+        "baseline": no_sc_total,
+        scaf_label: scaf_total,
+        "difference": diff,
+        "percentage difference": ratio,
+    }).T
+    result.index.name = None
+
+    if output_dir is not None:
+        os.makedirs(output_dir, exist_ok=True)
+        result.to_csv(os.path.join(output_dir, "E_Demand_tot.csv"))
+
+    return result
+
+
+def plot_energy_volumes_diverging_stacked(df, REMIND_E_volumes, year_cols, scaf_label="SCAF", output_dir=None, output_path=None):
     """Diverging stacked bar chart of the SCAF − REMIND energy volume gap, decomposed by energy type.
 
     One bar per year in the time series. For each year, positive contributions (SCAF > REMIND)
@@ -837,7 +1001,7 @@ def plot_energy_volumes_diverging_stacked(df, REMIND_E_volumes, year_cols, scaf_
         for u in uses
     ])
 
-    colors = plt.cm.tab10(np.linspace(0, 0.9, len(uses)))
+    colors = [ENERGY_USE_PALETTE[i % len(ENERGY_USE_PALETTE)] for i in range(len(uses))]
 
     x = np.array(remind_year_cols).astype('int')
     bar_width = (x[1] - x[0]) * 0.8 if len(x) > 1 else 4
@@ -857,17 +1021,25 @@ def plot_energy_volumes_diverging_stacked(df, REMIND_E_volumes, year_cols, scaf_
         pos_bottoms += pos
         neg_bottoms += neg
 
+    total_diff = diff.sum(axis=0)
+    ax.hlines(total_diff, x - bar_width / 2, x + bar_width / 2,
+              colors='black', linestyles='dashed', linewidth=1.5, label='Total')
+
     ax.axhline(0, color='black', linewidth=0.8)
     ax.set_xticks(x)
     ax.set_xticklabels(remind_year_cols, rotation=45, ha='right', fontsize=11)
     ax.set_xlabel("Year", fontsize=13)
-    ax.set_ylabel(f"{scaf_label} \u2212 REMIND (EJ)", fontsize=13)
-    ax.set_title(f"Energy volume gap: {scaf_label} \u2212 REMIND, decomposed by energy type", fontsize=15)
-    ax.legend(loc='upper right', fontsize=11)
+    ax.set_ylabel(f"Δ Energy volume (EJ)", fontsize=13)
+    ax.set_title(f"Energy volume difference between SCAF baseline and REMIND, decomposed by energy use", fontsize=15)
+    ax.legend(loc='upper left', fontsize=11)
     plt.tight_layout()
 
-    subdir = os.path.join(output_dir, "E_vol") if output_dir is not None else None
-    if subdir is not None:
+    if output_path is not None:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        fig.savefig(output_path, bbox_inches='tight')
+        plt.close(fig)
+    elif output_dir is not None:
+        subdir = output_dir
         os.makedirs(subdir, exist_ok=True)
         fig.savefig(os.path.join(subdir, "E_vol_diverging_stacked.png"), bbox_inches='tight')
         plt.close(fig)
@@ -875,7 +1047,7 @@ def plot_energy_volumes_diverging_stacked(df, REMIND_E_volumes, year_cols, scaf_
         plt.show()
 
 
-def plot_energy_volumes_diverging_stacked_scaf_diff(df, df_baseline, year_cols, output_dir=None, output_path=None):
+def plot_energy_volumes_diverging_stacked_scaf_diff(df, df_baseline, year_cols, subtitle="", output_dir=None, output_path=None):
     """Diverging stacked bar chart of the SCAF scenario − SCAF baseline energy volume gap, decomposed by energy type.
 
     One bar per year. Positive contributions (scenario > baseline) stack upward from zero,
@@ -899,7 +1071,7 @@ def plot_energy_volumes_diverging_stacked_scaf_diff(df, df_baseline, year_cols, 
         for u in uses
     ])
 
-    colors = plt.cm.tab10(np.linspace(0, 0.9, len(uses)))
+    colors = [ENERGY_USE_PALETTE[i % len(ENERGY_USE_PALETTE)] for i in range(len(uses))]
 
     x = np.array(year_cols).astype('int')
     bar_width = (x[1] - x[0]) * 0.8 if len(x) > 1 else 4
@@ -919,14 +1091,22 @@ def plot_energy_volumes_diverging_stacked_scaf_diff(df, df_baseline, year_cols, 
         pos_bottoms += pos
         neg_bottoms += neg
 
+    total_diff = diff.sum(axis=0)
+    ax.plot(x, total_diff, color='black', linestyle='dashed', linewidth=1.2,
+            marker='o', markersize=4, markerfacecolor='black', markeredgecolor='black',
+            label='Total', zorder=5)
+
     ax.axhline(0, color='black', linewidth=0.8)
     ax.set_xticks(x)
     ax.set_xticklabels(year_cols, rotation=45, ha='right', fontsize=11)
     ax.set_xlabel("Year", fontsize=13)
-    ax.set_ylabel("Scenario \u2212 Baseline (EJ)", fontsize=13)
-    ax.set_title("Energy volume gap: SCAF scenario \u2212 SCAF baseline, decomposed by energy type", fontsize=15)
-    ax.legend(loc='upper right', fontsize=11)
-    plt.tight_layout()
+    ax.set_ylabel("Δ Energy volume (EJ)", fontsize=13)
+    fig.suptitle("Energy volume difference between structural change scenario and baseline, decomposed by energy use", fontsize=15)
+    if subtitle:
+        fig.text(0.5, 0.92, subtitle, ha='center', va='top', fontsize=13)
+    ax.legend(loc='upper left', fontsize=11)
+    top_margin = 0.88 if subtitle else 0.93
+    plt.tight_layout(rect=[0, 0, 1, top_margin])
 
     if output_path is not None:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -1391,6 +1571,102 @@ def plot_nominal_demand_evolutions(df, year_cols, max_year="2035", output_dir=No
     _plot_one(nom_G,  "Nominal government expenditure pGj·Gj (excl. energy)", "pGj_Gj.png")
 
 
+def plot_net_exports(df, year_cols, df_ref=None, output_dir=None):
+    """Per-sector time series of real and nominal net exports (or their diff vs df_ref).
+
+    When df_ref is None: plots pXj·(Xj−Mj) and pXj0·(Xj−Mj) in levels.
+    When df_ref is provided: plots Δ[pXj·(Xj−Mj)] and Δ[pXj0·(Xj−Mj)] vs the reference.
+    pXj0 is the base-year (first-period) export price taken from df_ref when available, else from df.
+    """
+    x = np.array(year_cols).astype('int')
+
+    def _rows(src, var):
+        return src.loc[src['variable_name'] == var].reset_index(drop=True)
+
+    pXj_rows = _rows(df, 'pXj');  Xj_rows = _rows(df, 'Xj');  Mj_rows = _rows(df, 'Mj')
+
+    is_diff = df_ref is not None
+    if is_diff:
+        pXj_ref = _rows(df_ref, 'pXj')
+        Xj_ref  = _rows(df_ref, 'Xj')
+        Mj_ref  = _rows(df_ref, 'Mj')
+
+    subdir = os.path.join(output_dir, "net_exports") if output_dir is not None else None
+    if subdir is not None:
+        os.makedirs(subdir, exist_ok=True)
+
+    def _save_or_show(fig, fname):
+        if subdir is not None:
+            plt.savefig(os.path.join(subdir, fname), bbox_inches='tight')
+            plt.close(fig)
+        else:
+            plt.show()
+
+    total_nominal = np.zeros(len(year_cols))
+    total_real    = np.zeros(len(year_cols))
+
+    for sector in sectors_names_eng:
+        if sector.upper() == "ENERGY":
+            continue
+
+        p_row = pXj_rows.loc[pXj_rows['row_label'] == sector, year_cols]
+        q_row = Xj_rows.loc[Xj_rows['row_label']   == sector, year_cols]
+        m_row = Mj_rows.loc[Mj_rows['row_label']   == sector, year_cols]
+
+        if p_row.empty or q_row.empty or m_row.empty:
+            continue
+
+        pXj_ts = p_row.values[0].astype('float')
+        Xj_ts  = q_row.values[0].astype('float')
+        Mj_ts  = m_row.values[0].astype('float')
+
+        if is_diff:
+            p_ref_row = pXj_ref.loc[pXj_ref['row_label'] == sector, year_cols]
+            q_ref_row = Xj_ref.loc[Xj_ref['row_label']   == sector, year_cols]
+            m_ref_row = Mj_ref.loc[Mj_ref['row_label']   == sector, year_cols]
+            if p_ref_row.empty or q_ref_row.empty or m_ref_row.empty:
+                continue
+            pXj_ref_ts = p_ref_row.values[0].astype('float')
+            Xj_ref_ts  = q_ref_row.values[0].astype('float')
+            Mj_ref_ts  = m_ref_row.values[0].astype('float')
+            pXj0       = pXj_ref_ts[0]
+            nominal_NX = pXj_ts * (Xj_ts - Mj_ts) - pXj_ref_ts * (Xj_ref_ts - Mj_ref_ts)
+            real_NX    = pXj0 * ((Xj_ts - Mj_ts) - (Xj_ref_ts - Mj_ref_ts))
+        else:
+            pXj0       = pXj_ts[0]
+            nominal_NX = pXj_ts * (Xj_ts - Mj_ts)
+            real_NX    = pXj0   * (Xj_ts - Mj_ts)
+
+        total_nominal += nominal_NX
+        total_real    += real_NX
+
+        ylabel = ("Δ net exports (model units)" if is_diff else "Net exports (model units)")
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.plot(x, nominal_NX, marker='o', markersize=4, linewidth=1.5,
+                label='Nominal pXj·(Xj−Mj)')
+        ax.plot(x, real_NX,    marker='o', markersize=4, linewidth=1.5, linestyle='dashed',
+                label='Real pXj₀·(Xj−Mj)')
+        ax.axhline(0, color='grey', linewidth=0.8, linestyle='--')
+        ax.set_title(sector, fontsize=17)
+        ax.set_xlabel("Year", fontsize=14)
+        ax.set_ylabel(ylabel, fontsize=14)
+        ax.legend(fontsize=12)
+        _save_or_show(fig, f"net_exports_{sector.replace(' ', '_')}.png")
+
+    ylabel_total = ("Δ net exports (model units)" if is_diff else "Net exports (model units)")
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.plot(x, total_nominal, marker='o', markersize=4, linewidth=1.5,
+            label='Nominal pXj·(Xj−Mj)')
+    ax.plot(x, total_real,    marker='o', markersize=4, linewidth=1.5, linestyle='dashed',
+            label='Real pXj₀·(Xj−Mj)')
+    ax.axhline(0, color='grey', linewidth=0.8, linestyle='--')
+    ax.set_title("Total (sum over sectors, excl. energy)", fontsize=17)
+    ax.set_xlabel("Year", fontsize=14)
+    ax.set_ylabel(ylabel_total, fontsize=14)
+    ax.legend(fontsize=12)
+    _save_or_show(fig, "net_exports_TOTAL.png")
+
+
 def plot_export_share_of_output(df, year_cols, output_dir=None):
     """One plot per sector: (pXj * Xj) / (pYj * Yj) over time."""
     x = np.array(year_cols).astype('int')
@@ -1514,6 +1790,189 @@ def plot_export_share_of_output_diff(df, df_ref, year_cols, output_dir=None):
             plt.close(fig)
         else:
             plt.show()
+
+
+def plot_pYj_over_pXj_services_diff(df, df_ref, year_cols, output_dir=None):
+    sector = "SERVICES"
+    x = np.array(year_cols).astype('int')
+
+    pYj_df  = df.loc[(df['variable_name']  == "pYj") & (df['row_label']  == sector), year_cols].values.astype("float").flatten()
+    pXj_df  = df.loc[(df['variable_name']  == "pXj") & (df['row_label']  == sector), year_cols].values.astype("float").flatten()
+    pYj_ref = df_ref.loc[(df_ref['variable_name'] == "pYj") & (df_ref['row_label'] == sector), year_cols].values.astype("float").flatten()
+    pXj_ref = df_ref.loc[(df_ref['variable_name'] == "pXj") & (df_ref['row_label'] == sector), year_cols].values.astype("float").flatten()
+
+    ratio_df  = pYj_df  / pXj_df
+    ratio_ref = pYj_ref / pXj_ref
+    diff_pct  = (ratio_df - ratio_ref) / ratio_ref * 100
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(x, diff_pct, marker='o', markersize=4, linewidth=1.5)
+    ax.axhline(0, color='grey', linewidth=0.8, linestyle='--')
+    ax.set_title(f"Δ pYj/pXj ({sector}) vs no-SC", fontsize=16)
+    ax.set_xlabel("Year", fontsize=13)
+    ax.set_ylabel("% difference", fontsize=13)
+    plt.tight_layout()
+
+    if output_dir is not None:
+        subdir = os.path.join(output_dir, "pYj_over_pXj_services_diff")
+        os.makedirs(subdir, exist_ok=True)
+        plt.savefig(os.path.join(subdir, "pYj_over_pXj_services_diff.png"), bbox_inches='tight')
+        plt.close(fig)
+    else:
+        plt.show()
+
+
+def plot_real_aggregate_components_stacked(df, year_cols, by_sector=False, normalized=False, output_dir=None):
+    x  = np.array(year_cols).astype('int')
+    t0 = year_cols[0]
+
+    # Per-sector real values: shape (n_sectors, n_years)
+    # Gj and Ij are deflated by pCj in this model (no separate pGj/pIj deflator)
+    Cj_rows = df.loc[df['variable_name'] == "Cj"].reset_index(drop=True)
+    Gj_rows = df.loc[df['variable_name'] == "Gj"].reset_index(drop=True)
+    Ij_rows = df.loc[df['variable_name'] == "Ij"].reset_index(drop=True)
+    sectors = Cj_rows['row_label'].values
+
+    pCj0 = df.loc[df['variable_name'] == "pCj", t0].values.astype("float")
+
+    real_C_ps = pCj0[:, None] * Cj_rows[year_cols].values.astype("float")
+    real_G_ps = pCj0[:, None] * Gj_rows[year_cols].values.astype("float")
+    real_I_ps = pCj0[:, None] * Ij_rows[year_cols].values.astype("float")
+
+    io_real = compute_IO_monetary(df, year_cols, nominal=False)
+    io_ps = np.array([
+        io_real.loc[io_real['row_label'] == s, year_cols].values.astype("float").sum(axis=0)
+        for s in sectors
+    ])
+
+    comp_labels = ["real Cj", "real Gj", "real Ij", "real IO"]
+    colors    = plt.cm.tab10(np.linspace(0, 0.4, 4))
+    bar_width = 0.6
+
+    def _plot_one(components_4, title, fname):
+        stacked = np.stack(components_4, axis=0)  # (4, n_years)
+        ylabel  = "Real value (base-year prices)"
+        if normalized:
+            total   = stacked.sum(axis=0, keepdims=True)
+            stacked = stacked / total * 100
+            ylabel  = "Share (%)"
+
+        fig, ax = plt.subplots(figsize=(12, 7))
+        bottoms = np.zeros(len(year_cols))
+        for vals, label, color in zip(stacked, comp_labels, colors):
+            ax.bar(x, vals, bottom=bottoms, color=color, label=label,
+                   edgecolor='white', linewidth=0.5, width=bar_width)
+            bottoms += vals
+
+        if normalized:
+            ax.set_ylim(0, 100)
+        ax.set_xticks(x)
+        ax.set_xticklabels(year_cols, rotation=45, ha='right', fontsize=11)
+        ax.set_xlabel("Year", fontsize=13)
+        ax.set_ylabel(ylabel, fontsize=13)
+        ax.set_title(title, fontsize=15)
+        ax.legend(loc='upper left', fontsize=11)
+        plt.tight_layout()
+
+        if output_dir is not None:
+            subdir = os.path.join(output_dir, "real_aggregate_components")
+            os.makedirs(subdir, exist_ok=True)
+            plt.savefig(os.path.join(subdir, fname), bbox_inches='tight')
+            plt.close(fig)
+        else:
+            plt.show()
+
+    norm_tag = "_normalized" if normalized else ""
+    if by_sector:
+        for j, sector in enumerate(sectors):
+            _plot_one(
+                [real_C_ps[j], real_G_ps[j], real_I_ps[j], io_ps[j]],
+                title=f"Real aggregate components — {sector}",
+                fname=f"by_sector_{sector}{norm_tag}.png",
+            )
+    else:
+        _plot_one(
+            [real_C_ps.sum(axis=0), real_G_ps.sum(axis=0), real_I_ps.sum(axis=0), io_ps.sum(axis=0)],
+            title="Real aggregate components over time",
+            fname=f"aggregate{norm_tag}.png",
+        )
+
+
+def plot_real_aggregate_components_diff(df, df_ref, year_cols, by_sector=False, output_dir=None):
+    x  = np.array(year_cols).astype('int')
+    t0 = year_cols[0]
+
+    # Use df_ref's base-year pCj prices for both (consistent with other diff functions)
+    pCj0_ref = df_ref.loc[df_ref['variable_name'] == "pCj", t0].values.astype("float")
+
+    def _real_ps(src, var):
+        rows = src.loc[src['variable_name'] == var].reset_index(drop=True)
+        return pCj0_ref[:, None] * rows[year_cols].values.astype("float")
+
+    sectors = df.loc[df['variable_name'] == "Cj", 'row_label'].values
+
+    # Per-sector real components for df and df_ref: (n_sectors, n_years)
+    diff_C = _real_ps(df, "Cj") - _real_ps(df_ref, "Cj")
+    diff_G = _real_ps(df, "Gj") - _real_ps(df_ref, "Gj")
+    diff_I = _real_ps(df, "Ij") - _real_ps(df_ref, "Ij")
+
+    io_df  = compute_IO_monetary(df,     year_cols, nominal=False)
+    io_ref = compute_IO_monetary(df_ref, year_cols, nominal=False)
+    diff_IO_ps = np.array([
+        (io_df.loc[io_df['row_label']   == s, year_cols].values.astype("float").sum(axis=0) -
+         io_ref.loc[io_ref['row_label'] == s, year_cols].values.astype("float").sum(axis=0))
+        for s in sectors
+    ])
+
+    comp_labels = ["real Cj", "real Gj", "real Ij", "real IO"]
+    colors    = plt.cm.tab10(np.linspace(0, 0.4, 4))
+    bar_width = 0.6
+
+    def _plot_one(diffs_4, title, fname):
+        fig, ax = plt.subplots(figsize=(12, 7))
+        pos_bottoms = np.zeros(len(year_cols))
+        neg_bottoms = np.zeros(len(year_cols))
+
+        for d, label, color in zip(diffs_4, comp_labels, colors):
+            pos = np.where(d > 0, d, 0.0)
+            neg = np.where(d < 0, d, 0.0)
+            ax.bar(x, pos, bottom=pos_bottoms, color=color, label=label,
+                   edgecolor='white', linewidth=0.5, width=bar_width)
+            ax.bar(x, neg, bottom=neg_bottoms, color=color,
+                   edgecolor='white', linewidth=0.5, width=bar_width)
+            pos_bottoms += pos
+            neg_bottoms += neg
+
+        ax.axhline(0, color='black', linewidth=0.8)
+        ax.set_xticks(x)
+        ax.set_xticklabels(year_cols, rotation=45, ha='right', fontsize=11)
+        ax.set_xlabel("Year", fontsize=13)
+        ax.set_ylabel("Results − No-SC (base-year prices)", fontsize=13)
+        ax.set_title(title, fontsize=15)
+        ax.legend(loc='upper left', fontsize=11)
+        plt.tight_layout()
+
+        if output_dir is not None:
+            subdir = os.path.join(output_dir, "real_aggregate_components")
+            os.makedirs(subdir, exist_ok=True)
+            plt.savefig(os.path.join(subdir, fname), bbox_inches='tight')
+            plt.close(fig)
+        else:
+            plt.show()
+
+    if by_sector:
+        for j, sector in enumerate(sectors):
+            _plot_one(
+                [diff_C[j], diff_G[j], diff_I[j], diff_IO_ps[j]],
+                title=f"Δ real aggregate components vs no-SC — {sector}",
+                fname=f"diff_by_sector_{sector}.png",
+            )
+    else:
+        _plot_one(
+            [diff_C.sum(axis=0), diff_G.sum(axis=0), diff_I.sum(axis=0), diff_IO_ps.sum(axis=0)],
+            title="Δ real aggregate components vs no-SC",
+            fname="diff_aggregate.png",
+        )
 
 
 def plot_pY_Ej(df, year_cols, output_dir=None):
@@ -1815,6 +2274,87 @@ def compute_IO_monetary(df, year_cols, nominal):
     return pd.DataFrame(result_records, columns=meta_cols + year_cols)
 
 
+def plot_real_IO_monetary_diff(df, df_no_sc, year_cols, output_dir=None):
+    """Compare real and nominal pYijYij between results and no-SC databases.
+
+    Computes both real (fixed base-year prices) and nominal (current prices) IO
+    monetary matrices for both databases, takes the difference (results − no-SC),
+    then produces for each valuation:
+      1. A line chart of the total (scalar) difference per year.
+      2. A diverging stacked bar chart decomposing the difference by row sector.
+    """
+    subdir = os.path.join(output_dir, "IO_monetary") if output_dir is not None else None
+    if subdir is not None:
+        os.makedirs(subdir, exist_ok=True)
+
+    idx = ['row_label', 'col_label']
+    x = np.array(year_cols).astype('int')
+    bar_width = (x[1] - x[0]) * 0.8 if len(x) > 1 else 4
+
+    for nominal, label, prefix in [
+        (False, "real",    "real"),
+        (True,  "nominal", "nominal"),
+    ]:
+        io_sc  = compute_IO_monetary(df,       year_cols, nominal=nominal)
+        io_nsc = compute_IO_monetary(df_no_sc, year_cols, nominal=nominal)
+
+        a    = io_sc.set_index(idx)[year_cols].astype('float')
+        b    = io_nsc.set_index(idx)[year_cols].astype('float')
+        diff = a - b
+
+        row_contrib = diff.groupby(level='row_label').sum()
+        total_diff  = row_contrib.sum(axis=0).values
+
+        # --- Plot 1: scalar time series ---
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.plot(x, total_diff, marker='o', linewidth=2, color='steelblue')
+        ax.axhline(0, color='black', linewidth=0.8, linestyle='--')
+        ax.set_xticks(x)
+        ax.set_xticklabels(year_cols, rotation=45, ha='right', fontsize=11)
+        ax.set_xlabel("Year", fontsize=13)
+        ax.set_ylabel("Results − No-SC (monetary units)", fontsize=13)
+        ax.set_title(f"Total difference in {label} pYijYij: Results − No-SC", fontsize=15)
+        plt.tight_layout()
+        if subdir is not None:
+            fig.savefig(os.path.join(subdir, f"{prefix}_pYijYij_diff_total.png"), bbox_inches='tight')
+            plt.close(fig)
+        else:
+            plt.show()
+
+        # --- Plot 2: diverging stacked bar chart by row sector ---
+        sectors = row_contrib.index.tolist()
+        colors  = plt.cm.tab10(np.linspace(0, 0.9, len(sectors)))
+
+        fig, ax = plt.subplots(figsize=(14, 7))
+        pos_bottoms = np.zeros(len(year_cols))
+        neg_bottoms = np.zeros(len(year_cols))
+
+        for i, sector in enumerate(sectors):
+            d   = row_contrib.loc[sector].values
+            pos = np.where(d > 0, d, 0.0)
+            neg = np.where(d < 0, d, 0.0)
+            ax.bar(x, pos, bottom=pos_bottoms, color=colors[i], label=sector,
+                   edgecolor='white', linewidth=0.4, width=bar_width)
+            ax.bar(x, neg, bottom=neg_bottoms, color=colors[i],
+                   edgecolor='white', linewidth=0.4, width=bar_width)
+            pos_bottoms += pos
+            neg_bottoms += neg
+
+        ax.axhline(0, color='black', linewidth=0.8)
+        ax.set_xticks(x)
+        ax.set_xticklabels(year_cols, rotation=45, ha='right', fontsize=11)
+        ax.set_xlabel("Year", fontsize=13)
+        ax.set_ylabel("Results − No-SC (monetary units)", fontsize=13)
+        ax.set_title(f"Difference in {label} pYijYij (Results − No-SC), by row sector", fontsize=15)
+        ax.legend(loc='upper right', fontsize=11)
+        plt.tight_layout()
+        if subdir is not None:
+            fig.savefig(os.path.join(subdir, f"{prefix}_pYijYij_diff_by_sector.png"), bbox_inches='tight')
+            plt.close(fig)
+        else:
+            plt.show()
+
+
 def real_GDP_decomposed(df, year_cols, Yijpij_nom=None):
     """Compute a real GDP aggregate for all years.
 
@@ -1884,3 +2424,317 @@ def check_GDP_decomposed_vs_GDPreal(df, year_cols):
     print(f"  Difference:   {dec_vals - GDPreal}")
     print(f"  Rel diff (%): {rel_diff}")
     print("======================================\n")
+
+
+def plot_GDP_diff_decomposed_2050(df_no_sc, df_results, year_cols, subtitle="", output_dir=None):
+    """Decompose the no-SC minus results difference in real GDP at 2050 into four components.
+
+    Components (computed per scenario, then differenced as no-SC minus results):
+        pYj_composition_effect   = - sum_j [ pYj[j,t50]*Yj[j,t50]/prodGDPPI[t50] - pYj[j,t0]*Yj[j,t50] ]
+        taxes                    = - sum_j tauSj[j,t50] * Sj[j,t50] * pSj[j,t50]
+        pCIij_composition_effect = + sum_{j,i} [ nom_Yijpij[j,i,t50]/prodGDPPI[t50] - real_Yijpij[j,i,t50] ]
+        CIij_volume_effect       = + sum_{j,i} real_Yijpij[j,i,t50]
+
+    Plots a diverging stacked bar chart with one bar, segments above/below zero according
+    to their sign. A horizontal line marks the total difference; its value appears
+    explicitly on the y-axis. Title and labels clarify that values are no-SC minus results
+    for 2050.
+    """
+    t0  = year_cols[0]
+    t50 = '2050'
+
+    def _compute_components(df):
+        def _vec(var):
+            rows = df.loc[df['variable_name'] == var].reset_index(drop=True)
+            return rows.set_index('row_label')[year_cols].astype("float")
+
+        pYj   = _vec("pYj")
+        Yj    = _vec("Yj")
+        pSj   = _vec("pSj")
+        tauSj = _vec("tauSj")
+        Sj    = _vec("Sj")
+
+        prodGDPPI_val = float(df.loc[df['variable_name'] == "prodGDPPI", t50].values[0])
+
+        pYj_comp = - float((pYj[t50] * Yj[t50] / prodGDPPI_val - pYj[t0] * Yj[t50]).sum())
+        taxes    = - float((tauSj[t50] * Sj[t50] * pSj[t50]).sum() / prodGDPPI_val)
+
+        Yijpij_nom  = compute_IO_monetary(df, year_cols, nominal=True)
+        Yijpij_real = compute_IO_monetary(df, year_cols, nominal=False)
+        nom_2050    = Yijpij_nom[t50].values.astype("float")
+        real_2050   = Yijpij_real[t50].values.astype("float")
+
+        pCIij_comp =  float((nom_2050 / prodGDPPI_val - real_2050).sum())
+        CIij_vol   =  float(real_2050.sum())
+
+        return {
+            'pYj_composition_effect':   pYj_comp,
+            'taxes':                    taxes,
+            'pCIij_composition_effect': pCIij_comp,
+            'CIij_volume_effect':       CIij_vol,
+        }
+
+    comp_no_sc   = _compute_components(df_no_sc)
+    comp_results = _compute_components(df_results)
+
+    components = ['pYj_composition_effect', 'taxes', 'pCIij_composition_effect', 'CIij_volume_effect']
+    diffs = {k:  comp_results[k] - comp_no_sc[k] for k in components}
+    total = sum(diffs.values())
+
+    display_labels = {
+        'pYj_composition_effect':   'pYj composition effect',
+        'taxes':                    'Taxes (tauSj·Sj·pSj)',
+        'pCIij_composition_effect': 'pCIij composition effect',
+        'CIij_volume_effect':       'CI volume effect (real Yijpij)',
+    }
+    colors = plt.cm.tab10(np.linspace(0, 0.9, len(components)))
+
+    fig, ax = plt.subplots(figsize=(5, 7))
+    pos_bottom = 0.0
+    neg_bottom = 0.0
+
+    for i, name in enumerate(components):
+        val = diffs[name]
+        if val >= 0:
+            ax.bar([0], [val], bottom=[pos_bottom], color=colors[i],
+                   label=display_labels[name], edgecolor='white', linewidth=0.4)
+            pos_bottom += val
+        else:
+            ax.bar([0], [val], bottom=[neg_bottom], color=colors[i],
+                   label=display_labels[name], edgecolor='white', linewidth=0.4)
+            neg_bottom += val
+
+    ax.axhline(0, color='black', linewidth=0.8)
+    ax.axhline(total, color='black', linewidth=1.5, linestyle='--', label=f'Total: {total:.2f}')
+
+    existing_ticks = list(ax.get_yticks())
+    all_ticks = sorted(set(existing_ticks + [total]))
+    ax.set_yticks(all_ticks)
+
+    ax.set_xticks([0])
+    ax.set_xticklabels(['No-SC − Results, 2050'], fontsize=11)
+    ax.set_ylabel('Difference (monetary units)', fontsize=13)
+    title = 'Decomposition of the real output differences\nbetween baseline and structural change scenario'
+    if subtitle:
+        title += f'\n{subtitle}'
+    ax.set_title(title, fontsize=13)
+    ax.legend(loc='upper right', fontsize=11)
+    plt.tight_layout()
+
+    if output_dir is not None:
+        subdir = os.path.join(output_dir, "real_output_differences_decomposition")
+        os.makedirs(subdir, exist_ok=True)
+        fig.savefig(
+            os.path.join(subdir, "decomposition_of_real_output_differences_between_baseline_and_SC_scenario.png"),
+            bbox_inches='tight',
+        )
+        plt.close(fig)
+    else:
+        plt.show()
+
+
+def plot_pYj_composition_effect_diff_by_sector_2050(df_sc, df_baseline, year_cols, subtitle="", output_dir=None):
+    """Bar chart of the SC minus baseline pYj composition effect by sector at 2050.
+
+    For each sector j the per-scenario quantity is:
+        (pYj[j, 2050] / prodGDPPI[2050] - pYj[j, t0]) * Yj[j, 2050]
+
+    where prodGDPPI[2050] is the cumulative product of GDPPI from t0 to 2050.
+    The plotted value is SC minus baseline for each sector.
+    """
+    t0  = year_cols[0]
+    t50 = '2050'
+
+    def _sector_vals(df):
+        def _vec(var):
+            rows = df.loc[df['variable_name'] == var].reset_index(drop=True)
+            return rows.set_index('row_label')[year_cols].astype("float")
+
+        pYj = _vec("pYj")
+        Yj  = _vec("Yj")
+        prodGDPPI_val = float(df.loc[df['variable_name'] == "prodGDPPI", t50].values[0])
+        return - (pYj[t50] / prodGDPPI_val - pYj[t0]) * Yj[t50]
+
+    vals_sc       = _sector_vals(df_sc)
+    vals_baseline = _sector_vals(df_baseline)
+    diff = vals_sc - vals_baseline  # Series indexed by sector
+
+    sectors = diff.index.tolist()
+    total   = float(diff.sum())
+    colors  = plt.cm.tab10(np.linspace(0, 0.9, len(sectors)))
+
+    fig, ax = plt.subplots(figsize=(5, 7))
+    pos_bottom = 0.0
+    neg_bottom = 0.0
+
+    for i, sector in enumerate(sectors):
+        val = float(diff[sector])
+        if val >= 0:
+            ax.bar([0], [val], bottom=[pos_bottom], color=colors[i],
+                   label=sector, edgecolor='white', linewidth=0.4)
+            pos_bottom += val
+        else:
+            ax.bar([0], [val], bottom=[neg_bottom], color=colors[i],
+                   label=sector, edgecolor='white', linewidth=0.4)
+            neg_bottom += val
+
+    ax.axhline(0, color='black', linewidth=0.8)
+    ax.axhline(total, color='black', linewidth=1.5, linestyle='--', label=f'Total: {total:.2f}')
+
+    existing_ticks = list(ax.get_yticks())
+    ax.set_yticks(sorted(set(existing_ticks + [total])))
+
+    ax.set_xticks([0])
+    ax.set_xticklabels(['SC − Baseline, 2050'], fontsize=11)
+    ax.set_ylabel('SC − Baseline (monetary units)', fontsize=13)
+    title = 'pYj composition effect difference by sector (SC − Baseline), 2050'
+    if subtitle:
+        title += f'\n{subtitle}'
+    ax.set_title(title, fontsize=13)
+    ax.legend(loc='upper right', fontsize=11)
+    plt.tight_layout()
+
+    if output_dir is not None:
+        subdir = os.path.join(output_dir, "real_output_differences_decomposition")
+        os.makedirs(subdir, exist_ok=True)
+        fig.savefig(
+            os.path.join(subdir, "pYj_composition_effect_diff_by_sector_2050.png"),
+            bbox_inches='tight',
+        )
+        plt.close(fig)
+    else:
+        plt.show()
+
+
+def plot_calibration_energy_consumer_shares(hybridization_df, output_dir=None):
+    _palette = ENERGY_USE_PALETTE
+    df = hybridization_df[
+        (hybridization_df["Region"] == "EUR") &
+        (hybridization_df["Variable"] == "Volume")
+    ]
+    pivot = (
+        df.pivot_table(index="Energy consumers", columns="Energy uses",
+                       values="2020", aggfunc="sum")
+        .fillna(0)
+    )
+    consumers = pivot.index.tolist()
+    energy_uses = pivot.columns.tolist()
+    n = len(consumers)
+    x = np.arange(n)
+    colors = [_palette[i % len(_palette)] for i in range(len(energy_uses))]
+
+    subdir = os.path.join(output_dir, "energy_uses_shares") if output_dir is not None else None
+    if subdir is not None:
+        os.makedirs(subdir, exist_ok=True)
+
+    # ---- normalised ----
+    totals = pivot.sum(axis=1)
+    safe_totals = totals.where(totals != 0, 1.0)
+    shares = pivot.div(safe_totals, axis=0)
+
+    fig1, ax1 = plt.subplots(figsize=(12, 7))
+    bottoms = np.zeros(n)
+    for i, use in enumerate(energy_uses):
+        vals = shares[use].values
+        ax1.bar(x, vals, bottom=bottoms, color=colors[i], label=use,
+                edgecolor='white', linewidth=0.5)
+        bottoms += vals
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(consumers, rotation=30, ha='right', fontsize=11)
+    ax1.set_ylabel("Share", fontsize=13)
+    ax1.set_ylim(0, 1)
+    ax1.set_title("energy use composition by consumer — normalised (2020)", fontsize=15)
+    ax1.legend(bbox_to_anchor=(1.0, 0.5), loc='center left', fontsize=11)
+    plt.tight_layout()
+    if subdir is not None:
+        fig1.savefig(os.path.join(subdir, "energy_consumers_shares_normalised_2020.png"), bbox_inches='tight')
+        plt.close(fig1)
+    else:
+        plt.show()
+
+    # ---- absolute ----
+    fig2, ax2 = plt.subplots(figsize=(12, 7))
+    bottoms = np.zeros(n)
+    for i, use in enumerate(energy_uses):
+        vals = pivot[use].values
+        ax2.bar(x, vals, bottom=bottoms, color=colors[i], label=use,
+                edgecolor='white', linewidth=0.5)
+        bottoms += vals
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(consumers, rotation=30, ha='right', fontsize=11)
+    ax2.set_ylabel("Energy volume (EJ)", fontsize=13)
+    ax2.set_title("Energy use composition by consumer (2020)", fontsize=15)
+    ax2.legend(bbox_to_anchor=(1.0, 0.5), loc='center left', fontsize=11)
+    plt.tight_layout()
+    if subdir is not None:
+        fig2.savefig(os.path.join(subdir, "energy_consumers_shares_absolute_2020.png"), bbox_inches='tight')
+        plt.close(fig2)
+    else:
+        plt.show()
+
+
+def plot_calibration_energy_use_shares(hybridization_df, output_dir=None):
+    df = hybridization_df[
+        (hybridization_df["Region"] == "EUR") &
+        (hybridization_df["Variable"] == "Volume")
+    ]
+    pivot = (
+        df.pivot_table(index="Energy uses", columns="Energy consumers",
+                       values="2020", aggfunc="sum")
+        .fillna(0)
+    )
+    energy_uses = pivot.index.tolist()
+    consumers   = pivot.columns.tolist()
+    n = len(energy_uses)
+    x = np.arange(n)
+    _palette = ENERGY_USE_PALETTE
+    colors = [_palette[i % len(_palette)] for i in range(len(consumers))]
+
+    subdir = os.path.join(output_dir, "energy_uses_shares") if output_dir is not None else None
+    if subdir is not None:
+        os.makedirs(subdir, exist_ok=True)
+
+    # ---- Chart 1: normalised (bar height = 1) ----
+    totals = pivot.sum(axis=1)
+    safe_totals = totals.where(totals != 0, 1.0)
+    shares = pivot.div(safe_totals, axis=0)
+
+    fig1, ax1 = plt.subplots(figsize=(12, 7))
+    bottoms = np.zeros(n)
+    for i, consumer in enumerate(consumers):
+        vals = shares[consumer].values
+        ax1.bar(x, vals, bottom=bottoms, color=colors[i], label=consumer,
+                edgecolor='white', linewidth=0.5)
+        bottoms += vals
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(energy_uses, rotation=30, ha='right', fontsize=11)
+    ax1.set_ylabel("Share", fontsize=13)
+    ax1.set_ylim(0, 1)
+    ax1.set_title("consumer composition by energy use — normalised (2020)", fontsize=15)
+    ax1.legend(bbox_to_anchor=(1.0, 0.5), loc='center left', fontsize=11)
+    plt.tight_layout()
+    if subdir is not None:
+        fig1.savefig(os.path.join(subdir, "energy_uses_shares_normalised_2020.png"), bbox_inches='tight')
+        plt.close(fig1)
+    else:
+        plt.show()
+
+    # ---- Chart 2: absolute (bar height = total EJ) ----
+    fig2, ax2 = plt.subplots(figsize=(12, 7))
+    bottoms = np.zeros(n)
+    for i, consumer in enumerate(consumers):
+        vals = pivot[consumer].values
+        ax2.bar(x, vals, bottom=bottoms, color=colors[i], label=consumer,
+                edgecolor='white', linewidth=0.5)
+        bottoms += vals
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(energy_uses, rotation=30, ha='right', fontsize=11)
+    ax2.set_ylabel("Energy volume (EJ)", fontsize=13)
+    ax2.set_title("Consumers composition of energy uses (2020)", fontsize=15)
+    ax2.legend(bbox_to_anchor=(1.0, 0.5), loc='center left', fontsize=11)
+    plt.tight_layout()
+    if subdir is not None:
+        fig2.savefig(os.path.join(subdir, "energy_uses_shares_absolute_2020.png"), bbox_inches='tight')
+        plt.close(fig2)
+    else:
+        plt.show()
