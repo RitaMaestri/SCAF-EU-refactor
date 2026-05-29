@@ -10,10 +10,10 @@ results_2026-04-17_17-54, drafts, EUKLEMS-TFP_CDES_KL,All structural change driv
 results_2026-04-20_15-33, tagged, EUKLEMS-TFP, Heterogeneous TFP growth rates, one_driver, data_SC, exo_ME
 results_2026-04-14_17-45, tagged, no_SC, Baseline , baseline, baseline, exo_ME
 results_2026-04-15_14-57, tagged, CDES, CDES consumption function, one_driver, data_SC, exo_ME
-results_2026-04-20_17-06, tagged, EUKLEMS-TFP, Heterogeneous TFP growth rates, one_driver, data_SC, exo_ME
-results_2026-04-20_17-22, tagged, KL, KL elasticities, one_driver, data_SC,exo_ME
-results_2026-04-20_17-26, tagged, EUKLEMS-TFP_CDES_KL, All structural change drivers, all_drivers, data_SC, exo_ME
-results_2026-04-21_13-58, tagged, trade, Changes in comparative advantage,one_driver, hypothesis_SC,exo_ME
-results_2026-04-21_14-00, tagged, tech-coeff, Services technical coefficients ,one_driver, hypothesis_SC,exo_ME
-results_2026-04-28_14-49, tagged, no_SC, Baseline , baseline, baseline, corrected_GDPPI
-results_2026-05-22_15-49, tagged, EUKLEMS-TFP, Heterogeneous TFP growth rates, one_driver, data_SC, corrected_GDPPI
+results_2026-04-20_17-06, tagged, EUKLEMS-TFP, TFP, one_driver, data_SC, exo_ME
+results_2026-04-20_17-22, tagged, KL, KLelast, one_driver, data_SC,exo_ME
+results_2026-04-20_17-26, tagged, EUKLEMS-TFP_CDES_KL, Composite, all_drivers, data_SC, exo_ME
+results_2026-04-21_13-58, tagged, trade, CompAdv,one_driver, hypothesis_SC,exo_ME
+results_2026-04-21_14-00, tagged, tech-coeff, IOcoeff ,one_driver, hypothesis_SC,exo_ME
+results_2026-04-15_15-16, drafts, no_SC, Baseline , baseline, baseline, corrected_GDPPI
+results_2026-05-22_16-20, tagged, EUKLEMS-TFP, TFP, one_driver, data_SC, corrected_GDPPI

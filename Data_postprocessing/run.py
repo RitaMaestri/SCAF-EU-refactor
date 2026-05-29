@@ -10,7 +10,7 @@ from scipy.ndimage.interpolation import shift
 import sys
 import matplotlib.colors as mcolors
 from scipy import stats
-from lib import export_E_Demand_tot_csv, compute_IO_monetary, plot_varj_evol, plot_varj_evol_absolute, plot_variable_1D, plot_KL_GDP_evolution, plot_VA_share_vs_log_gdp_per_capita, plot_variable_share_vs_log_gdp_per_capita, plot_variable_diff_by_sector, plot_Yj_diff_diverging_stacked, plot_aggregate_diff, plot_structural_change_panel, plot_structural_change_panel_diff, plot_energy_volumes_comparison_by_use, plot_total_energy_volume_comparison, plot_energy_volumes_diverging_stacked, plot_energy_volumes_diverging_stacked_scaf_diff, plot_energy_volumes_by_consumer, plot_Yj_vs_REMIND_output, plot_sector_Sj_Yj, plot_sector_Sj_Yj_diff, plot_real_va_output_diff, plot_real_va_vs_gdp, sectors_names_eng, plot_energy_expenditure_by_sector, plot_energy_expenditure_share, plot_export_share_of_output, plot_export_share_of_output_diff, plot_real_export_share_of_output, plot_nominal_demand_evolutions, plot_net_exports, plot_energy_sector_inputs, plot_pY_Ej, plot_demand_components_stacked, plot_KL_shares_by_sector, check_GDP_decomposed_vs_GDPreal, plot_real_IO_monetary_diff, plot_GDP_diff_decomposed_2050, plot_pYj_composition_effect_diff_by_sector_2050, plot_real_aggregate_components_stacked, plot_real_aggregate_components_diff, plot_calibration_energy_consumer_shares, plot_calibration_energy_use_shares
+from lib import export_E_Demand_tot_csv, compute_IO_monetary, plot_varj_evol, plot_varj_evol_absolute, plot_variable_1D, plot_KL_GDP_evolution, plot_VA_share_vs_log_gdp_per_capita, plot_variable_share_vs_log_gdp_per_capita, plot_variable_diff_by_sector, plot_Yj_diff_diverging_stacked, plot_aggregate_diff, compute_structural_change_panel, plot_structural_change_panel, plot_structural_change_panel_diff, construct_wb_timeseries, build_joint_structural_change_timeseries, plot_joint_structural_change_timeseries, plot_wb_va_shares, plot_scaf_va_shares, plot_structural_change_panels_split, plot_energy_volumes_comparison_by_use, plot_total_energy_volume_comparison, plot_energy_volumes_diverging_stacked, plot_energy_volumes_diverging_stacked_scaf_diff, plot_energy_volumes_by_consumer, plot_Yj_vs_REMIND_output, plot_sector_Sj_Yj, plot_sector_Sj_Yj_diff, plot_real_va_output_diff, plot_real_va_vs_gdp, sectors_names_eng, plot_energy_expenditure_by_sector, plot_energy_expenditure_share, plot_export_share_of_output, plot_export_share_of_output_diff, plot_real_export_share_of_output, plot_nominal_demand_evolutions, plot_net_exports, plot_energy_sector_inputs, plot_pY_Ej, plot_demand_components_stacked, plot_KL_shares_by_sector, check_GDP_decomposed_vs_GDPreal, plot_real_IO_monetary_diff, plot_GDP_diff_decomposed_2050, plot_pYj_composition_effect_diff_by_sector_2050, plot_real_aggregate_components_stacked, plot_real_aggregate_components_diff, plot_calibration_energy_consumer_shares, plot_calibration_energy_use_shares
 
 # =============================================================================
 # SETUP
@@ -80,10 +80,11 @@ def presentation_plots(results_path, subtitle="", output_name=None, no_sc_df=Non
         output_dir=os.path.join("Data_postprocessing", "plots", "calibration"),
     )
     ################# structural change panel #######################################
-    plot_structural_change_panel(SCAF_results, year_cols, fix_ylim=True,  subtitle=subtitle, output_dir=output_dir)
-    plot_structural_change_panel(SCAF_results, year_cols, fix_ylim=False, subtitle=subtitle, output_dir=output_dir)
-    plot_structural_change_panel(SCAF_results, year_cols, fix_ylim=True,  subtitle=subtitle, include_real_va=False, output_dir=output_dir)
-    plot_structural_change_panel(SCAF_results, year_cols, fix_ylim=False, subtitle=subtitle, include_real_va=False, output_dir=output_dir)
+    panel_df = compute_structural_change_panel(SCAF_results, year_cols)
+    plot_structural_change_panel(panel_df, year_cols, fix_ylim=True,  subtitle=subtitle, output_dir=output_dir)
+    plot_structural_change_panel(panel_df, year_cols, fix_ylim=False, subtitle=subtitle, output_dir=output_dir)
+    plot_structural_change_panel(panel_df, year_cols, fix_ylim=True,  subtitle=subtitle, include_real_va=False, output_dir=output_dir)
+    plot_structural_change_panel(panel_df, year_cols, fix_ylim=False, subtitle=subtitle, include_real_va=False, output_dir=output_dir)
     if no_sc_df is not None:
         plot_structural_change_panel_diff(SCAF_results, no_sc_df, year_cols, subtitle=subtitle, output_dir=output_dir)
         plot_structural_change_panel_diff(SCAF_results, no_sc_df, year_cols, subtitle=subtitle, output_dir=output_dir)
@@ -110,7 +111,7 @@ def presentation_plots(results_path, subtitle="", output_name=None, no_sc_df=Non
 
 
 
-def narrow_presentation_plots(results_path, subtitle="", run_set="", key="", nominal_consumption=False, no_sc_df=None):
+def narrow_presentation_plots(results_path, subtitle="", run_set="", key="", nominal_consumption=False, no_sc_df=None, regression=True):
     output_dir = os.path.join("Data_postprocessing", "plots", "presentation", run_set, key)
     os.makedirs(output_dir, exist_ok=True)
 
@@ -118,8 +119,9 @@ def narrow_presentation_plots(results_path, subtitle="", run_set="", key="", nom
     meta_cols = ['variable_name', 'row_label', 'col_label', 'status']
     year_cols = [c for c in SCAF_results.columns if c not in meta_cols and int(c) <= 2050]
     SCAF_results = SCAF_results[meta_cols + year_cols]
+    panel_df = compute_structural_change_panel(SCAF_results, year_cols)
 
-    if no_sc_df is not None:
+    if no_sc_df is not None and key != "no_SC":
         plot_energy_volumes_diverging_stacked_scaf_diff(
             SCAF_results, no_sc_df, year_cols,
             subtitle=subtitle,
@@ -128,12 +130,23 @@ def narrow_presentation_plots(results_path, subtitle="", run_set="", key="", nom
             SCAF_results, no_sc_df, year_cols,
             subtitle=subtitle,
             output_path=os.path.join(output_dir, "Yj_diff_stacked.png"))
+        plot_structural_change_panels_split(
+            SCAF_results, no_sc_df, year_cols,
+            subtitle=subtitle,
+            output_dir=output_dir)
 
     if key == "no_SC":
         plot_energy_volumes_diverging_stacked(
             SCAF_results, REMIND_E_volumes, year_cols,
             scaf_label=subtitle,
             output_path=os.path.join(output_dir, "E_vol.png"))
+        plot_total_energy_volume_comparison(
+            SCAF_results, REMIND_E_volumes, year_cols,
+            include_PE=True, scaf_label="Baseline", df_no_sc=None,
+            output_path=os.path.join(output_dir, "E_tot.png"))
+        wb_nom_df, wb_real_df = construct_wb_timeseries(data_dir="Data_postprocessing")
+        plot_wb_va_shares(wb_nom_df, wb_real_df, subtitle=subtitle, output_dir=output_dir, regression=regression)
+        plot_scaf_va_shares(panel_df, wb_nom_df, wb_real_df, subtitle=subtitle, output_dir=output_dir, regression=regression)
     else:
         plot_total_energy_volume_comparison(
             SCAF_results, REMIND_E_volumes, year_cols,
@@ -146,15 +159,9 @@ def narrow_presentation_plots(results_path, subtitle="", run_set="", key="", nom
                 output_dir=output_dir)
 
     plot_structural_change_panel(
-        SCAF_results, year_cols, fix_ylim=True, subtitle=subtitle,
+        panel_df, year_cols, fix_ylim=True, subtitle=subtitle,
         nominal_consumption=(nominal_consumption or key == "no_SC"), include_output=False,
         output_path=os.path.join(output_dir, "SC_ind.png"))
-
-    if no_sc_df is not None:
-        plot_structural_change_panel_diff(
-            SCAF_results, no_sc_df, year_cols, subtitle=subtitle,
-            nominal_consumption=nominal_consumption, include_output=False,
-            output_path=os.path.join(output_dir, "SC_diff.png"))
 
 
 
@@ -331,13 +338,13 @@ def exploratory_plots(results_path, subtitle="", no_sc_df=None):
     ###############################################################################
 
 
-def run_plots(results_path, subtitle="", output_name=None, run_set=None, key=None, nominal_consumption=False, no_sc_df=None):
+def run_plots(results_path, subtitle="", output_name=None, run_set=None, key=None, nominal_consumption=False, no_sc_df=None, regression=True):
     if PLOT_FUNCTION == "presentation_plots":
         presentation_plots(results_path, subtitle=subtitle, output_name=output_name, no_sc_df=no_sc_df)
     elif PLOT_FUNCTION == "exploratory_plots":
         exploratory_plots(results_path, subtitle=subtitle, no_sc_df=no_sc_df)
     elif PLOT_FUNCTION == "narrow_presentation_plots":
-        narrow_presentation_plots(results_path, subtitle=subtitle, run_set=run_set or "", key=key or "", nominal_consumption=nominal_consumption, no_sc_df=no_sc_df)
+        narrow_presentation_plots(results_path, subtitle=subtitle, run_set=run_set or "", key=key or "", nominal_consumption=nominal_consumption, no_sc_df=no_sc_df, regression=regression)
 
 
 # =============================================================================

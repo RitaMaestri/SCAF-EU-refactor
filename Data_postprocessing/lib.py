@@ -1,4 +1,5 @@
 import os
+import json
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -605,77 +606,574 @@ def plot_aggregate_diff(df, df_ref, year_cols, variable_name, y_label, output_di
         plt.show()
 
 
-def plot_structural_change_panel(df, year_cols, fix_ylim=True, subtitle="", include_real_va=True, nominal_consumption=True, include_output=True, output_dir=None, output_path=None):
+def align_L_to_population(L_array, year_cols,
+                           data_dir="Data_postprocessing", base_year="2020"):
+    """Scale SCAF L so that L[base_year] equals aggregate WB population[base_year].
+
+    A single multiplicative coefficient  coeff = pop[base_year] / L[base_year]
+    is applied to every element of L_array, preserving the growth profile.
+
+    Parameters
+    ----------
+    L_array   : np.ndarray  — L values for each year in year_cols (model units)
+    year_cols : list[str]   — year strings aligned with L_array
+    data_dir  : str         — folder containing WB_data/ (default "Data_postprocessing")
+    base_year : str         — year in which L and population must match (default "2020")
+
+    Returns
+    -------
+    np.ndarray — L_array * (pop[base_year] / L[base_year])
+    """
+    import json
+
+    wb_dir = os.path.join(data_dir, "WB_data")
+
+    with open(os.path.join(wb_dir, "mappings.json"), "r") as fh:
+        mappings = json.load(fh)
+    agg_codes = mappings["EUR region"]
+
+    pop_df = pd.read_csv(
+        os.path.join(wb_dir, "pop.csv"), skiprows=4, index_col="Country Code",
+        encoding="utf-8-sig"
+    )
+    pop_df.columns = [str(c).strip() for c in pop_df.columns]
+
+    pop_base = float(pop_df.loc[agg_codes, base_year].sum())
+    L_base   = float(L_array[list(year_cols).index(base_year)])
+
+    return L_array * (pop_base / L_base)
+
+
+def compute_structural_change_panel(df, year_cols, data_dir="Data_postprocessing"):
+    """Compute all structural-change share time series from raw SCAF output.
+
+    Parameters
+    ----------
+    df        : raw SCAF results DataFrame (variable_name / row_label / year columns)
+    year_cols : list of year column strings
+
+    Returns
+    -------
+    pd.DataFrame  with columns:  indicator | sector | year1 | year2 | …
+        indicator values:
+            "log_gdp_pc"               — aggregate x-axis (sector = "")
+            "Real Value Added Share"
+            "Nominal Value Added Share"
+            "Nominal Consumption Share"
+            "Nominal Output Share"
+            "Real Output Share"
+    """
+    # ---- x-axis ----
+    GDPreal    = df.loc[df['variable_name'] == "GDPreal", year_cols].values[0].astype("float")
+    L          = df.loc[df['variable_name'] == "L",       year_cols].values[0].astype("float")
+    L          = align_L_to_population(L, year_cols, data_dir=data_dir)
+    log_gdp_pc = np.log(GDPreal * 1e6 / L)   # GDPreal in M EUR → convert to EUR
+
+    # ---- sector → aggregate mapping ----
+    _map_df    = pd.read_csv(os.path.join(data_dir, "mapping", "mapping_sectors.csv"),
+                              skipinitialspace=True)
+    sec_to_agg = dict(zip(_map_df["sector"].str.strip(), _map_df["aggregate"].str.strip()))
+    agg_order  = list(dict.fromkeys(_map_df["aggregate"].str.strip()))  # preserves CSV order
+
+    def _aggregate(levels, sector_names):
+        """Sum rows of levels (n_sectors × n_years) by aggregate group.
+        Returns (agg_levels shape n_groups × n_years, agg_names list)."""
+        result = np.zeros((len(agg_order), levels.shape[1]))
+        for i, agg in enumerate(agg_order):
+            for j, sec in enumerate(sector_names):
+                if sec_to_agg.get(sec) == agg:
+                    result[i] += levels[j]
+        return result, list(agg_order)
+
+    # ---- share helpers ----
+    def _shares_va(src):
+        pKLj = src.loc[src['variable_name'] == "pKLj"].reset_index(drop=True)
+        KLj  = src.loc[src['variable_name'] == "KLj"].reset_index(drop=True)
+        levels = pKLj[year_cols].values.astype("float") * KLj[year_cols].values.astype("float")
+        agg_levels, agg_names = _aggregate(levels, pKLj['row_label'].values)
+        return agg_levels / agg_levels.sum(axis=0), agg_names
+
+    def _shares_rva(src, pL_base, pK_base):
+        Lj = src.loc[src['variable_name'] == "Lj"].reset_index(drop=True)
+        Kj = src.loc[src['variable_name'] == "Kj"].reset_index(drop=True)
+        levels = (Lj[year_cols].values.astype("float") * pL_base
+                + Kj[year_cols].values.astype("float") * pK_base)
+        agg_levels, agg_names = _aggregate(levels, Lj['row_label'].values)
+        return agg_levels / agg_levels.sum(axis=0), agg_names
+
+    def _shares_cj(src):
+        pCj = src.loc[src['variable_name'] == "pCj"].reset_index(drop=True)
+        Cj  = src.loc[src['variable_name'] == "Cj"].reset_index(drop=True)
+        levels = pCj[year_cols].values.astype("float") * Cj[year_cols].values.astype("float")
+        agg_levels, agg_names = _aggregate(levels, pCj['row_label'].values)
+        return agg_levels / agg_levels.sum(axis=0), agg_names
+
+    def _shares_out_nom(src):
+        pYj = src.loc[src['variable_name'] == "pYj"].reset_index(drop=True)
+        Yj  = src.loc[src['variable_name'] == "Yj"].reset_index(drop=True)
+        levels = pYj[year_cols].values.astype("float") * Yj[year_cols].values.astype("float")
+        agg_levels, agg_names = _aggregate(levels, pYj['row_label'].values)
+        return agg_levels / agg_levels.sum(axis=0), agg_names
+
+    def _shares_out_real(src, pYj0):
+        Yj   = src.loc[src['variable_name'] == "Yj"].reset_index(drop=True)
+        levels = pYj0 * Yj[year_cols].values.astype("float")   # pYj0 shape (n_sectors, 1)
+        agg_levels, agg_names = _aggregate(levels, Yj['row_label'].values)
+        return agg_levels / agg_levels.sum(axis=0), agg_names
+
+    # base prices (calibration year)
+    pL_base = df.loc[df['variable_name'] == "pL", year_cols[0]].values[0].astype("float")
+    pK_base = df.loc[df['variable_name'] == "pK", year_cols[0]].values[0].astype("float")
+    pYj0    = df.loc[df['variable_name'] == "pYj"].reset_index(drop=True)[year_cols[0]].values.astype("float")[:, np.newaxis]
+
+    va_shares,  va_names  = _shares_va(df)
+    rva_shares, rva_names = _shares_rva(df, pL_base, pK_base)
+    cj_shares,  cj_names  = _shares_cj(df)
+    out_nom,    out_names  = _shares_out_nom(df)
+    out_real,   _          = _shares_out_real(df, pYj0)
+
+    rows = [{"indicator": "log_gdp_pc", "sector": "",
+              **dict(zip(year_cols, log_gdp_pc))}]
+
+    for shares, names, label in [
+        (rva_shares, rva_names, "Real Value Added Share"),
+        (va_shares,  va_names,  "Nominal Value Added Share"),
+        (cj_shares,  cj_names,  "Nominal Consumption Share"),
+        (out_nom,    out_names, "Nominal Output Share"),
+        (out_real,   out_names, "Real Output Share"),
+    ]:
+        for i, sector in enumerate(names):
+            rows.append({"indicator": label, "sector": sector,
+                         **dict(zip(year_cols, shares[i]))})
+
+    return pd.DataFrame(rows)
+
+
+def build_joint_structural_change_timeseries(panel_df, wb_nominal_df, wb_real_df,
+                                              model_year="2020"):
+    """Splice World Bank historical VA-share series (1995–2019) with SCAF model output (2020–2050).
+
+    WB data supplies years strictly before ``model_year``; the full SCAF panel
+    (from :func:`compute_structural_change_panel`) supplies all years from
+    ``model_year`` onwards.  Log real GDP per capita follows the same split: WB
+    values for the historical period, the panel's ``log_gdp_pc`` for the model
+    period.
+
+    Parameters
+    ----------
+    panel_df      : pd.DataFrame — output of ``compute_structural_change_panel``
+    wb_nominal_df : pd.DataFrame — first element returned by ``construct_wb_timeseries``
+    wb_real_df    : pd.DataFrame — second element returned by ``construct_wb_timeseries``
+    model_year    : str, default ``"2020"`` — first year taken from ``panel_df``;
+                    WB years strictly below this value form the historical segment
+
+    Returns
+    -------
+    pd.DataFrame with columns: variable | sector | unit | 1995 | … | 2050
+        rows:
+            ``value_added_share_nominal``  (agriculture / industry / services)
+            ``value_added_share_real``     (agriculture / industry / services)
+            ``log_real_gdp_per_capita``    (sector = "all")
+    """
+    # panel sector label (now lowercase aggregates) → WB sector name (identity)
+    _SECTOR_MAP = {
+        "agriculture":   "agriculture",
+        "industry": "industry",
+        "services":      "services",
+    }
+
+    # ---- Year column detection ----
+    wb_years    = sorted([c for c in wb_nominal_df.columns if c.isdigit() and len(c) == 4])
+    pre_years   = [y for y in wb_years if y < model_year]          # WB: 1995–2019
+    panel_years = sorted([c for c in panel_df.columns
+                           if c.isdigit() and len(c) == 4 and c >= model_year])  # SCAF: 2020–2050
+
+    if not pre_years:
+        raise ValueError(
+            f"build_joint_structural_change_timeseries: "
+            f"no WB years found before model_year={model_year!r}."
+        )
+    if not panel_years:
+        raise ValueError(
+            f"build_joint_structural_change_timeseries: "
+            f"no panel years found >= model_year={model_year!r}."
+        )
+
+    nom_unit  = "fraction of nominal three-sector VA"
+    real_unit = "fraction of real three-sector VA"
+    gdp_unit  = "log EUR 2020 per person"
+
+    rows = []
+
+    # ---- Nominal VA shares ----
+    for scaf_sector, wb_sector in _SECTOR_MAP.items():
+        wb_row    = wb_nominal_df.loc[
+            (wb_nominal_df["variable"] == "value_added_share_nominal") &
+            (wb_nominal_df["sector"]   == wb_sector)
+        ]
+        panel_row = panel_df.loc[
+            (panel_df["indicator"] == "Nominal Value Added Share") &
+            (panel_df["sector"]    == scaf_sector)
+        ]
+        row = {"variable": "value_added_share_nominal", "sector": wb_sector, "unit": nom_unit}
+        row.update({y: float(wb_row[y].values[0])    for y in pre_years})
+        row.update({y: float(panel_row[y].values[0]) for y in panel_years})
+        rows.append(row)
+
+    # ---- Real VA shares ----
+    for scaf_sector, wb_sector in _SECTOR_MAP.items():
+        wb_row    = wb_real_df.loc[
+            (wb_real_df["variable"] == "value_added_share_real") &
+            (wb_real_df["sector"]   == wb_sector)
+        ]
+        panel_row = panel_df.loc[
+            (panel_df["indicator"] == "Real Value Added Share") &
+            (panel_df["sector"]    == scaf_sector)
+        ]
+        row = {"variable": "value_added_share_real", "sector": wb_sector, "unit": real_unit}
+        row.update({y: float(wb_row[y].values[0])    for y in pre_years})
+        row.update({y: float(panel_row[y].values[0]) for y in panel_years})
+        rows.append(row)
+
+    # ---- Log real GDP per capita — WB for pre_years, panel for panel_years ----
+    gdp_wb    = wb_nominal_df.loc[wb_nominal_df["variable"] == "log_real_gdp_per_capita"]
+    gdp_panel = panel_df.loc[panel_df["indicator"] == "log_gdp_pc"]
+
+    # Rescale WB GDP so that WB[model_year] == SCAF[model_year].
+    # On log scale this is a constant additive shift = log(SCAF_GDP / WB_GDP) at model_year,
+    # equivalent to multiplying every WB GDP level by coeff = SCAF_GDP_2020 / WB_GDP_2020.
+    log_shift = (float(gdp_panel[model_year].values[0])
+                 - float(gdp_wb[model_year].values[0]))
+
+    gdp_row   = {"variable": "log_real_gdp_per_capita", "sector": "all", "unit": gdp_unit}
+    gdp_row.update({y: float(gdp_wb[y].values[0]) + log_shift for y in pre_years})
+    gdp_row.update({y: float(gdp_panel[y].values[0]) for y in panel_years})
+    rows.append(gdp_row)
+
+    return pd.DataFrame(rows).reset_index(drop=True)
+
+
+def plot_joint_structural_change_timeseries(joint_df, model_year="2020",
+                                             subtitle="", output_dir=None):
+    """Two 1×3 panels plotting the spliced WB + SCAF structural-change time series.
+
+    Produces one figure for nominal VA shares and one for real VA shares.
+    Each figure has three subplots (agriculture | industry | services) sharing
+    a common y-axis.  X-axis is log real GDP per capita (EUR 2020).
+
+    Visual encoding
+    ---------------
+    Grey dashed line  — all years connected in chronological order
+    Blue filled dots  — years before ``model_year`` (World Bank historical data)
+    Red filled dots   — ``model_year`` and beyond (SCAF model output)
+
+    Parameters
+    ----------
+    joint_df   : pd.DataFrame — output of ``build_joint_structural_change_timeseries``
+    model_year : str, default ``"2020"`` — first year coloured red
+    subtitle   : str — optional subtitle rendered below the main title
+    output_dir : str or None — directory to save ``VA_nom_joint.png`` /
+                 ``VA_real_joint.png``; if None, calls ``plt.show()``
+    """
+    SECTORS       = ["agriculture", "industry", "services"]
+    SECTOR_LABELS = {"agriculture": "Agriculture",
+                     "industry": "Industry",
+                     "services":    "Services"}
+
+    # ---- Detect year columns ----
+    year_cols   = sorted([c for c in joint_df.columns if c.isdigit() and len(c) == 4])
+    pre_years   = [y for y in year_cols if y <  model_year]
+    model_years = [y for y in year_cols if y >= model_year]
+
+    # ---- X-axis (log real GDP per capita) ----
+    gdp_row  = joint_df.loc[joint_df["variable"] == "log_real_gdp_per_capita"]
+    x_all    = gdp_row[year_cols].values[0].astype("float")
+    x_pre    = gdp_row[pre_years].values[0].astype("float")   if pre_years   else np.array([])
+    x_model  = gdp_row[model_years].values[0].astype("float") if model_years else np.array([])
+
+    for var_name, fig_title in [
+        ("value_added_share_nominal", "Nominal Value Added Share"),
+        ("value_added_share_real",    "Real Value Added Share"),
+    ]:
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
+        top_margin = 0.88 if subtitle else 0.93
+        fig.subplots_adjust(top=top_margin, wspace=0.08)
+        fig.suptitle(fig_title, fontsize=16, fontweight="bold", y=0.99)
+        if subtitle:
+            fig.text(0.5, 0.93, subtitle, ha="center", va="top", fontsize=12)
+
+        # Legend label for the SCAF segment
+        model_years_str = (f"{model_years[0]}–{model_years[-1]}"
+                           if len(model_years) > 1 else str(model_years[0]))
+
+        # Collect handles/labels once for the shared legend
+        legend_handles = []
+
+        for col_idx, sector in enumerate(SECTORS):
+            ax    = axes[col_idx]
+            s_row = joint_df.loc[
+                (joint_df["variable"] == var_name) &
+                (joint_df["sector"]   == sector)
+            ]
+            y_all   = s_row[year_cols].values[0].astype("float")
+            y_pre   = s_row[pre_years].values[0].astype("float")   if pre_years   else np.array([])
+            y_model = s_row[model_years].values[0].astype("float") if model_years else np.array([])
+
+            # Grey connecting line (all years, chronological)
+            ax.plot(x_all, y_all, color="grey", linestyle="--", linewidth=1, zorder=1)
+            # Blue dots — historical WB data
+            h_blue = ax.scatter(x_pre,   y_pre,   color="steelblue", s=25, zorder=2,
+                                label=f"1995–{int(model_year)-1} (WB)")
+            # Red dots — SCAF model year(s)
+            h_red  = ax.scatter(x_model, y_model, color="tomato",    s=50, zorder=3,
+                                label=f"{model_years_str} (SCAF)")
+
+            ax.set_title(SECTOR_LABELS[sector], fontsize=13)
+            ax.set_xlabel("log real GDP per capita (EUR 2020)", fontsize=10)
+            if col_idx == 0:
+                ax.set_ylabel("share", fontsize=11)
+
+            if col_idx == 0:
+                legend_handles = [h_blue, h_red]
+
+        # Shared legend on the last subplot
+        axes[-1].legend(handles=legend_handles, fontsize=10, loc="upper left")
+
+        if output_dir is not None:
+            fname = "VA_nom_joint.png" if "nominal" in var_name else "VA_real_joint.png"
+            plt.savefig(os.path.join(output_dir, fname), bbox_inches="tight")
+            plt.close(fig)
+        else:
+            plt.show()
+
+
+def plot_wb_va_shares(wb_nominal_df, wb_real_df,
+                      subtitle="", output_dir=None, pad=0.15, regression=True):
+    """Plot World Bank historical VA shares vs log real GDP per capita (two 1×3 figures).
+
+    Y-axis: same height across all three sector panels (largest data range wins),
+    each panel centred on its own data; lower bound clipped at 0.
+
+    Parameters
+    ----------
+    wb_nominal_df : first  element of construct_wb_timeseries()
+    wb_real_df    : second element of construct_wb_timeseries()
+    subtitle      : optional figure subtitle string
+    output_dir    : if given, saves "WB_VA_nom.png" and "WB_VA_real.png" there
+    pad           : fractional padding added to max_half (default 0.15)
+    regression    : if True, overlay an OLS regression line on each panel (default True)
+    """
+    SECTORS       = ["agriculture", "industry", "services"]
+    SECTOR_LABELS = {"agriculture": "Agriculture",
+                     "industry": "Industry",
+                     "services": "Services"}
+
+    # x-axis: log real GDP per capita from the nominal df
+    year_cols = sorted([c for c in wb_nominal_df.columns if c.isdigit() and len(c) == 4])
+    gdp_row   = wb_nominal_df.loc[wb_nominal_df["variable"] == "log_real_gdp_per_capita"]
+    x         = gdp_row[year_cols].values[0].astype("float")
+
+    for df, var_name, fig_title, fname in [
+        (wb_nominal_df, "value_added_share_nominal",
+         "Nominal Value Added Share (World Bank historical)", "WB_VA_nom.png"),
+        (wb_real_df,    "value_added_share_real",
+         "Real Value Added Share (World Bank historical)",    "WB_VA_real.png"),
+    ]:
+        # ---- compute y-axis limits ----
+        series_by_sector = {}
+        for sec in SECTORS:
+            row = df.loc[(df["variable"] == var_name) & (df["sector"] == sec)]
+            series_by_sector[sec] = row[year_cols].values[0].astype("float")
+
+        half_ranges = {sec: (s.max() - s.min()) / 2 for sec, s in series_by_sector.items()}
+        centers     = {sec: (s.min() + s.max()) / 2 for sec, s in series_by_sector.items()}
+        max_half    = max(half_ranges.values()) * (1 + pad)
+
+        ylims = {}
+        for sec in SECTORS:
+            y_lo = max(0.0, centers[sec] - max_half)
+            y_hi = centers[sec] + max_half
+            ylims[sec] = (y_lo, y_hi)
+
+        # ---- plot ----
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5))   # no sharey — each sector has its own limits
+        top_margin = 0.80 if subtitle else 0.88
+        fig.subplots_adjust(top=top_margin, bottom=0.18, wspace=0.30)
+        fig.suptitle(fig_title, fontsize=16, fontweight="bold", y=0.99)
+        if subtitle:
+            fig.text(0.5, 0.90, subtitle, ha="center", va="top", fontsize=12)
+
+        for col_idx, sec in enumerate(SECTORS):
+            ax = axes[col_idx]
+            y  = series_by_sector[sec]
+
+            ax.scatter(x, y, s=25, color="steelblue")
+
+            if regression:
+                coeffs = np.polyfit(x, y, 1)
+                x_line = np.array([x.min(), x.max()])
+                y_line = np.polyval(coeffs, x_line)
+                ax.plot(x_line, y_line, color="firebrick", linewidth=1.5, zorder=1)
+
+            ax.set_title(SECTOR_LABELS[sec], fontsize=13)
+            ax.set_xlabel("log real GDP (EUR2020) per capita", fontsize=10)
+            if col_idx == 0:
+                ax.set_ylabel("share over the value added sum", fontsize=10)
+            ax.set_ylim(*ylims[sec])
+
+        if output_dir is not None:
+            plt.savefig(os.path.join(output_dir, fname), bbox_inches="tight")
+            plt.close(fig)
+        else:
+            plt.show()
+
+
+def plot_scaf_va_shares(panel_df, wb_nominal_df, wb_real_df,
+                        subtitle="", output_dir=None, pad=0.15, regression=True):
+    """Plot SCAF model VA and consumption shares vs log GDP per capita (three 1×3 figures).
+
+    Y-axis interval height is borrowed from the corresponding WB figure so the two sets
+    of plots are visually comparable; each panel is centred on the SCAF data.
+
+    Parameters
+    ----------
+    panel_df      : output of compute_structural_change_panel()
+    wb_nominal_df : first  element of construct_wb_timeseries()
+    wb_real_df    : second element of construct_wb_timeseries()
+    subtitle      : optional figure subtitle string
+    output_dir    : if given, saves SCAF_VA_nom.png / SCAF_VA_real.png / SCAF_VA_cons.png
+    pad           : fractional padding (default 0.15, must match plot_wb_va_shares call)
+    regression    : if True, overlay an OLS regression line on each panel (default True)
+    """
+    SECTORS       = ["agriculture", "industry", "services"]
+    SECTOR_LABELS = {"agriculture": "Agriculture",
+                     "industry": "Industry",
+                     "services": "Services"}
+
+    # ---- x-axis from SCAF panel ----
+    panel_year_cols = [c for c in panel_df.columns if c not in ("indicator", "sector")]
+    panel_year_cols = sorted(panel_year_cols, key=int)
+    gdp_row = panel_df.loc[panel_df["indicator"] == "log_gdp_pc"]
+    x       = gdp_row[panel_year_cols].values[0].astype("float")
+
+    # ---- WB max_half helper ----
+    wb_year_cols = sorted([c for c in wb_nominal_df.columns
+                           if c.isdigit() and len(c) == 4])
+
+    def _wb_max_half(df, var_name):
+        half_ranges = []
+        for sec in SECTORS:
+            s = df.loc[(df["variable"] == var_name) & (df["sector"] == sec),
+                       wb_year_cols].values[0].astype("float")
+            half_ranges.append((s.max() - s.min()) / 2)
+        return max(half_ranges) * (1 + pad)
+
+    wb_nom_mh  = _wb_max_half(wb_nominal_df, "value_added_share_nominal")
+    wb_real_mh = _wb_max_half(wb_real_df,    "value_added_share_real")
+
+    for indicator, fig_title, fname, max_half in [
+        ("Nominal Value Added Share",
+         "Nominal Value Added Share (SCAF model)", "SCAF_VA_nom.png",  wb_nom_mh),
+        ("Real Value Added Share",
+         "Real Value Added Share (SCAF model)",    "SCAF_VA_real.png", wb_real_mh),
+        ("Nominal Consumption Share",
+         "Nominal Consumption Share (SCAF model)", "SCAF_VA_cons.png", wb_nom_mh),
+    ]:
+        # ---- y-axis limits: SCAF-centred, WB height ----
+        series_by_sector = {}
+        for sec in SECTORS:
+            row = panel_df.loc[(panel_df["indicator"] == indicator)
+                               & (panel_df["sector"] == sec)]
+            series_by_sector[sec] = row[panel_year_cols].values[0].astype("float")
+
+        ylims = {}
+        for sec in SECTORS:
+            s        = series_by_sector[sec]
+            center_j = (s.min() + s.max()) / 2
+            ylims[sec] = (max(0.0, center_j - max_half), center_j + max_half)
+
+        # ---- plot ----
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+        top_margin = 0.80 if subtitle else 0.88
+        fig.subplots_adjust(top=top_margin, bottom=0.18, wspace=0.30)
+        fig.suptitle(fig_title, fontsize=16, fontweight="bold", y=0.99)
+        if subtitle:
+            fig.text(0.5, 0.90, subtitle, ha="center", va="top", fontsize=12)
+
+        for col_idx, sec in enumerate(SECTORS):
+            ax = axes[col_idx]
+            y  = series_by_sector[sec]
+
+            ax.scatter(x, y, s=25, color="steelblue")
+
+            if regression:
+                coeffs = np.polyfit(x, y, 1)
+                x_line = np.array([x.min(), x.max()])
+                y_line = np.polyval(coeffs, x_line)
+                ax.plot(x_line, y_line, color="firebrick", linewidth=1.5, zorder=1)
+
+            ax.set_title(SECTOR_LABELS[sec], fontsize=13)
+            ax.set_xlabel("log real GDP (EUR2020) per capita", fontsize=10)
+            if col_idx == 0:
+                ax.set_ylabel("share over the value added sum", fontsize=10)
+            ax.set_ylim(*ylims[sec])
+
+        if output_dir is not None:
+            plt.savefig(os.path.join(output_dir, fname), bbox_inches="tight")
+            plt.close(fig)
+        else:
+            plt.show()
+
+
+def plot_structural_change_panel(result_df, year_cols, fix_ylim=True, subtitle="", include_real_va=True, nominal_consumption=True, include_output=True, output_dir=None, output_path=None):
     """3×3 panel: VA share, real VA share, Cj share for AGRICULTURE / MANUFACTURE / SERVICES.
 
-    Rows:
-      0 — nominal VA share  (pKLj·KLj / total)
-      1 — real VA share     (Lj·pL₀ + Kj·pK₀ / total)
-      2 — nominal Cj share  (pCj·Cj / total)
+    Parameters
+    ----------
+    result_df : DataFrame returned by compute_structural_change_panel
+    year_cols : list of year column strings
 
-    fix_ylim=True  → each subplot y-axis clamped to [0, 1]
+    Rows (controlled by flags):
+      0 — real VA share      (Lj·pL₀ + Kj·pK₀ / total)  [skipped if include_real_va=False]
+      1 — nominal VA share   (pKLj·KLj / total)
+      2 — nominal Cj share   (pCj·Cj / total)             [only if nominal_consumption=True]
+      3 — nominal output share (pYj·Yj)                   [only if include_output=True]
+      4 — real output share  (pYj₀·Yj)                    [only if include_output=True]
+
+    fix_ylim=True  → each subplot y-axis clamped to [0, 0.85]
     fix_ylim=False → y-axis auto-scales
     subtitle       → user-provided subtitle displayed below the main title
     """
     target_sectors = ["AGRICULTURE", "MANUFACTURE", "SERVICES"]
 
-    # ---- shared x-axis: log GDP per capita ----
-    GDPreal    = df.loc[df['variable_name'] == "GDPreal", year_cols].values[0].astype("float")
-    L          = df.loc[df['variable_name'] == "L",       year_cols].values[0].astype("float")
-    log_gdp_pc = np.log(GDPreal / L)
+    # ---- x-axis ----
+    gdp_row    = result_df[result_df["indicator"] == "log_gdp_pc"]
+    log_gdp_pc = gdp_row[year_cols].values[0].astype("float")
 
-    # ---- Row 0: nominal VA share (pKLj * KLj) ----
-    pKLj_rows = df.loc[df['variable_name'] == "pKLj"].reset_index(drop=True)
-    KLj_rows  = df.loc[df['variable_name'] == "KLj"].reset_index(drop=True)
-    nom_va    = pKLj_rows[year_cols].values.astype("float") * KLj_rows[year_cols].values.astype("float")
-    va_names  = pKLj_rows['row_label'].values
-    va_shares = nom_va / nom_va.sum(axis=0)  # (n_sectors, n_years)
-
-    # ---- Row 1: real VA share (Lj·pL₀ + Kj·pK₀) ----
-    Lj_rows  = df.loc[df['variable_name'] == "Lj"].reset_index(drop=True)
-    Kj_rows  = df.loc[df['variable_name'] == "Kj"].reset_index(drop=True)
-    pL_base  = df.loc[df['variable_name'] == "pL", year_cols[0]].values[0].astype("float")
-    pK_base  = df.loc[df['variable_name'] == "pK", year_cols[0]].values[0].astype("float")
-    real_va  = Lj_rows[year_cols].values.astype("float") * pL_base \
-             + Kj_rows[year_cols].values.astype("float") * pK_base
-    rva_names  = Lj_rows['row_label'].values
-    rva_shares = real_va / real_va.sum(axis=0)
-
-    # ---- Row 2: nominal Cj share (pCj * Cj) ----
-    pCj_rows = df.loc[df['variable_name'] == "pCj"].reset_index(drop=True)
-    Cj_rows  = df.loc[df['variable_name'] == "Cj"].reset_index(drop=True)
-    nom_cj   = pCj_rows[year_cols].values.astype("float") * Cj_rows[year_cols].values.astype("float")
-    cj_names  = pCj_rows['row_label'].values
-    cj_shares = nom_cj / nom_cj.sum(axis=0)
-
-    # ---- Row 3: nominal output share (pYj * Yj) ----
-    pYj_rows = df.loc[df['variable_name'] == "pYj"].reset_index(drop=True)
-    Yj_rows  = df.loc[df['variable_name'] == "Yj"].reset_index(drop=True)
-    nom_out  = pYj_rows[year_cols].values.astype("float") * Yj_rows[year_cols].values.astype("float")
-    out_names = pYj_rows['row_label'].values
-    nom_out_shares = nom_out / nom_out.sum(axis=0)
-
-    # ---- Row 4: real output share (pYj₀ * Yj) ----
-    pYj0           = pYj_rows[year_cols[0]].values.astype("float")[:, np.newaxis]
-    real_out       = pYj0 * Yj_rows[year_cols].values.astype("float")
-    real_out_shares = real_out / real_out.sum(axis=0)
+    def _get_shares(indicator_label):
+        sub    = result_df[result_df["indicator"] == indicator_label]
+        names  = sub["sector"].values
+        shares = sub[year_cols].values.astype("float")
+        return shares, names
 
     row_data = [
-        (rva_shares, rva_names, "Real Value Added Share"),
-        (va_shares,  va_names,  "Nominal Value Added Share"),
+        (*_get_shares("Real Value Added Share"),    "Real Value Added Share"),
+        (*_get_shares("Nominal Value Added Share"), "Nominal Value Added Share"),
     ]
     if not include_real_va:
         row_data = [row_data[1]]
     if nominal_consumption:
-        row_data.append((cj_shares, cj_names, "Nominal Consumption Share"))
+        row_data.append((*_get_shares("Nominal Consumption Share"), "Nominal Consumption Share"))
     if include_output:
         row_data += [
-            (nom_out_shares,  out_names, "Nominal output share\n(pYj·Yj)"),
-            (real_out_shares, out_names, "Real output share\n(pYj₀·Yj)"),
+            (*_get_shares("Nominal Output Share"), "Nominal output share\n(pYj·Yj)"),
+            (*_get_shares("Real Output Share"),    "Real output share\n(pYj₀·Yj)"),
         ]
 
     n_rows = len(row_data)
     fig, axes = plt.subplots(n_rows, 3, figsize=(18, 5 * n_rows))
+    if n_rows == 1:
+        axes = axes[np.newaxis, :]
     top_margin = 0.91 if subtitle else 0.94
     fig.subplots_adjust(top=top_margin, hspace=0.35, wspace=0.3)
     fig.suptitle("Structural change indicators", fontsize=18, fontweight='bold', y=0.99)
@@ -832,6 +1330,95 @@ def plot_structural_change_panel_diff(df, df_ref, year_cols, subtitle="", nomina
         plt.close(fig)
     else:
         plt.show()
+
+
+def plot_structural_change_panels_split(df, df_ref, year_cols, subtitle="", output_dir=None):
+    """Saves 5 separate 1×3 figures of share differences (df minus df_ref):
+    SC_diff_real_VA.png, SC_diff_nom_VA.png, SC_diff_nom_C.png,
+    SC_diff_nom_L.png, SC_diff_real_L.png
+    """
+    target_sectors = ["AGRICULTURE", "MANUFACTURE", "SERVICES"]
+
+    GDPreal    = df.loc[df['variable_name'] == "GDPreal", year_cols].values[0].astype("float")
+    L_agg      = df.loc[df['variable_name'] == "L",       year_cols].values[0].astype("float")
+    log_gdp_pc = np.log(GDPreal / L_agg)
+
+    pL_base = df.loc[df['variable_name'] == "pL", year_cols[0]].values[0].astype("float")
+    pK_base = df.loc[df['variable_name'] == "pK", year_cols[0]].values[0].astype("float")
+
+    def _va(src):
+        p = src.loc[src['variable_name'] == "pKLj"].reset_index(drop=True)
+        q = src.loc[src['variable_name'] == "KLj"].reset_index(drop=True)
+        nom = p[year_cols].values.astype("float") * q[year_cols].values.astype("float")
+        return nom / nom.sum(axis=0), p['row_label'].values
+
+    def _rva(src):
+        Lj = src.loc[src['variable_name'] == "Lj"].reset_index(drop=True)
+        Kj = src.loc[src['variable_name'] == "Kj"].reset_index(drop=True)
+        nom = (Lj[year_cols].values.astype("float") * pL_base
+             + Kj[year_cols].values.astype("float") * pK_base)
+        return nom / nom.sum(axis=0), Lj['row_label'].values
+
+    def _cj(src):
+        p = src.loc[src['variable_name'] == "pCj"].reset_index(drop=True)
+        q = src.loc[src['variable_name'] == "Cj"].reset_index(drop=True)
+        nom = p[year_cols].values.astype("float") * q[year_cols].values.astype("float")
+        return nom / nom.sum(axis=0), p['row_label'].values
+
+    def _empl_nom(src):
+        Lj = src.loc[src['variable_name'] == "Lj"].reset_index(drop=True)
+        pL = src.loc[src['variable_name'] == "pL", year_cols].values.astype("float")
+        nom = Lj[year_cols].values.astype("float") * pL
+        return nom / nom.sum(axis=0), Lj['row_label'].values
+
+    def _empl_real(src):
+        Lj = src.loc[src['variable_name'] == "Lj"].reset_index(drop=True)
+        nom = Lj[year_cols].values.astype("float") * pL_base
+        return nom / nom.sum(axis=0), Lj['row_label'].values
+
+    rva_df,  rva_names  = _rva(df);       rva_ref,  _ = _rva(df_ref)
+    va_df,   va_names   = _va(df);        va_ref,   _ = _va(df_ref)
+    cj_df,   cj_names   = _cj(df);        cj_ref,   _ = _cj(df_ref)
+    enl_df,  enl_names  = _empl_nom(df);  enl_ref,  _ = _empl_nom(df_ref)
+    erl_df,  erl_names  = _empl_real(df); erl_ref,  _ = _empl_real(df_ref)
+
+    plots = [
+        (rva_df - rva_ref, rva_names, "real value added",    "SC_diff_real_VA.png"),
+        (va_df  - va_ref,  va_names,  "nominal value added", "SC_diff_nom_VA.png"),
+        (cj_df  - cj_ref,  cj_names,  "nominal consumption", "SC_diff_nom_C.png"),
+        (enl_df - enl_ref, enl_names, "nominal employment",  "SC_diff_nom_L.png"),
+        (erl_df - erl_ref, erl_names, "real employment",     "SC_diff_real_L.png"),
+    ]
+
+    escaped = subtitle.replace(' ', r'\ ')
+    for diff_shares, names, label, fname in plots:
+        fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+        fig.subplots_adjust(top=0.85, wspace=0.3)
+        if subtitle:
+            title = rf"Difference of {label} shares between $\mathit{{{escaped}}}$ scenario and baseline"
+        else:
+            title = f"Difference of {label} shares between scenario and baseline"
+        fig.suptitle(title, fontsize=15, fontweight='bold', y=0.98)
+
+        for col_idx, sector in enumerate(target_sectors):
+            ax = axes[col_idx]
+            idx = np.where(names == sector)[0]
+            if idx.size > 0:
+                ax.plot(log_gdp_pc, diff_shares[idx[0]], marker='o', markersize=4, linewidth=1.5)
+            ax.axhline(0, color='grey', linewidth=0.8, linestyle='--')
+            ylo, yhi = ax.get_ylim()
+            ax.set_ylim(min(ylo, -0.001), max(yhi, 0.001))
+            ax.set_title(sector, fontsize=14)
+            ax.set_xlabel("log(GDP per capita)", fontsize=11)
+            if col_idx == 0:
+                ax.set_ylabel(f"Δ {label} share", fontsize=12)
+
+        if output_dir is not None:
+            os.makedirs(output_dir, exist_ok=True)
+            plt.savefig(os.path.join(output_dir, fname), bbox_inches='tight')
+            plt.close(fig)
+        else:
+            plt.show()
 
 
 def plot_energy_volumes_comparison_by_use(df, REMIND_E_volumes, year_cols, scaf_label="SCAF", df_no_sc=None, output_dir=None):
@@ -1022,8 +1609,8 @@ def plot_energy_volumes_diverging_stacked(df, REMIND_E_volumes, year_cols, scaf_
         neg_bottoms += neg
 
     total_diff = diff.sum(axis=0)
-    ax.hlines(total_diff, x - bar_width / 2, x + bar_width / 2,
-              colors='black', linestyles='dashed', linewidth=1.5, label='Total')
+    ax.plot(x, total_diff, color='black', linestyle='dashed', linewidth=1.5,
+            marker='o', markersize=4, label='Total')
 
     ax.axhline(0, color='black', linewidth=0.8)
     ax.set_xticks(x)
@@ -2738,3 +3325,187 @@ def plot_calibration_energy_use_shares(hybridization_df, output_dir=None):
         plt.close(fig2)
     else:
         plt.show()
+
+
+# ---------------------------------------------------------------------------
+# World Bank reference time-series
+# ---------------------------------------------------------------------------
+
+def construct_wb_timeseries(data_dir: str = ".") -> tuple:
+    """Read World Bank CSVs from WB_data/ and return two wide DataFrames.
+
+    Parameters
+    ----------
+    data_dir : str
+        Directory that contains the ``WB_data`` sub-folder.
+
+    Returns
+    -------
+    nominal_df : pd.DataFrame
+        Columns: variable | sector | unit | 1995 | … | 2020
+        Rows: VA shares (nominal) and log real GDP per capita.
+    real_df : pd.DataFrame
+        Same layout, VA shares computed from constant-2015-USD values.
+    """
+
+    YEARS = [str(y) for y in range(1995, 2021)]   # "1995" … "2020"
+    WB_DIR = os.path.join(data_dir, "WB_data")
+
+    with open(os.path.join(WB_DIR, "mappings.json")) as _f:
+        _mappings = json.load(_f)
+    AGG_CODES  = _mappings["EUR region"]
+    USD_TO_EUR = _mappings["US$2015-EUR2020"]
+
+    def _read_wb(filename):
+        """Load one World Bank CSV, clean it, and return a country-indexed DataFrame."""
+        path = os.path.join(WB_DIR, filename)
+        df = pd.read_csv(path, skiprows=4, encoding="utf-8-sig")
+        # Replace World Bank "not available" sentinel
+        df.replace("..", np.nan, inplace=True)
+        df.set_index("Country Code", inplace=True)
+        # Keep only the years we need and convert to numeric
+        df = df[YEARS].apply(pd.to_numeric, errors="coerce")
+        # Validate that all required codes are present
+        missing = [c for c in AGG_CODES if c not in df.index]
+        if missing:
+            raise ValueError(
+                f"construct_wb_timeseries: file '{filename}' is missing "
+                f"the following required country codes: {missing}"
+            )
+        return df
+
+    # ---- Read all nine files ----
+    agr_nom  = _read_wb("Agriculture, forestry, and fishing, value added (current US$).csv")
+    man_nom  = _read_wb("Industry (including construction), value added (current US$).csv")
+    srv_nom  = _read_wb("Services, value added (current US$).csv")
+    agr_real = _read_wb("Agriculture, forestry, and fishing, value added (constant 2015 US$).csv")
+    man_real = _read_wb("Industry (including construction), value added (constant 2015 US$).csv")
+    srv_real = _read_wb("Services, value added (constant 2015 US$).csv")
+    gdp_real = _read_wb("GDP (constant 2015 US$).csv")
+    pop      = _read_wb("pop.csv")
+
+    # ---- Sum levels across AGG_CODES (one Series per variable, index = year) ----
+    AGR_NOM  = agr_nom.loc[AGG_CODES, YEARS].sum(axis=0)
+    MAN_NOM  = man_nom.loc[AGG_CODES, YEARS].sum(axis=0)
+    SRV_NOM  = srv_nom.loc[AGG_CODES, YEARS].sum(axis=0)
+
+    AGR_REAL = agr_real.loc[AGG_CODES, YEARS].sum(axis=0)
+    MAN_REAL = man_real.loc[AGG_CODES, YEARS].sum(axis=0)
+    SRV_REAL = srv_real.loc[AGG_CODES, YEARS].sum(axis=0)
+
+    GDP_REAL = gdp_real.loc[AGG_CODES, YEARS].sum(axis=0)
+    POP      = pop.loc[AGG_CODES, YEARS].sum(axis=0)
+
+    # ---- Derived quantities ----
+    TOTAL_NOM_VA  = AGR_NOM  + MAN_NOM  + SRV_NOM
+    TOTAL_REAL_VA = AGR_REAL + MAN_REAL + SRV_REAL
+
+    agr_nom_share  = AGR_NOM  / TOTAL_NOM_VA
+    man_nom_share  = MAN_NOM  / TOTAL_NOM_VA
+    srv_nom_share  = SRV_NOM  / TOTAL_NOM_VA
+
+    agr_real_share = AGR_REAL / TOTAL_REAL_VA
+    man_real_share = MAN_REAL / TOTAL_REAL_VA
+    srv_real_share = SRV_REAL / TOTAL_REAL_VA
+
+    GDP_REAL_EUR   = GDP_REAL * USD_TO_EUR          # constant 2015 US$ → EUR 2020 exchange rate
+    log_real_gdp_pc = np.log(GDP_REAL_EUR / POP)
+
+    # ---- Helper to build one row dict ----
+    def _row(variable, sector, unit, series):
+        return {"variable": variable, "sector": sector, "unit": unit,
+                **{y: series[y] for y in YEARS}}
+
+    # ---- Assemble DataFrames ----
+    nom_unit  = "fraction of nominal three-sector VA"
+    real_unit = "fraction of real three-sector VA"
+    gdp_unit  = "log EUR 2020 per person"
+
+    nominal_rows = [
+        _row("value_added_share_nominal", "agriculture",   nom_unit,  agr_nom_share),
+        _row("value_added_share_nominal", "industry", nom_unit,  man_nom_share),
+        _row("value_added_share_nominal", "services",      nom_unit,  srv_nom_share),
+        _row("log_real_gdp_per_capita",   "all",           gdp_unit,  log_real_gdp_pc),
+    ]
+
+    real_rows = [
+        _row("value_added_share_real",  "agriculture",   real_unit, agr_real_share),
+        _row("value_added_share_real",  "industry", real_unit, man_real_share),
+        _row("value_added_share_real",  "services",      real_unit, srv_real_share),
+        _row("log_real_gdp_per_capita", "all",           gdp_unit,  log_real_gdp_pc),
+    ]
+
+    nominal_df = pd.DataFrame(nominal_rows).reset_index(drop=True)
+    real_df    = pd.DataFrame(real_rows).reset_index(drop=True)
+
+    return nominal_df, real_df
+
+
+def export_wb_timeseries_csv(data_dir="Data_postprocessing", output_path=None):
+    """Aggregate World Bank data over the EUR region and write a wide-format CSV.
+
+    Rows exported
+    -------------
+    value_added_share_nominal  — agriculture / industry / services
+    value_added_share_real     — agriculture / industry / services
+    log_real_gdp_per_capita    — all  (log EUR 2020 per person)
+    population                 — all  (persons)
+    gdp_real                   — all  (M constant 2015 USD)
+    gdp_nominal                — all  (M current USD)
+
+    All series span 1995–2020 and are summed across the EUR region defined in
+    ``WB_data/mappings.json`` before being written.
+
+    Parameters
+    ----------
+    data_dir    : str — folder containing ``WB_data/`` (default "Data_postprocessing")
+    output_path : str or None — destination CSV path.  Defaults to
+                  ``<data_dir>/WB_data/wb_timeseries.csv``
+
+    Returns
+    -------
+    pd.DataFrame — the data written to disk
+    """
+    YEARS  = [str(y) for y in range(1995, 2021)]
+    WB_DIR = os.path.join(data_dir, "WB_data")
+
+    with open(os.path.join(WB_DIR, "mappings.json")) as fh:
+        mappings = json.load(fh)
+    AGG_CODES = mappings["EUR region"]
+
+    # --- reuse construct_wb_timeseries for shares + log_real_gdp_per_capita ---
+    nom_df, real_df = construct_wb_timeseries(data_dir=data_dir)
+
+    # --- read and aggregate level variables over the EUR region ---
+    def _read_wb(filename):
+        path = os.path.join(WB_DIR, filename)
+        df = pd.read_csv(path, skiprows=4, encoding="utf-8-sig")
+        df.replace("..", np.nan, inplace=True)
+        df.set_index("Country Code", inplace=True)
+        return df[YEARS].apply(pd.to_numeric, errors="coerce")
+
+    POP      = _read_wb("pop.csv").loc[AGG_CODES].sum(axis=0)
+    GDP_REAL = _read_wb("GDP (constant 2015 US$).csv").loc[AGG_CODES].sum(axis=0) / 1e6
+    GDP_NOM  = _read_wb("GDP (current US$).csv").loc[AGG_CODES].sum(axis=0) / 1e6
+
+    def _row(variable, sector, unit, series):
+        return {"variable": variable, "sector": sector, "unit": unit,
+                **{y: series[y] for y in YEARS}}
+
+    # --- combine into one DataFrame ---
+    # nom_df:  3 VA-share rows + 1 log_gdp row
+    # real_df: 3 VA-share rows + 1 log_gdp row (duplicate — skip)
+    rows = list(nom_df.to_dict("records"))
+    for rec in real_df.to_dict("records"):
+        if rec["variable"] != "log_real_gdp_per_capita":
+            rows.append(rec)
+    rows.append(_row("population",  "all", "persons",             POP))
+    rows.append(_row("gdp_real",    "all", "M constant 2015 USD", GDP_REAL))
+    rows.append(_row("gdp_nominal", "all", "M current USD",       GDP_NOM))
+
+    out_df = pd.DataFrame(rows).reset_index(drop=True)
+
+    if output_path is None:
+        output_path = os.path.join(WB_DIR, "wb_timeseries.csv")
+    out_df.to_csv(output_path, index=False)
+    return out_df

@@ -1,0 +1,8 @@
+sector,aggregate
+AGRICULTURE,agriculture
+MANUFACTURE,industry
+ENERGY,industry
+STEEL,industry
+CHEMICAL,industry
+SERVICES,services
+TRANSPORTATION,services
